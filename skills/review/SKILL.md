@@ -58,11 +58,12 @@ reflect의 대상:
 
 | 유형 | 목적지 | 예시 |
 |------|--------|------|
-| 범용적 교훈 | `.loom/principles/` | "인터페이스를 먼저 정의하면 병렬 작업이 쉬워진다" |
-| concept 보완 | `.loom/concepts/` 해당 파일 | "이 concept에 누락된 책임이 있었다" |
-| decision 후기 | `.loom/decisions/` 해당 파일에 추기 | "이 결정의 결과가 예상과 달랐다" |
+| 범용적 교훈 | `.loom/principles/` (템플릿: `templates/principle.md`) | "인터페이스를 먼저 정의하면 병렬 작업이 쉬워진다" |
+| concept 보완 | `.loom/concepts/` 해당 파일 (템플릿: `templates/concept.md`) | "이 concept에 누락된 책임이 있었다" |
+| decision 후기 | `.loom/decisions/` 해당 파일에 추기 (템플릿: `templates/decision.md`) | "이 결정의 결과가 예상과 달랐다" |
 
 원칙을 추가/수정할 때는 `principles/index.md`도 함께 업데이트한다.
+concept을 보완한 경우, `.loom/index.md`의 갱신이 필요한지 판단한다.
 
 ## Summary
 

@@ -47,7 +47,7 @@ triage에서 바로 넘어온 경우, 원본 요구사항을 입력으로 사용
 
 `.loom/plans/`에 plan 파일을 생성한다.
 
-템플릿: `references/plan-template.md`를 읽어 사용한다.
+템플릿: `templates/plan.md`를 읽어 사용한다.
 
 ### 파일 이름 규칙
 
