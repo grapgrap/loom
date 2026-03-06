@@ -1,18 +1,18 @@
 ---
 name: review
 description: >-
-  구현이 설계를 충족하는지 검증하고, 경험에서 배운 것을 원칙으로 축적한다. 구현이 완료된 후
-  사용한다. "review", "리뷰해줘", "구현 확인" 같은 맥락에서 트리거된다.
+  구현이 설계를 충족하는지 검증하고, 기존 원칙을 경험과 대조하며, 세션의 학습을 축적한다.
+  구현이 완료된 후 사용한다. "review", "리뷰해줘", "구현 확인" 같은 맥락에서 트리거된다.
   review 완료 시 자동으로 reflect를 수행한다.
 ---
 
 # Review
 
-구현이 설계를 충족하는지 검증하고, 경험에서 원칙을 축적한다.
+구현이 설계를 충족하는지 검증하고, 경험을 축적한다.
 
 review는 두 가지를 수행한다:
-1. **검증** — 구현이 concept과 plan에 부합하는가
-2. **reflect** — 이 사이클에서 배운 것을 원칙에 축적
+1. **검증** — 구현이 concept, plan, decision, principle에 부합하는가
+2. **reflect** — 기존 원칙을 경험과 대조하고, 세션의 학습을 축적한다
 
 ## Step 0 — 컨텍스트 로드
 
@@ -37,39 +37,32 @@ review는 두 가지를 수행한다:
 
 ## Step 2 — Reflect
 
-이번 사이클에서 배운 것을 원칙으로 축적한다.
+이번 사이클의 경험을 기존 원칙과 대조하고, 세션의 학습을 축적한다.
 
-reflect의 대상:
-- 반복적으로 발생한 문제 패턴
-- 효과적이었던 접근법
-- 예상과 달랐던 결과
-- concept이나 decision이 놓친 관점
+### 원칙 검증
 
-### 축적 기준
+기존 principle을 이번 세션의 경험과 대조한다:
 
-원칙으로 추가할 가치가 있는가를 판단한다. 두 조건을 모두 충족해야 한다:
+- 이번 경험이 기존 원칙과 부합하는가
+- 기존 원칙의 표현이 부정확하거나 범위가 맞지 않는가
+- 기존 원칙의 전제가 여전히 유효한가
 
-1. **범위**: 다른 프로젝트, 다른 맥락에서도 유효한가
-2. **성격**: 설계(shape) 또는 검증(review)에서 판단의 근거로 작동하는가
+불일치가 발견되면 해당 principle 파일을 수정하고,
+`principles/index.md`도 함께 업데이트한다.
 
-성격의 리트머스 테스트:
-> "이것을 몰랐다면 다르게 **결정**했을 것" → principle
-> "이것을 몰랐다면 **빼먹었을** 것" → 체크리스트 (principle이 아님)
+### 세션 학습 축적
 
-일회성 교훈, 프로젝트 특수한 노하우, 구현 절차의 주의사항은 원칙이 아니다.
+이번 세션에서 얻은 교훈을 적절한 곳에 기록한다.
 
-### 라우팅
+concept이나 decision에 대한 학습:
+- concept 보완 → `.loom/concepts/` 해당 파일 수정 (템플릿: `templates/concept.md`)
+- decision 후기 → `.loom/decisions/` 해당 파일에 추기 (템플릿: `templates/decision.md`)
 
-학습이 발견되면 적절한 목적지로 보낸다:
-
-| 유형 | 목적지 | 예시 |
-|------|--------|------|
-| 범용적 교훈 | `.loom/principles/` (템플릿: `templates/principle.md`) | "인터페이스를 먼저 정의하면 병렬 작업이 쉬워진다" |
-| concept 보완 | `.loom/concepts/` 해당 파일 (템플릿: `templates/concept.md`) | "이 concept에 누락된 책임이 있었다" |
-| decision 후기 | `.loom/decisions/` 해당 파일에 추기 (템플릿: `templates/decision.md`) | "이 결정의 결과가 예상과 달랐다" |
-
-원칙을 추가/수정할 때는 `principles/index.md`도 함께 업데이트한다.
 concept을 보완한 경우, `.loom/index.md`의 갱신이 필요한지 판단한다.
+
+아직 원칙은 아니지만 의미 있는 교훈:
+- auto memory에 기록한다
+- 여러 세션에 걸쳐 축적된 후 meditate에서 원칙으로 증류될 수 있다
 
 ## Summary
 
@@ -79,8 +72,9 @@ review 완료 시 다음 형식으로 정리한다:
 ## Review Summary
 - 검증 결과: [회귀 N건 / 수정 N건 / 관찰 N건]
 - Reflect:
-  - Principles: [추가/수정된 원칙]
+  - Principles: [수정된 원칙]
   - Concepts: [보완된 concept]
   - Decisions: [후기가 추가된 decision]
+  - Memory: [auto memory에 기록한 교훈]
 - 다음 단계: [회귀가 필요하면 어느 단계로, 아니면 완료]
 ```
