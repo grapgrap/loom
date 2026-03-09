@@ -1,5 +1,5 @@
 {
   "name": "loom",
   "description": "요구사항을 설계로, 설계를 실행 계획으로 구체화하는 시스템. shape, plan, review, calibrate 네 단계의 루프를 통해 제품을 만들고 경험을 축적한다.",
-  "version": "0.3.2"
+  "version": "0.3.3"
 }
