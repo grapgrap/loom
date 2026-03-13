@@ -26,7 +26,7 @@
 ## 트레이드 오프
 
 - 구현 세부사항(기술 선택, 라이브러리, 파일 구조)은 concept에 기술하지 않는다
-- 시점 종속 항목(열린 질문, 미확인 사항, TBD)은 concept에 기술하지 않는다 — concept은 세션이 끝난 후에도 그대로 유효해야 한다
+- 시점 종속 항목(열린 질문, 미확인 사항, TBD)은 concept에 기술하지 않는다 — decision(보류 결정) 또는 plan(후속 작업)으로 라우팅한다
 - skill(shape, plan, review, calibrate)은 concept으로 정의하지 않는다 — skill은 loom의 "코드"이지 도메인 엔티티가 아니다
 
 ## 관련 컨셉
