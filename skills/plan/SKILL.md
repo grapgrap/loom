@@ -14,10 +14,9 @@ description: >-
 
 ## Step 0 — 컨텍스트 로드
 
-1. `skills/navigation/SKILL.md`를 읽어 문서 탐색 도구를 확인한다.
-2. `.loom/principles/index.md`를 읽어 원칙을 로드한다.
-3. `.loom/concepts/`에서 관련 concept들을 읽는다.
-4. `.loom/decisions/`에서 관련 decision들을 읽는다.
+1. `.loom/principles/index.md`를 읽어 원칙을 로드한다.
+2. `.loom/concepts/`에서 관련 concept들을 읽는다.
+3. `.loom/decisions/`에서 관련 decision들을 읽는다.
 
 shape에서 넘어온 경우, shape summary를 입력으로 사용한다.
 triage에서 바로 넘어온 경우, 원본 요구사항을 입력으로 사용한다.
