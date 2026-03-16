@@ -20,7 +20,7 @@ review가 세션 단위의 검증이라면, calibrate는 축적된 괴리를 교
 
 1. `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
 2. `.loom/concepts/`의 모든 concept을 읽는다.
-3. `.loom/principles/index.md`를 읽어 원칙을 로드한다.
+3. `.loom/principles/index.md`가 존재하면 읽어 원칙을 로드한다.
 4. 관련 코드를 탐색하여 현재 구현 상태를 파악한다.
 
 ## Step 1 — Concept 감사
@@ -82,6 +82,7 @@ auto memory에 축적된 세션 학습들을 검토한다.
 2. **당위성**: 그 방향이 유효한 이유가 충분히 명확한가
 
 증류된 원칙은 사용자에게 제안하고 승인 후 `.loom/principles/`에 작성한다.
+`.loom/principles/` 디렉토리가 없으면 디렉토리와 `index.md`를 함께 생성한다.
 
 템플릿: `templates/principle.md`
 

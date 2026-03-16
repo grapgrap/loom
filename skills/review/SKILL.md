@@ -16,7 +16,7 @@ review는 두 가지를 수행한다:
 
 ## Step 0 — 컨텍스트 로드
 
-1. `.loom/principles/index.md`를 읽어 원칙을 로드한다.
+1. `.loom/principles/index.md`가 존재하면 읽어 원칙을 로드한다.
 2. 관련 concept들을 읽는다.
 3. 관련 plan을 읽어 태스크와 설계 의도를 파악한다.
 4. 관련 decision들을 읽어 결정의 맥락을 파악한다.
