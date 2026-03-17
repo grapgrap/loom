@@ -16,10 +16,13 @@ review는 두 가지를 수행한다:
 
 ## Step 0 — 컨텍스트 로드
 
-1. `.loom/principles/index.md`가 존재하면 읽어 원칙을 로드한다.
-2. 관련 concept들을 읽는다.
-3. 관련 plan을 읽어 태스크와 설계 의도를 파악한다.
-4. 관련 decision들을 읽어 결정의 맥락을 파악한다.
+1. 사용자의 발화에서 작업 대상의 scope를 식별한다.
+2. 해당 scope의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
+3. 해당 scope의 `.loom/concepts/`에서 관련 concept들을 읽는다.
+4. 해당 scope의 `.loom/plans/`에서 관련 plan을 읽어 태스크와 설계 의도를 파악한다.
+5. 해당 scope의 `.loom/decisions/`에서 관련 decision들을 읽어 결정의 맥락을 파악한다.
+6. `~/.claude/.loom/principles/index.md`가 존재하면 읽는다 (user scope).
+7. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
 
 ## Step 1 — 검증
 
@@ -48,8 +51,8 @@ review는 두 가지를 수행한다:
 - 기존 원칙의 표현이 부정확하거나 범위가 맞지 않는가
 - 기존 원칙의 전제가 여전히 유효한가
 
-불일치가 발견되면 해당 principle 파일을 수정하고,
-`principles/index.md`도 함께 업데이트한다.
+불일치가 발견되면 해당 principle 파일이 속한 scope에서 수정하고,
+해당 scope의 `principles/index.md`도 함께 업데이트한다.
 
 ### 세션 학습 축적
 

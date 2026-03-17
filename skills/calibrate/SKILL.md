@@ -18,10 +18,12 @@ review가 세션 단위의 검증이라면, calibrate는 축적된 괴리를 교
 
 ## Step 0 — 컨텍스트 로드
 
-1. `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
-2. `.loom/concepts/`의 모든 concept을 읽는다.
-3. `.loom/principles/index.md`가 존재하면 읽어 원칙을 로드한다.
-4. 관련 코드를 탐색하여 현재 구현 상태를 파악한다.
+1. 사용자의 발화에서 작업 대상의 scope를 식별한다.
+2. 해당 scope의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
+3. 해당 scope의 `.loom/concepts/`의 모든 concept을 읽는다.
+4. `~/.claude/.loom/principles/index.md`가 존재하면 읽는다 (user scope).
+5. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
+6. 관련 코드를 탐색하여 현재 구현 상태를 파악한다.
 
 ## Step 1 — Concept 감사
 
@@ -46,6 +48,7 @@ concept과 코드를 대조하여 괴리를 식별한다:
 사용자가 승인한 항목에 대해서만 교정을 수행한다.
 
 교정 시:
+
 - concept을 수정한다.
 - concept에 변경이 생기면 새 decision을 작성하여 변경의 맥락을 기록한다.
 - 기존 decision은 수정하지 않는다.
@@ -66,8 +69,8 @@ concept과 코드를 대조하여 괴리를 식별한다:
 - 표현이 부정확하거나 범위가 맞지 않는가
 - 더 이상 유효하지 않은 원칙이 있는가
 
-불일치가 발견되면 해당 principle 파일을 수정하고,
-`principles/index.md`도 함께 업데이트한다.
+불일치가 발견되면 해당 principle 파일이 속한 scope에서 수정하고,
+해당 scope의 `principles/index.md`도 함께 업데이트한다.
 원칙 제거는 사용자에게 제안하고 승인 후 적용한다.
 원칙은 사용자의 것이므로, 시스템이 임의로 삭제하지 않는다.
 
@@ -81,8 +84,9 @@ auto memory에 축적된 세션 학습들을 검토한다.
 1. **반복성**: 개발 과정에서 반복적으로 마주치는 판단 상황에 대한 것인가
 2. **당위성**: 그 방향이 유효한 이유가 충분히 명확한가
 
-증류된 원칙은 사용자에게 제안하고 승인 후 `.loom/principles/`에 작성한다.
-`.loom/principles/` 디렉토리가 없으면 디렉토리와 `index.md`를 함께 생성한다.
+증류된 원칙은 사용자에게 제안하고 승인 후 user scope(`~/.claude/.loom/principles/`)에 작성한다.
+개인의 체득된 믿음은 프로젝트에 종속되지 않으므로, 기본 저장은 user scope다.
+디렉토리가 없으면 디렉토리와 `index.md`를 함께 생성한다.
 
 템플릿: `templates/principle.md`
 

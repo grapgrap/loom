@@ -24,6 +24,10 @@ principle은 판단의 규칙이 아니라 판단의 근거다.
 - 두 가지 조건을 모두 충족해야 한다:
   1. **반복성**: 개발 과정에서 반복적으로 마주치는 판단 상황에 대한 것인가
   2. **당위성**: 근거가 충분히 명확하여, 이를 공유하는 누구든 같은 방향으로 판단할 수 있는가
+- user와 project scope를 관통하는 유일한 엔티티다:
+  - 기본 저장은 user scope (`~/.claude/.loom/principles/`) — 개인의 체득된 믿음은 프로젝트에 종속되지 않는다
+  - project scope에 저장하면 해당 범위에서 user 원칙보다 우선한다
+  - 로드 시 scope 해소를 통해 병합된다
 
 ## 트레이드 오프
 
@@ -36,3 +40,4 @@ principle은 판단의 규칙이 아니라 판단의 근거다.
 - [[concept]] - concept 설계의 판단 근거가 된다
 - [[decision]] - decision의 판단 근거가 된다
 - [[plan]] - plan 수립 시 근거로 작용한다
+- [[scope]] - user와 project scope를 관통하는 유일한 엔티티

@@ -14,9 +14,12 @@ description: >-
 
 ## Step 0 — 컨텍스트 로드
 
-1. `.loom/principles/index.md`를 읽어 원칙을 로드한다.
-2. `.loom/concepts/`에서 관련 concept들을 읽는다.
-3. `.loom/decisions/`에서 관련 decision들을 읽는다.
+1. 사용자의 발화에서 작업 대상의 scope를 식별한다.
+2. 해당 scope의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
+3. 해당 scope의 `.loom/concepts/`에서 관련 concept들을 읽는다.
+4. 해당 scope의 `.loom/decisions/`에서 관련 decision들을 읽는다.
+5. `~/.claude/.loom/principles/index.md`가 존재하면 읽는다 (user scope).
+6. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
 
 shape에서 넘어온 경우, shape summary를 입력으로 사용한다.
 triage에서 바로 넘어온 경우, 원본 요구사항을 입력으로 사용한다.
