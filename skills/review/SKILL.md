@@ -20,7 +20,7 @@ review는 두 가지를 수행한다:
 2. 해당 scope의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
 3. 해당 scope의 `.loom/concepts/`에서 관련 concept들을 읽는다.
 4. 해당 scope의 `.loom/plans/`에서 관련 plan을 읽어 태스크와 설계 의도를 파악한다.
-5. 해당 scope의 `.loom/decisions/`에서 관련 decision들을 읽어 결정의 맥락을 파악한다.
+5. 해당 scope의 `.loom/decisions/`에서 이번 세션에서 생성된 decision들을 읽는다. 이전 decision의 유효성은 concept이 보장하며, 괴리 발견은 calibrate의 책임이다.
 6. `~/.claude/.loom/principles/index.md`가 존재하면 읽는다 (user scope).
 7. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
 
@@ -31,7 +31,7 @@ review는 두 가지를 수행한다:
 - **concept 정합성**: 구현이 concept에 정의된 책임과 관계를 존중하는가
 - **concept 형식 준수**: concept에 시점 종속 항목이 포함되어 있지 않은가
 - **plan 충족**: plan의 태스크가 의도대로 구현되었는가
-- **decision 준수**: 결정된 방향과 제약을 따르는가
+- **decision 준수**: 이번 세션에서 생성된 decision의 방향과 제약을 따르는가
 
 ## Step 2 — 원칙 검증
 
