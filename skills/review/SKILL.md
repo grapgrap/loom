@@ -21,7 +21,7 @@ review는 두 가지를 수행한다:
 3. 해당 scope의 `.loom/concepts/`에서 관련 concept들을 읽는다.
 4. 해당 scope의 `.loom/plans/`에서 관련 plan을 읽어 태스크와 설계 의도를 파악한다.
 5. 해당 scope의 `.loom/decisions/`에서 이번 세션에서 생성된 decision들을 읽는다. 이전 decision의 유효성은 concept이 보장하며, 괴리 발견은 calibrate의 책임이다.
-6. `~/.claude/.loom/principles/index.md`가 존재하면 읽는다 (user scope).
+6. `~/.claude/.loom/principles/index.md`를 읽는다 (user scope).
 7. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
 
 ## Step 1 — 설계 검증

@@ -23,7 +23,7 @@ shape는 기능/시스템 단위뿐 아니라 plan 태스크 단위에서도 호
 1. 사용자의 발화에서 작업 대상의 scope를 식별한다.
 2. 해당 scope의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
 3. 해당 scope의 `.loom/concepts/`에서 관련 concept들을 읽는다.
-4. `~/.claude/.loom/principles/index.md`가 존재하면 읽는다 (user scope).
+4. `~/.claude/.loom/principles/index.md`를 읽는다 (user scope).
 5. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
 6. 입력을 다음 기준으로 분류한다:
 
