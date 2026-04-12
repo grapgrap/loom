@@ -22,11 +22,12 @@ shape는 기능/시스템 단위뿐 아니라 plan 태스크 단위에서도 호
 
 1. 사용자의 발화에서 작업 대상의 scope를 식별한다.
 2. 해당 scope의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
-3. 해당 scope의 `.loom/concepts/`에서 관련 concept들을 읽는다.
-4. 해당 scope의 `.loom/decisions/`에서 관련 decision들을 읽는다.
-5. `~/.claude/.loom/principles/index.md`를 읽는다 (user scope).
-6. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
-7. 입력을 다음 기준으로 분류한다:
+3. `aeira search -s {scope의 .loom 경로} "{입력 키워드}"` 로 관련 문서를 식별한다.
+4. 식별된 문서에서 `aeira graph neighbors -s {scope의 .loom 경로} "{node}"` 로 연결 문서를 탐색한다 (outgoing: 연관 concept, incoming: 참조 decision).
+5. 탐색된 concept과 decision을 읽는다.
+6. `~/.claude/.loom/principles/index.md`를 읽는다 (user scope).
+7. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
+8. 입력을 다음 기준으로 분류한다:
 
 | 수준               | 신호                                                                                | 행동                                                                                         |
 | ------------------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -113,6 +114,10 @@ index는 프로젝트 탐색의 지도 역할을 하므로, 엔티티 목록과 
 - decision: `{NNNN}-{결정-제목}.md` (예: `0001-session-based-auth.md`)
 
 decision은 순번을 부여하여 시간순을 보존한다.
+
+### 그래프 갱신
+
+`.loom/` 내 문서를 생성하거나 수정한 후 `aeira sync -s {scope의 .loom 경로}` 를 실행한다.
 
 ## Summary
 

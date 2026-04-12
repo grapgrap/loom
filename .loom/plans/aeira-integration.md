@@ -27,8 +27,8 @@ loom 스킬이 맥락을 로드할 때(Step 0) aeira를 활용하고, 문서를 
 
 #### 세부 작업 목록
 
-- [ ] `aeira init .loom` — source 경로 등록
-- [ ] `aeira sync` — 최초 그래프 구축
+- [x] `aeira init .loom` — source 경로 등록
+- [x] `aeira sync` — 최초 그래프 구축
 
 ### 2. 스킬 Step 0에 aeira 탐색 추가
 
@@ -44,11 +44,11 @@ loom 스킬이 맥락을 로드할 때(Step 0) aeira를 활용하고, 문서를 
 
 #### 세부 작업 목록
 
-- [ ] skills/shape/SKILL.md — Step 0에 aeira 탐색 단계 추가
-- [ ] skills/plan/SKILL.md — Step 0에 aeira 탐색 단계 추가
-- [ ] skills/task/SKILL.md — Step 0에 aeira 탐색 단계 추가
-- [ ] skills/review/SKILL.md — Step 0에 aeira 탐색 단계 추가
-- [ ] skills/calibrate/SKILL.md — Step 0에 aeira 탐색 단계 추가
+- [x] skills/shape/SKILL.md — Step 0에 aeira 탐색 단계 추가
+- [x] skills/plan/SKILL.md — Step 0에 aeira 탐색 단계 추가
+- [x] skills/task/SKILL.md — Step 0에 aeira 탐색 단계 추가
+- [x] skills/review/SKILL.md — Step 0에 aeira 탐색 단계 추가
+- [x] skills/calibrate/SKILL.md — Step 0에 aeira 탐색 단계 추가
 
 ### 3. 문서 변경 후 sync 호출 강제
 
@@ -65,11 +65,11 @@ loom 스킬이 맥락을 로드할 때(Step 0) aeira를 활용하고, 문서를 
 #### 세부 작업 목록
 
 각 스킬의 문서 변경 시점:
-- [ ] skills/shape/SKILL.md — Step 3 (concept/decision/index 생성/수정 후)
-- [ ] skills/plan/SKILL.md — Step 3 (plan 파일 생성 후)
-- [ ] skills/task/SKILL.md — Step 2~3 (decision 기록 후, plan 업데이트 후)
-- [ ] skills/review/SKILL.md — Step 1~2 이후 decision 기록 시
-- [ ] skills/calibrate/SKILL.md — 교정 수행 후
+- [x] skills/shape/SKILL.md — Step 3 (concept/decision/index 생성/수정 후)
+- [x] skills/plan/SKILL.md — Step 3 (plan 파일 생성 후)
+- [x] skills/task/SKILL.md — Step 1 (decision 기록 후)
+- [x] skills/review/SKILL.md — Step 3 (세션 학습 축적 후)
+- [x] skills/calibrate/SKILL.md — Step 1 (교정 수행 후)
 
 ### 4. 정규화 점검
 
@@ -84,8 +84,8 @@ loom 스킬이 맥락을 로드할 때(Step 0) aeira를 활용하고, 문서를 
 
 #### 세부 작업 목록
 
-- [ ] 5개 스킬의 aeira 관련 표현·순서·경로 일관성 확인
-- [ ] 불일치 발견 시 교정
+- [x] 5개 스킬의 aeira 관련 표현·순서·경로 일관성 확인
+- [x] 불일치 발견 시 교정 (plan sync 표현 통일)
 
 ## 검증
 

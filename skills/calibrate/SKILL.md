@@ -21,9 +21,10 @@ review가 세션 단위의 검증이라면, calibrate는 축적된 괴리를 교
 1. 사용자의 발화에서 작업 대상의 scope를 식별한다.
 2. 해당 scope의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
 3. 해당 scope의 `.loom/concepts/`의 모든 concept을 읽는다.
-4. `~/.claude/.loom/principles/index.md`를 읽는다 (user scope).
-5. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
-6. 관련 코드를 탐색하여 현재 구현 상태를 파악한다.
+4. 각 concept에서 `aeira graph neighbors -s {scope의 .loom 경로} "{concept node}" --direction incoming` 으로 참조하는 decision들을 확인한다.
+5. `~/.claude/.loom/principles/index.md`를 읽는다 (user scope).
+6. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
+7. 관련 코드를 탐색하여 현재 구현 상태를 파악한다.
 
 ## Step 1 — Concept 감사
 
@@ -59,6 +60,10 @@ concept과 코드를 대조하여 괴리를 식별한다:
 
 - concept: `templates/concept.md`
 - decision: `templates/decision.md`
+
+### 그래프 갱신
+
+`.loom/` 내 문서를 생성하거나 수정한 후 `aeira sync -s {scope의 .loom 경로}` 를 실행한다.
 
 ## Step 2 — 원칙 검증, 증류, 및 메모리 정제
 
