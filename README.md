@@ -1,6 +1,6 @@
 # loom
 
-A Claude Code plugin that turns requirements into designs, and designs into actionable plans.
+A Claude Code plugin that turns requirements into designs, and designs into implementation.
 
 [English](README.md) [한국어](README.ko.md)
 
@@ -14,14 +14,15 @@ loom maintains feedback loops that keep these artifacts alive alongside the code
 
 ## Workflow
 
-loom operates through four skills.
+loom operates through five skills.
 
 ### Work Flow
 
-**shape** → **plan** → implement
+**shape** -> **plan** -> **task** -> implement
 
 - **shape**: Refines ambiguous requirements to the design level. Covers approach strategies, constraints, and trade-offs, producing concepts and decisions.
 - **plan**: Breaks down shape's output into executable tasks with dependencies.
+- **task**: Implements plan tasks through execution agreement with the user. Presents a direction draft, discusses it, then writes code.
 
 ### Feedback Loops
 
@@ -47,7 +48,7 @@ Each decision is independent and self-contained.
 ### Principle
 
 Beliefs grounded in repeated experience that serve as the basis for judgment.
-Not rules, but grounds — when people share the same principle, they arrive at the same judgment.
+Not rules, but grounds -- when people share the same principle, they arrive at the same judgment.
 The only entity that spans both user scope and project scope.
 
 ### Plan
@@ -61,6 +62,10 @@ A system that determines priority among entities when multiple `.loom/` layers e
 There is a user scope (`~/.claude/.loom/`) and project scope (`.loom/`), where the nearest scope takes precedence.
 
 ## Getting Started
+
+### Prerequisites
+
+- [aeira](https://github.com/grapgrap/aeira) -- `npm install -g @grapgrap/aeira`
 
 ### Installation
 
@@ -79,6 +84,12 @@ When you have a requirement that needs design, start with shape.
 ```
 
 Once shape is complete, it will guide you on whether to proceed with plan or implement directly.
+
+Once plan is complete, execute tasks with task.
+
+```
+/loom:task
+```
 
 After implementation, verify with review.
 
