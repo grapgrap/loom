@@ -20,14 +20,14 @@ loom operates through five skills.
 
 **shape** -> **plan** -> **task** -> implement
 
-- **shape**: Refines ambiguous requirements to the design level. Covers approach strategies, constraints, and trade-offs, producing concepts and decisions.
+- **shape**: Refines ambiguous requirements to the design level. Covers approach strategies, constraints, and trade-offs. Produces concepts, decisions, and retention decisions when preconditions or constraints shift but the existing design is kept.
 - **plan**: Breaks down shape's output into executable tasks with dependencies.
 - **task**: Implements plan tasks through execution agreement with the user. Presents a direction draft, discusses it, then writes code.
 
 ### Feedback Loops
 
 - **review**: Session-scoped verification. Checks whether the implementation meets the design, and accumulates learnings.
-- **calibrate**: Corrects accumulated drift. When concepts and code diverge over time, it realigns documentation to the current state.
+- **calibrate**: Detects accumulated drift. When preconditions or constraints have shifted or concepts and code have diverged, it reports findings and hands redesign back to shape.
 
 ## Components
 
@@ -44,6 +44,7 @@ They serve as the project's ubiquitous language.
 Records the context behind decisions that shaped a concept's form.
 Preserves why something was decided, providing grounds for future re-evaluation.
 Each decision is independent and self-contained.
+Retention decisions capture why existing concepts or decisions are kept when their preconditions or constraints have shifted.
 
 ### Principle
 
