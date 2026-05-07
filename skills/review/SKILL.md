@@ -16,15 +16,13 @@ review는 두 가지를 수행한다:
 
 ## Step 0 — 컨텍스트 로드
 
-1. 사용자의 발화에서 작업 대상의 scope를 식별한다.
-2. 해당 scope의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
-3. `aeira search -s {scope의 .loom 경로} "{입력 키워드}"` 로 관련 문서를 식별한다.
-4. 식별된 문서에서 `aeira graph neighbors -s {scope의 .loom 경로} "{node}"` 로 연결 문서를 탐색한다 (outgoing: 연관 concept, incoming: 참조 decision).
-5. 탐색된 concept을 읽는다.
-6. 해당 scope의 `.loom/plans/`에서 관련 plan을 읽어 태스크와 설계 의도를 파악한다.
-7. 해당 scope의 `.loom/decisions/`에서 이번 세션에서 생성된 decision들을 읽는다. 이전 decision의 유효성은 concept이 보장하며, 괴리 발견은 calibrate의 책임이다.
-8. `~/.claude/.loom/principles/index.md`를 읽는다 (user scope).
-9. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
+1. 작업 대상 프로젝트의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
+2. `aeira search -s {프로젝트의 .loom 경로} "{입력 키워드}"` 로 관련 문서를 식별한다.
+3. 식별된 문서에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{node}"` 로 연결 문서를 탐색한다 (outgoing: 연관 concept, incoming: 참조 decision).
+4. 탐색된 concept을 읽는다.
+5. `.loom/plans/`에서 관련 plan을 읽어 태스크와 설계 의도를 파악한다.
+6. `.loom/decisions/`에서 이번 세션에서 생성된 decision들을 읽는다. 이전 decision의 유효성은 concept이 보장하며, 괴리 발견은 calibrate의 책임이다.
+7. `.loom/principles/index.md`를 읽는다.
 
 ## Step 1 — 설계 검증
 
@@ -89,26 +87,22 @@ Step 1, 2에서 발견한 문제를 심각도와 함께 정리한다:
 - 기존 원칙의 표현이 부정확하거나 범위가 맞지 않는가
 - 기존 원칙의 전제가 여전히 유효한가
 
-불일치가 발견되면 해당 principle 파일이 속한 scope에서 수정하고,
-해당 scope의 `principles/index.md`도 함께 업데이트한다.
+불일치가 발견되면 해당 principle 파일을 수정하고, `.loom/principles/index.md`도 함께 업데이트한다.
 
 ### 세션 학습 축적
 
 이번 세션에서 얻은 교훈을 적절한 곳에 기록한다.
 
-concept이나 decision에 대한 학습:
 - concept 보완 → `.loom/concepts/` 해당 파일 수정 (템플릿: `templates/concept.md`)
 - decision 후기 → `.loom/decisions/` 해당 파일에 추기 (템플릿: `templates/decision.md`)
 
 concept을 보완한 경우, `.loom/index.md`의 갱신이 필요한지 판단한다.
 
-아직 원칙은 아니지만 의미 있는 교훈:
-- auto memory에 기록한다
-- 여러 세션에 걸쳐 축적된 후 calibrate에서 원칙으로 증류될 수 있다
+새 원칙·룰·컨벤션을 발견한 경우, 사용자에게 제안하고 승인 후 `.loom/principles/`에 작성한다 (템플릿: `templates/principle.md`).
 
 ### 그래프 갱신
 
-`.loom/` 내 문서를 생성하거나 수정한 후 `aeira sync -s {scope의 .loom 경로}` 를 실행한다.
+`.loom/` 내 문서를 생성하거나 수정한 후 `aeira sync -s {프로젝트의 .loom 경로}` 를 실행한다.
 
 ## Summary
 
@@ -118,9 +112,8 @@ review 완료 시 다음 형식으로 정리한다:
 ## Review Summary
 - 검증 결과: [회귀 N건 / 수정 N건 / 관찰 N건]
 - Reflect:
-  - Principles: [수정된 원칙]
+  - Principles: [수정·신규 추가된 원칙·룰·컨벤션]
   - Concepts: [보완된 concept]
   - Decisions: [후기가 추가된 decision]
-  - Memory: [auto memory에 기록한 교훈]
 - 다음 단계: [회귀가 필요하면 어느 단계로, 아니면 완료]
 ```

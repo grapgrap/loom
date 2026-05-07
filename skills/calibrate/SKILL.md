@@ -18,13 +18,11 @@ review가 세션 단위의 검증이라면, calibrate는 축적된 괴리를 교
 
 ## Step 0 — 컨텍스트 로드
 
-1. 사용자의 발화에서 작업 대상의 scope를 식별한다.
-2. 해당 scope의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
-3. 해당 scope의 `.loom/concepts/`의 모든 concept을 읽는다.
-4. 각 concept에서 `aeira graph neighbors -s {scope의 .loom 경로} "{concept node}" --direction incoming` 으로 참조하는 decision들을 확인한다.
-5. `~/.claude/.loom/principles/index.md`를 읽는다 (user scope).
-6. 해당 scope에서 cwd까지의 `.loom/principles/index.md`를 읽는다 (project scope, 중첩 시 가까운 scope 우선).
-7. 관련 코드를 탐색하여 현재 구현 상태를 파악한다.
+1. 작업 대상 프로젝트의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
+2. `.loom/concepts/`의 모든 concept을 읽는다.
+3. 각 concept에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{concept node}" --direction incoming` 으로 참조하는 decision들을 확인한다.
+4. `.loom/principles/index.md`를 읽는다.
+5. 관련 코드를 탐색하여 현재 구현 상태를 파악한다.
 
 ## Step 1 — 누적 감사
 
@@ -65,7 +63,7 @@ review가 세션 단위의 검증이라면, calibrate는 축적된 괴리를 교
 
 리포트를 제시한 뒤 shape 재진입 여부는 사용자에게 맡긴다. 사용자가 재진입을 선택하면 감지된 이탈 중 어느 범위를 shape의 입력으로 삼을지 함께 결정한다. calibrate는 concept이나 decision을 직접 수정하지 않는다.
 
-## Step 2 — 원칙 검증, 증류, 및 메모리 정제
+## Step 2 — 원칙·룰·컨벤션 검증
 
 ### 기존 원칙 검증
 
@@ -75,44 +73,20 @@ review가 세션 단위의 검증이라면, calibrate는 축적된 괴리를 교
 - 표현이 부정확하거나 범위가 맞지 않는가
 - 더 이상 유효하지 않은 원칙이 있는가
 
-불일치가 발견되면 해당 principle 파일이 속한 scope에서 수정하고,
-해당 scope의 `principles/index.md`도 함께 업데이트한다.
+불일치가 발견되면 해당 principle 파일을 수정하고, `.loom/principles/index.md`도 함께 업데이트한다.
 원칙 제거는 사용자에게 제안하고 승인 후 적용한다.
 원칙은 사용자의 것이므로, 시스템이 임의로 삭제하지 않는다.
 
-### 원칙 증류
+### 신규 원칙·룰·컨벤션 발견
 
-auto memory에 축적된 세션 학습들을 검토한다.
-여러 세션에 걸쳐 반복되는 패턴이 발견되면 원칙으로 증류할 수 있는지 판단한다.
-
-원칙의 조건:
-
-1. **반복성**: 개발 과정에서 반복적으로 마주치는 판단 상황에 대한 것인가
-2. **당위성**: 그 방향이 유효한 이유가 충분히 명확한가
-
-증류된 원칙은 사용자에게 제안하고 승인 후 user scope(`~/.claude/.loom/principles/`)에 작성한다.
-개인의 체득된 믿음은 프로젝트에 종속되지 않으므로, 기본 저장은 user scope다.
+누적 감사 중 새 원칙·룰·컨벤션 패턴이 식별되면 사용자에게 제안한다. 승인 후 `.loom/principles/`에 작성하고, 인덱스에서 원칙·룰·컨벤션 중 어느 분류로 등록할지 함께 결정한다.
 디렉토리가 없으면 디렉토리와 `index.md`를 함께 생성한다.
 
 템플릿: `templates/principle.md`
 
-### Auto memory 정제
-
-증류가 완료된 후, auto memory의 유효성을 검증하고 정리한다.
-
-각 메모리를 다음 기준으로 분류한다:
-
-- **제거**: 이미 원칙으로 승격되어 중복인 메모리, 더 이상 유효하지 않은 교정, 현재 코드/문서 상태와 무관해진 메모리
-- **수정**: 과도하게 특수한 교정을 적용 범위에 맞게 일반화, 표현이 부정확한 메모리를 교정
-- **유지**: 원칙은 아니지만 여전히 유효한 교정
-
-분류 결과를 리포트로 정리하여 사용자에게 제안한다.
-메모리 제거는 사용자가 승인한 항목에 대해서만 수행한다.
-메모리는 사용자의 것이므로, 시스템이 임의로 삭제하지 않는다.
-
 ### 그래프 갱신
 
-`.loom/` 내 문서를 생성하거나 수정한 경우 `aeira sync -s {scope의 .loom 경로}` 를 실행한다. calibrate에서는 원칙 수정이 sync 대상에 해당하며, 원칙은 user scope에 속한다.
+`.loom/` 내 문서를 생성하거나 수정한 경우 `aeira sync -s {프로젝트의 .loom 경로}` 를 실행한다.
 
 ## Summary
 
@@ -126,12 +100,8 @@ calibrate 완료 시 다음 형식으로 정리한다:
   - 축적된 분화의 옵션 가치 재평가: [재합침 후보 / 뒤늦은 분화 후보]
   - concept과 decision의 괴리: [항목 수]
 - Principles:
-  - 수정: [수정된 원칙]
-  - 증류 제안: [auto memory에서 발견된 원칙 후보]
+  - 수정: [수정된 원칙·룰·컨벤션]
+  - 신규 추가 제안: [발견된 새 원칙·룰·컨벤션]
   - 제거 제안: [근거와 함께]
-- Auto memory:
-  - 제거: [제거된 메모리와 사유]
-  - 수정: [수정된 메모리와 변경 내용]
-  - 유지: [유지된 메모리 수]
 - 다음 단계: [shape 재진입 여부와 범위, 아니면 완료]
 ```
