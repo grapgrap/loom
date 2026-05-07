@@ -31,7 +31,7 @@ loom operates through five skills.
 
 ## Components
 
-loom manages five entities in the `.loom/` directory.
+loom manages six entities in the `.loom/` directory.
 
 ### Concept
 
@@ -50,17 +50,22 @@ Retention decisions capture why existing concepts or decisions are kept when the
 
 Beliefs grounded in repeated experience that serve as the basis for judgment.
 Not rules, but grounds -- when people share the same principle, they arrive at the same judgment.
-The only entity that spans both user scope and project scope.
+The foundational layer of thought, applicable beyond any specific domain.
+
+### Rule
+
+A condition-action mapping where a principle is applied within a specific domain.
+"In this situation, do this" -- the form a principle takes when its scope is bounded.
+
+### Convention
+
+An agreed-upon unification of expression.
+Form-level consistency where what matters is the agreement itself, not absolute justification.
 
 ### Plan
 
 Documents that structure designs into executable tasks and dependencies.
 Breaks down shape's output into implementation units and tracks progress.
-
-### Scope
-
-A system that determines priority among entities when multiple `.loom/` layers exist.
-There is a user scope (`~/.claude/.loom/`) and project scope (`.loom/`), where the nearest scope takes precedence.
 
 ## Getting Started
 
