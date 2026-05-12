@@ -9,7 +9,7 @@ A Claude Code plugin that turns requirements into designs, and designs into impl
 When building software, we already follow a natural flow.
 Refining requirements, making plans, implementing, and looking back. loom structures this flow to make it reproducible.
 
-The artifacts from a structured flow (design documents, decision records, principles) should remain valid over time.
+The artifacts from a structured flow (design documents, decision records, rules) should remain valid over time.
 loom maintains feedback loops that keep these artifacts alive alongside the code.
 
 ## Workflow
@@ -31,7 +31,7 @@ loom operates through five skills.
 
 ## Components
 
-loom manages six entities in the `.loom/` directory.
+loom manages five entities in the `.loom/` directory.
 
 ### Concept
 
@@ -46,21 +46,15 @@ Preserves why something was decided, providing grounds for future re-evaluation.
 Each decision is independent and self-contained.
 Retention decisions capture why existing concepts or decisions are kept when their preconditions or constraints have shifted.
 
-### Principle
-
-Beliefs grounded in repeated experience that serve as the basis for judgment.
-Not rules, but grounds -- when people share the same principle, they arrive at the same judgment.
-The foundational layer of thought, applicable beyond any specific domain.
-
 ### Rule
 
-A condition-action mapping where a principle is applied within a specific domain.
-"In this situation, do this" -- the form a principle takes when its scope is bounded.
+A non-functional requirement specific to this project that must always be observed.
+The heavier end of the enforcement axis -- automatically referenced by shape·plan·task and reflected in their outputs.
 
 ### Convention
 
-An agreed-upon unification of expression.
-Form-level consistency where what matters is the agreement itself, not absolute justification.
+A preferred form that is strongly recommended but replaceable.
+Covers agreed-upon unification of expression, structure, and tools -- the lighter end of the enforcement axis.
 
 ### Plan
 
