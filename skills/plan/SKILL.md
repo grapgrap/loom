@@ -18,7 +18,7 @@ description: >-
 2. `aeira search -s {프로젝트의 .loom 경로} "{입력 키워드}"` 로 관련 문서를 식별한다.
 3. 식별된 문서에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{node}"` 로 연결 문서를 탐색한다 (outgoing: 연관 concept, incoming: 참조 decision).
 4. 탐색된 concept과 decision을 읽는다.
-5. `.loom/principles/index.md`를 읽는다.
+5. `.loom/rules/index.md`를 읽는다.
 
 shape에서 넘어온 경우, shape summary를 입력으로 사용한다.
 triage에서 바로 넘어온 경우, 원본 요구사항을 입력으로 사용한다.
@@ -31,6 +31,10 @@ triage에서 바로 넘어온 경우, 원본 요구사항을 입력으로 사용
 - 각 태스크는 독립적으로 실행 가능한 단위여야 한다
 - 태스크 간 복잡도가 대체로 균일해야 한다
 - 한 태스크가 너무 크다고 느껴지면 더 쪼갠다
+
+분해 시 로드한 rule 각각에 대해 다음을 판단한다:
+- rule이 태스크에 적용되는가?
+- 적용된다면 rule을 만족하는 형태로 태스크를 분해한다
 
 해상도가 부족한 태스크의 신호:
 - 태스크 기술이 "~를 정의한다", "~를 구현한다" 수준에 머물고, 입출력의 형태가 명시되지 않은 경우

@@ -37,3 +37,5 @@
 
 - [[concept]] - concept을 참조하여 범위를 한정한다
 - [[decision]] - decision을 참조하여 설계 의도와 제약을 이해한다
+- [[rule]] - rule을 자동 참조하여 태스크 구성에 반영한다
+- [[convention]] - convention을 자동 참조하여 태스크 구성에 반영한다

@@ -11,8 +11,8 @@ description: >-
 구현이 설계를 충족하는지 검증하고, 경험을 축적한다.
 
 review는 두 가지를 수행한다:
-1. **검증** — 구현이 concept, plan, decision, principle에 부합하는가
-2. **reflect** — 기존 원칙을 경험과 대조하고, 세션의 학습을 축적한다
+1. **검증** — 구현이 concept, plan, decision, rule·convention에 부합하는가
+2. **reflect** — 기존 rule·convention을 경험과 대조하고, 세션의 학습을 축적한다
 
 ## Step 0 — 컨텍스트 로드
 
@@ -22,7 +22,7 @@ review는 두 가지를 수행한다:
 4. 탐색된 concept을 읽는다.
 5. `.loom/plans/`에서 관련 plan을 읽어 태스크와 설계 의도를 파악한다.
 6. `.loom/decisions/`에서 이번 세션에서 생성된 decision들을 읽는다. 이전 decision의 유효성은 concept이 보장하며, 괴리 발견은 calibrate의 책임이다.
-7. `.loom/principles/index.md`를 읽는다.
+7. `.loom/rules/index.md`를 읽는다.
 
 ## Step 1 — 설계 검증
 
@@ -52,14 +52,14 @@ review는 두 가지를 수행한다:
 - **자기완결성**: 참조된 다른 decision을 읽지 않아도 맥락이 이해되는가 (대체·폐기 참조가 없고, 갱신·계승 참조가 있더라도 맥락이 자기 안에서 닫히는가)
 - **유지 decision 근거**: 전제·제약의 무효화 정황이 사실과 맞는가, 유지 근거와 유효 기한이 이후 감사 가능한 형태로 기록되었는가
 
-## Step 2 — 원칙 검증
+## Step 2 — rule·convention 검증
 
-구현이 원칙에 부합하는지 검증한다. 로드한 원칙 각각에 대해:
+구현이 rule과 convention에 부합하는지 검증한다. 로드한 rule·convention 각각에 대해:
 
-1. 원칙의 **적용** 시나리오가 현재 변경과 관련되는지 판단한다
-2. 관련되는 원칙의 **테스트** 질문을 구현에 대입한다
-3. **경계**에 해당하면 적용하지 않는다
-4. 위반이 발견되면 어떤 원칙의 어떤 테스트에 어긋나는지 명시한다
+1. 이 rule·convention이 현재 변경에 적용되는지 판단한다
+2. 적용된다면, 구현이 정의된 형태와 일치하는지 확인한다
+3. rule 위반(적용되는 상황에서 정의와 어긋남)은 수정 필요로 분류한다
+4. convention 위반(정당한 사유 없이 정의와 어긋남)은 사유 확인 또는 수정 후보로 분류한다
 
 ---
 
@@ -72,22 +72,22 @@ Step 1, 2에서 발견한 문제를 심각도와 함께 정리한다:
 
 이번 사이클의 경험을 기존 원칙과 대조하고, 세션의 학습을 축적한다.
 
-### Concept-원칙 정합성
+### Concept-rule 정합성
 
-이번 세션에서 생성되거나 수정된 concept이 있다면, 원칙에 비추어 검증한다:
+이번 세션에서 생성되거나 수정된 concept이 있다면, rule·convention과 정합한지 검증한다:
 
-- concept의 설계 방향이 관련 원칙의 **적용** 시나리오와 부합하는가
-- concept의 트레이드오프가 원칙의 **테스트** 질문을 통과하는가
+- concept의 설계 방향이 관련 rule·convention의 적용 범위와 부합하는가
+- concept의 트레이드오프가 rule·convention의 정의와 충돌하지 않는가
 
-### 원칙 유효성
+### rule·convention 유효성
 
-기존 principle을 이번 세션의 경험과 대조한다:
+기존 rule·convention을 이번 세션의 경험과 대조한다:
 
-- 이번 경험이 기존 원칙과 부합하는가
-- 기존 원칙의 표현이 부정확하거나 범위가 맞지 않는가
-- 기존 원칙의 전제가 여전히 유효한가
+- 이번 경험이 기존 rule·convention과 부합하는가
+- 기존 정의가 부정확하거나 적용 범위가 맞지 않는가
+- 기존 rule·convention의 전제가 여전히 유효한가
 
-불일치가 발견되면 해당 principle 파일을 수정하고, `.loom/principles/index.md`도 함께 업데이트한다.
+불일치가 발견되면 해당 파일을 수정하고, `.loom/rules/index.md`도 함께 업데이트한다.
 
 ### 세션 학습 축적
 
@@ -98,7 +98,7 @@ Step 1, 2에서 발견한 문제를 심각도와 함께 정리한다:
 
 concept을 보완한 경우, `.loom/index.md`의 갱신이 필요한지 판단한다.
 
-새 원칙·룰·컨벤션을 발견한 경우, 사용자에게 제안하고 승인 후 `.loom/principles/`에 작성한다 (템플릿: `templates/principle.md`).
+새 rule·convention을 발견한 경우, 사용자에게 제안하고 승인 후 `.loom/rules/`에 작성한다. rule인지 convention인지 분류는 사용자와 함께 결정한다.
 
 ### 그래프 갱신
 
@@ -112,7 +112,7 @@ review 완료 시 다음 형식으로 정리한다:
 ## Review Summary
 - 검증 결과: [회귀 N건 / 수정 N건 / 관찰 N건]
 - Reflect:
-  - Principles: [수정·신규 추가된 원칙·룰·컨벤션]
+  - Rules: [수정·신규 추가된 rule·convention]
   - Concepts: [보완된 concept]
   - Decisions: [후기가 추가된 decision]
 - 다음 단계: [회귀가 필요하면 어느 단계로, 아니면 완료]

@@ -28,10 +28,10 @@
 - 구현 세부사항(기술 선택, 라이브러리, 파일 구조)은 concept에 기술하지 않는다
 - 시점 종속 항목(열린 질문, 미확인 사항, TBD)은 concept에 기술하지 않는다 — decision(보류 결정) 또는 plan(후속 작업)으로 라우팅한다
 - skill(shape, plan, review, calibrate)은 concept으로 정의하지 않는다 — skill은 loom의 "코드"이지 도메인 엔티티가 아니다
+- 비기능 제약은 concept으로 정의하지 않는다 — concept의 정의에 전제 조건으로 부수적 등장은 허용되지만, 비기능 제약 자체는 decision(추상적 방향성) 또는 rule(구체적 강제)로 분류한다
 
 ## 관련 컨셉
 
 - [[decision]] - concept의 변경 맥락을 기록한다
 - [[plan]] - concept을 참조하여 태스크를 구성한다
-- [[principle]] - concept 설계의 판단 기준이 된다
 - [[index]] - concept의 목록과 관계를 탐색 지도로 제공한다

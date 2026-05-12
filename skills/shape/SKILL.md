@@ -24,7 +24,7 @@ shape는 기능/시스템 단위뿐 아니라 plan 태스크 단위에서도 호
 2. `aeira search -s {프로젝트의 .loom 경로} "{입력 키워드}"` 로 관련 문서를 식별한다.
 3. 식별된 문서에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{node}"` 로 연결 문서를 탐색한다 (outgoing: 연관 concept, incoming: 참조 decision).
 4. 탐색된 concept과 decision을 읽는다.
-5. `.loom/principles/index.md`를 읽는다.
+5. `.loom/rules/index.md`를 읽는다.
 6. 입력을 다음 기준으로 분류한다:
 
 | 수준               | 신호                                                                                | 행동                                                                                         |
@@ -81,6 +81,14 @@ plan 태스크 단위로 shape가 호출된 경우(decision 0013), 태스크의 
 - 유지 판단은 사용자의 영역이다 — 에이전트는 감지하고 근거를 수집한다
 - 유지 선택 시 Step 3에서 "유지 decision"을 생산한다
 - 재설계 선택 시 이 Step 안에서 방향을 다시 수립한다
+
+### rule 정합성 검토
+
+수집과 경계 판단을 하면서 로드한 rule 각각에 대해 다음을 판단한다:
+
+- rule이 새 concept에 적용되는가?
+- 적용된다면 rule을 만족하는 형태로 설계를 진행한다
+- 설계와 rule이 충돌하면 사용자에게 보고한다 (설계 변경 또는 rule 변경 결정)
 
 ### 결정 기록
 
