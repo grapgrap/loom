@@ -33,4 +33,4 @@ decision은 "발생 시점에 즉시 기록한다"는 원칙이 있으므로 tas
 
 ## 영향
 
-- [[plan]] - plan의 concept/index 갱신이 task가 아닌 review 시점에 발생함을 인지해야 한다
+- plan - plan의 concept/index 갱신이 task가 아닌 review 시점에 발생함을 인지해야 한다

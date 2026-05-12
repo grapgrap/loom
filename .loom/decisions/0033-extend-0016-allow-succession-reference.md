@@ -43,4 +43,4 @@
 
 - [[decision]] - 갱신/계승 참조 허용을 명시
 - decision 0016 - 적용 범위가 "대체/폐기 참조 금지"로 한정됨 (이 decision이 확장 기록)
-- [[shape]] - 유지 decision 생산 시 갱신/계승 참조 가능
+- shape - 유지 decision 생산 시 갱신/계승 참조 가능

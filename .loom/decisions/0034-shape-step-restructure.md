@@ -38,6 +38,6 @@ shape의 Step 구조를 다음과 같이 재편한다:
 
 ## 영향
 
-- [[shape]] — Step 1, 2의 이름과 초점 전환
+- shape — Step 1, 2의 이름과 초점 전환
 - [[0013-resolution-check-through-shape]] — "shape의 기존 메커니즘 (triage, 도메인 탐색, 설계 방향 수립)" 문구의 Step 이름 갱신 필요
 - [[0030-addition-compromise-at-concept-level]] — 영향 섹션의 "shape - 분화 필요성 판단" 문구가 새 Step 2 맥락으로 조정되어야 함

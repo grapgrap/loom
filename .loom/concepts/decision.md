@@ -40,6 +40,6 @@
 ## 관련 컨셉
 
 - [[concept]] - concept의 변경을 촉발하거나 제약한다
-- [[plan]] - plan이 decision을 참조하여 설계 의도를 이해한다
+- plan - plan이 decision을 참조하여 설계 의도를 이해한다
 - [[rule]] - rule의 변경 근거와 누적 판단 기준이 decision으로 기록된다
 - [[convention]] - convention의 변경 근거가 decision으로 기록된다

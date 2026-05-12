@@ -45,7 +45,7 @@ shape는 decision의 신규 유형으로 "전제/제약 흔들림에도 유지" 
 
 ## 영향
 
-- [[shape]] - 신규 decision 유형으로 "전제/제약 흔들림에도 유지"를 생산
+- shape - 신규 decision 유형으로 "전제/제약 흔들림에도 유지"를 생산
 - [[decision]] - 유지 근거를 보존하는 역할 추가
-- [[review]] - 유지 decision의 근거 타당성을 세션 범위에서 검증
-- [[calibrate]] - 변화가 있었는데 유지 decision이 누락된 상황을 전체 범위에서 감지
+- review - 유지 decision의 근거 타당성을 세션 범위에서 검증
+- calibrate - 변화가 있었는데 유지 decision이 누락된 상황을 전체 범위에서 감지

@@ -2,7 +2,7 @@
 
 ## 맥락
 
-0029에서 principle을 셋(원칙·룰·컨벤션)으로 분화한 동기는 user scope의 13개 항목 분류였다. 분화 자체는 user scope에서 작동하지만, project scope에서 코드 작성 위임의 합의 잔고를 다루는 자리로 정당성을 재검증하면 비대칭이 드러난다.
+0037에서 principle을 셋(원칙·룰·컨벤션)으로 분화한 동기는 user scope의 13개 항목 분류였다. 분화 자체는 user scope에서 작동하지만, project scope에서 코드 작성 위임의 합의 잔고를 다루는 자리로 정당성을 재검증하면 비대칭이 드러난다.
 
 사용자의 다섯 원칙(OOE/RFP/FT/DCB/EDS)은 0027에서 shape/review/calibrate 스킬의 Step과 판단 지점으로 작성되어, 별도 엔티티로서 보관소에 자동 참조되는 경로 없이 작동한다. 그러나 이 처리는 사용자 개인 원칙에 한정되며, project scope에서 별도 principle 엔티티가 존재해야 한다는 가정은 검증된 적이 없다.
 
@@ -22,13 +22,13 @@ project scope의 principle 엔티티를 폐기한다. rule + decision 누적이 
 
 - rule의 변경 근거가 decision으로 충실히 기록된다: 누적된 decision이 새 rule을 판단하는 기준 역할을 할 수 있다
 - 추상적 방향성 또한 decision으로 기록된다: trade-off 우선순위가 decision의 형태로 보존되어 누적된다
-- user scope의 사용자 자산은 그대로 유지된다: 0030의 자동 참조 제거와 호환되며, user scope에 보관된 13개 항목은 자동 참조 없이 보존된다
+- user scope의 사용자 자산은 그대로 유지된다: 0038의 자동 참조 제거와 호환되며, user scope에 보관된 13개 항목은 자동 참조 없이 보존된다
 
 ## 대안
 
 ### project scope의 principle 엔티티 유지
 
-- 설명: 0029의 셋 분화를 유지하고, project scope에서도 principle 엔티티를 두어 사용자가 명시적으로 데이터를 채울 수 있게 한다
+- 설명: 0037의 셋 분화를 유지하고, project scope에서도 principle 엔티티를 두어 사용자가 명시적으로 데이터를 채울 수 있게 한다
 - 트레이드오프: 별도 엔티티의 작동 경로가 결국 decision의 누적과 중복된다. rule의 변경 근거를 decision으로 기록하기만 하면 자연스럽게 누적되는데, 그것을 별도 엔티티로 정제하는 단계는 잉여 작업이다
 
 ### principle 엔티티를 유지하되 자동 참조 영역에서 제외

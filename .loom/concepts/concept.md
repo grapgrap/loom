@@ -33,5 +33,5 @@
 ## 관련 컨셉
 
 - [[decision]] - concept의 변경 맥락을 기록한다
-- [[plan]] - concept을 참조하여 태스크를 구성한다
+- plan - concept을 참조하여 태스크를 구성한다
 - [[index]] - concept의 목록과 관계를 탐색 지도로 제공한다

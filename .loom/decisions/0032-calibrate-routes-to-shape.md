@@ -44,7 +44,7 @@ calibrate가 감지한 신호가 shape의 재진입 조건이 된다. 이로써 
 
 ## 영향
 
-- [[calibrate]] - 직접 수정 금지, shape 재진입 판단으로 전환
-- [[shape]] - calibrate의 감지 신호를 재진입 조건으로 수용
+- calibrate - 직접 수정 금지, shape 재진입 판단으로 전환
+- shape - calibrate의 감지 신호를 재진입 조건으로 수용
 - [[concept]] - 변경 경로가 shape로 단일화
 - [[decision]] - 변경 경로가 shape로 단일화

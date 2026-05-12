@@ -50,7 +50,7 @@ shape/review/calibrate 세 스킬의 재작성 논의에서, 사용자의 다섯
 
 ## 영향
 
-- [[shape]] - Step이 OOE/RFP/FT/DCB/EDS 작동을 구조적으로 유도한다
-- [[review]] - Step이 OOE/RFP/FT/DCB/EDS 작동을 구조적으로 유도한다
-- [[calibrate]] - Step이 OOE/RFP/FT/DCB 작동을 구조적으로 유도한다
+- shape - Step이 OOE/RFP/FT/DCB/EDS 작동을 구조적으로 유도한다
+- review - Step이 OOE/RFP/FT/DCB/EDS 작동을 구조적으로 유도한다
+- calibrate - Step이 OOE/RFP/FT/DCB 작동을 구조적으로 유도한다
 - [[principle]] - user scope의 체득된 믿음으로 정체성을 유지한다 (복제 금지)

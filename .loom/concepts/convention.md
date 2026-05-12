@@ -42,4 +42,4 @@ convention은 "이 형태로 통일한다"의 형태를 가진다.
 - [[rule]] - 강제성 축의 다른 극 (항상 지켜야 하는 강제적 합의)
 - [[decision]] - convention의 근거와 변경 맥락이 기록된다
 - [[concept]] - concept이 다루는 도메인 위에서 convention이 작동한다
-- [[plan]] - plan이 convention을 자동 참조하여 태스크를 구성한다
+- plan - plan이 convention을 자동 참조하여 태스크를 구성한다

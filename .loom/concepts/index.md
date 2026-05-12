@@ -34,6 +34,6 @@
 
 - [[concept]] - 목록과 한 줄 설명을 index가 제공한다
 - [[decision]] - 변경될 때 index 갱신 여부를 판단한다
-- [[plan]] - 변경될 때 index 갱신 여부를 판단한다
+- plan - 변경될 때 index 갱신 여부를 판단한다
 - [[rule]] - 변경될 때 index 갱신 여부를 판단한다
 - [[convention]] - 변경될 때 index 갱신 여부를 판단한다
