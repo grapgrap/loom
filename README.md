@@ -1,6 +1,7 @@
 # loom
 
-A Claude Code plugin that turns requirements into designs, and designs into implementation.
+A plugin that turns requirements into designs, and designs into implementation.
+Works with Claude Code and OpenAI Codex CLI — both consume the same `SKILL.md` files.
 
 [English](README.md) [한국어](README.ko.md)
 
@@ -69,18 +70,35 @@ Breaks down shape's output into implementation units and tracks progress.
 
 ### Installation
 
-Install as a Claude Code plugin.
+**Claude Code** — install as a plugin.
 
 ```bash
 claude plugin add grapgrap/loom
 ```
 
+**OpenAI Codex CLI** — clone the repo and run the installer. It creates symlinks under `~/.agents/skills/loom-*` pointing at this checkout. Re-run after `git pull` to update. Pass `--remove` to uninstall.
+
+```bash
+git clone https://github.com/grapgrap/loom ~/.loom
+bash ~/.loom/scripts/install-codex.sh
+```
+
+For project-scope install instead, copy or symlink `skills/*` into your project's `.agents/skills/`. Codex discovers `.agents/skills/` from the current directory up to the repo root.
+
 ### First Use
 
 When you have a requirement that needs design, start with shape.
 
+Claude Code:
+
 ```
 /loom:shape I want to add user authentication
+```
+
+Codex (mention the skill with `$`):
+
+```
+$shape I want to add user authentication
 ```
 
 Once shape is complete, it will guide you on whether to proceed with plan or implement directly.
@@ -88,17 +106,20 @@ Once shape is complete, it will guide you on whether to proceed with plan or imp
 Once plan is complete, execute tasks with task.
 
 ```
-/loom:task
+/loom:task        # Claude Code
+$task             # Codex
 ```
 
 After implementation, verify with review.
 
 ```
-/loom:review
+/loom:review      # Claude Code
+$review           # Codex
 ```
 
 When you sense drift between documentation and code over time, correct it with calibrate.
 
 ```
-/loom:calibrate
+/loom:calibrate   # Claude Code
+$calibrate        # Codex
 ```
