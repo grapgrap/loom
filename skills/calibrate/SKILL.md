@@ -21,10 +21,15 @@ review가 세션 단위의 검증이라면, calibrate는 축적된 괴리를 교
 1. 작업 대상 프로젝트의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
 2. `.loom/concepts/`의 모든 concept을 읽는다.
 3. 각 concept에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{concept node}" --direction incoming` 으로 참조하는 decision들을 확인한다.
-4. `.loom/rules/index.md`를 읽는다.
-5. 관련 코드를 탐색하여 현재 구현 상태를 파악한다.
+4. 관련 코드를 탐색하여 현재 구현 상태를 파악한다.
 
-## Step 1 — 누적 감사
+## Step 1 — 룰 카탈로그 로드
+
+`.loom/rules/index.md`를 읽어 어떤 룰과 컨벤션이 있는지 카탈로그를 인지한다.
+
+rule은 이 프로젝트에서 항상 지켜져야 하는 강제적 합의, convention은 강하게 권장되지만 대체 가능한 형태이다. 인덱스를 통해 항목 목록과 각 항목의 호출 상황을 파악한다. 본문은 활용 시점에 필요한 항목을 골라낸 뒤 로드한다.
+
+## Step 2 — 누적 감사
 
 전체 범위에서 concept, 코드, decision 사이의 누적 이탈을 감사한다. calibrate는 감사 결과를 리포트로 출력할 뿐, concept이나 decision을 직접 변경하지 않는다. 리포트를 바탕으로 shape 재진입 여부는 사용자가 판단한다.
 
@@ -63,7 +68,16 @@ review가 세션 단위의 검증이라면, calibrate는 축적된 괴리를 교
 
 리포트를 제시한 뒤 shape 재진입 여부는 사용자에게 맡긴다. 사용자가 재진입을 선택하면 감지된 이탈 중 어느 범위를 shape의 입력으로 삼을지 함께 결정한다. calibrate는 concept이나 decision을 직접 수정하지 않는다.
 
-## Step 2 — rule·convention 검증
+## Step 3 — rule·convention 검증
+
+### 룰 카탈로그 활용
+
+인지한 룰 카탈로그를 도구 선택 절차로 활용한다:
+
+1. 지금 수행하려는 행동을 의식적으로 명시한다
+2. 카탈로그에서 그 행동에 적용될 가능성 있는 항목을 골라낸다
+3. 골라낸 항목의 본문 파일을 로드해 정의된 형태를 파악한다
+4. 본문에 따라 누적 감사를 진행한다
 
 ### 기존 rule·convention 검증
 
