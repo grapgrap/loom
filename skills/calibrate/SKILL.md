@@ -19,7 +19,7 @@ review가 세션 단위의 검증이라면, calibrate는 축적된 괴리를 교
 ## Step 0 — 컨텍스트 로드
 
 1. 작업 대상 프로젝트의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
-2. `.loom/concepts/`의 모든 concept을 읽는다.
+2. `.loom/concepts/`의 모든 concept과 `.loom/flows/`의 모든 flow를 읽는다.
 3. 각 concept에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{concept node}" --direction incoming` 으로 참조하는 decision들을 확인한다.
 4. 관련 코드를 탐색하여 현재 구현 상태를 파악한다.
 
@@ -31,7 +31,7 @@ rule은 이 프로젝트에서 항상 지켜져야 하는 강제적 합의, conv
 
 ## Step 2 — 누적 감사
 
-전체 범위에서 concept, 코드, decision 사이의 누적 이탈을 감사한다. calibrate는 감사 결과를 리포트로 출력할 뿐, concept이나 decision을 직접 변경하지 않는다. 리포트를 바탕으로 shape 재진입 여부는 사용자가 판단한다.
+전체 범위에서 concept, flow, 코드, decision 사이의 누적 이탈을 감사한다. calibrate는 감사 결과를 리포트로 출력할 뿐, concept이나 decision을 직접 변경하지 않는다. 리포트를 바탕으로 shape 재진입 여부는 사용자가 판단한다.
 
 ### 감사 차원
 
@@ -47,6 +47,7 @@ rule은 이 프로젝트에서 항상 지켜져야 하는 강제적 합의, conv
 
 - concept 간 책임이 겹치거나, 경계가 모호하거나, 한 concept의 변경 이유가 여럿으로 번졌는가
 - 코드와 concept이 기술하는 책임 사이에 불일치가 있는가
+- 코드의 흐름이 flow에 기술된 도메인 간 단계와 어긋났는가
 
 #### 축적된 분화의 옵션 가치 재평가
 

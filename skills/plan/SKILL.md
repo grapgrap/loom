@@ -16,8 +16,8 @@ description: >-
 
 1. 작업 대상 프로젝트의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
 2. `aeira search -s {프로젝트의 .loom 경로} "{입력 키워드}"` 로 관련 문서를 식별한다.
-3. 식별된 문서에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{node}"` 로 연결 문서를 탐색한다 (outgoing: 연관 concept, incoming: 참조 decision).
-4. 탐색된 concept과 decision을 읽는다.
+3. 식별된 문서에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{node}"` 로 연결 문서를 탐색한다 (outgoing: 연관 concept과 flow, incoming: 참조 decision).
+4. 탐색된 concept, flow, decision을 읽는다.
 
 shape에서 넘어온 경우, shape summary를 입력으로 사용한다.
 triage에서 바로 넘어온 경우, 원본 요구사항을 입력으로 사용한다.
@@ -31,6 +31,8 @@ rule은 이 프로젝트에서 항상 지켜져야 하는 강제적 합의, conv
 ## Step 2 — 분해
 
 입력을 실행 가능한 태스크로 분해한다.
+
+concept과 flow가 분해의 바탕이다 — flow의 단계는 어떤 도메인을 어떤 순서로 구현할지의 단서가 되고, concept은 각 태스크의 범위를 한정한다.
 
 분해의 원칙:
 - 각 태스크는 독립적으로 실행 가능한 단위여야 한다

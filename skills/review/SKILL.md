@@ -11,15 +11,15 @@ description: >-
 구현이 설계를 충족하는지 검증하고, 경험을 축적한다.
 
 review는 두 가지를 수행한다:
-1. **검증** — 구현이 concept, plan, decision, rule·convention에 부합하는가
+1. **검증** — 구현이 concept, flow, plan, decision, rule·convention에 부합하는가
 2. **reflect** — 기존 rule·convention을 경험과 대조하고, 세션의 학습을 축적한다
 
 ## Step 0 — 컨텍스트 로드
 
 1. 작업 대상 프로젝트의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
 2. `aeira search -s {프로젝트의 .loom 경로} "{입력 키워드}"` 로 관련 문서를 식별한다.
-3. 식별된 문서에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{node}"` 로 연결 문서를 탐색한다 (outgoing: 연관 concept, incoming: 참조 decision).
-4. 탐색된 concept을 읽는다.
+3. 식별된 문서에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{node}"` 로 연결 문서를 탐색한다 (outgoing: 연관 concept과 flow, incoming: 참조 decision).
+4. 탐색된 concept과 flow를 읽는다.
 5. `.loom/plans/`에서 관련 plan을 읽어 태스크와 설계 의도를 파악한다.
 6. `.loom/decisions/`에서 이번 세션에서 생성된 decision들을 읽는다. 이전 decision의 유효성은 concept이 보장하며, 괴리 발견은 calibrate의 책임이다.
 
@@ -36,6 +36,7 @@ rule은 이 프로젝트에서 항상 지켜져야 하는 강제적 합의, conv
 ### 설계 산출물 정합성
 
 - **concept 정합성**: 구현이 concept에 정의된 책임과 관계를 존중하는가
+- **flow 정합성**: 구현이 flow에 기술된 도메인 간 흐름을 따르는가
 - **concept 형식 준수**: concept에 시점 종속 항목이 포함되어 있지 않은가
 - **plan 충족**: plan의 태스크가 의도대로 구현되었는가
 - **decision 준수**: 이번 세션에서 생성된 decision의 방향과 제약을 따르는가

@@ -15,8 +15,8 @@ plan의 태스크를 사용자와의 실행 합의를 거쳐 구현한다.
 
 1. 작업 대상 프로젝트의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
 2. `aeira search -s {프로젝트의 .loom 경로} "{입력 키워드}"` 로 관련 문서를 식별한다.
-3. 식별된 문서에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{node}"` 로 연결 문서를 탐색한다 (outgoing: 연관 concept, incoming: 참조 decision).
-4. 탐색된 concept과 decision을 읽는다.
+3. 식별된 문서에서 `aeira graph neighbors -s {프로젝트의 .loom 경로} "{node}"` 로 연결 문서를 탐색한다 (outgoing: 연관 concept과 flow, incoming: 참조 decision).
+4. 탐색된 concept, flow, decision을 읽는다.
 5. 대상 plan 파일을 읽어 태스크 목록과 의존관계를 파악한다.
 
 사용자가 특정 태스크를 지정한 경우 해당 태스크에 집중한다.
@@ -35,7 +35,7 @@ rule은 이 프로젝트에서 항상 지켜져야 하는 강제적 합의, conv
 ### 초안의 형태
 
 - 구체적 코드가 아닌 수도코드 수준으로 제시한다.
-- concept의 역할과 인터랙션이 실제 데이터 흐름으로 어떻게 표현되는지를 보인다.
+- concept의 책임과 flow의 단계가 실제 데이터 흐름으로 어떻게 표현되는지를 보인다.
 - 이 태스크가 전체 그림에서 어디에 해당하며, 어떤 목적을 달성하는지를 설명한다.
 
 ### 논의
