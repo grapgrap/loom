@@ -20,7 +20,7 @@ loom operates through five skills.
 
 **shape** -> **plan** -> **task** -> implement
 
-- **shape**: Refines ambiguous requirements to the design level. Covers approach strategies, constraints, and trade-offs. Produces concepts, decisions, and retention decisions when preconditions or constraints shift but the existing design is kept.
+- **shape**: Refines ambiguous requirements to the design level. Covers approach strategies, constraints, and trade-offs. Produces concepts and flows, along with decisions -- including retention decisions when preconditions or constraints shift but the existing design is kept.
 - **plan**: Breaks down shape's output into executable tasks with dependencies.
 - **task**: Implements plan tasks through execution agreement with the user. Presents a direction draft, discusses it, then writes code.
 
@@ -31,17 +31,23 @@ loom operates through five skills.
 
 ## Components
 
-loom manages five entities in the `.loom/` directory.
+loom manages six entities in the `.loom/` directory.
 
 ### Concept
 
-Persistent documents that define the project's domain entities.
+Persistent documents that define the project's domain entities statically.
 They describe "what this system deals with," focusing on the domain rather than implementation.
 They serve as the project's ubiquitous language.
 
+### Flow
+
+Persistent documents that describe how domains compose over time.
+Where a concept defines a domain statically, a flow traces the order in which those domains interlock to accomplish one complete piece of work.
+The composition counterpart to concept's decomposition -- a flow doubles as a lens that reveals the boundaries between domains.
+
 ### Decision
 
-Records the context behind decisions that shaped a concept's form.
+Records the context behind decisions that shaped a concept's or flow's form.
 Preserves why something was decided, providing grounds for future re-evaluation.
 Each decision is independent and self-contained.
 Retention decisions capture why existing concepts or decisions are kept when their preconditions or constraints have shifted.
