@@ -41,9 +41,9 @@ They serve as the project's ubiquitous language.
 
 ### Flow
 
-Persistent documents that describe how domains compose over time.
-Where a concept defines a domain statically, a flow traces the order in which those domains interlock to accomplish one complete piece of work.
-The composition counterpart to concept's decomposition -- a flow doubles as a lens that reveals the boundaries between domains.
+Persistent documents that describe the path of a collaboration that belongs to no single domain and is scattered across several.
+Where a concept defines a domain as a node, a flow traces the ownerless collaboration crossing those nodes.
+If a single subject owns the coordination, that subject is itself a concept (an orchestrator) -- so flow rests as a conditional axis atop concept's primary decomposition. Drawing a flow doubles as a lens that reveals the boundaries between domains.
 
 ### Decision
 
