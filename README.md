@@ -41,9 +41,9 @@ They serve as the project's ubiquitous language.
 
 ### Flow
 
-Persistent documents that describe the path of a collaboration that belongs to no single domain and is scattered across several.
-Where a concept defines a domain as a node, a flow traces the ownerless collaboration crossing those nodes.
-If a single subject owns the coordination, that subject is itself a concept (an orchestrator) -- so flow rests as a conditional axis atop concept's primary decomposition. Drawing a flow doubles as a lens that reveals the boundaries between domains.
+Persistent documents that describe the path of a collaboration in which events cross domain boundaries.
+Where a concept defines a domain as a node, a flow traces the path crossing those nodes -- both live on the same strategic layer.
+A flow appears as a conditional axis only when such an event path actually exists. Being nameable does not make coordination a concept; coordination earns a concept of its own only when it holds state or rules of its own. Drawing a flow doubles as a lens that reveals the boundaries between domains.
 
 ### Decision
 
