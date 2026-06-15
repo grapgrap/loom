@@ -43,7 +43,7 @@ rule은 이 프로젝트에서 항상 지켜져야 하는 강제적 합의, conv
 사용자와의 논의를 통해 방향성을 구체화한다.
 
 논의 중 결정이 발생하면 즉시 `.loom/decisions/`에 기록한다.
-기록 기준은 decision concept을 따른다. 템플릿: `templates/decision.md`.
+기록 기준은 decision concept을 따른다. 템플릿: `../../templates/decision.md`.
 파일 이름: `{NNNN}-{결정-제목}.md` (순번으로 시간순 보존).
 
 concept과 index의 갱신은 task의 책임이 아니다 — review에서 구현 결과를 바탕으로 처리한다.
