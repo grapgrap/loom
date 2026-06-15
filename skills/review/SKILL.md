@@ -1,18 +1,15 @@
 ---
 name: review
 description: >-
-  구현이 설계를 충족하는지 검증하고, 기존 rule·convention을 경험과 대조하며, 세션의 학습을
-  축적한다. 구현이 완료된 후 사용한다. "review", "리뷰해줘", "구현 확인" 같은 맥락에서
-  트리거된다. review 완료 시 자동으로 reflect를 수행한다.
+  구현이 설계를 충족하는지 검증하고, rule·convention 위반을 분류한다. 구현이 완료된 후
+  사용한다. "review", "리뷰해줘", "구현 확인" 같은 맥락에서 트리거된다.
 ---
 
 # Review
 
-구현이 설계를 충족하는지 검증하고, 경험을 축적한다.
+구현이 설계를 충족하는지 검증한다.
 
-review는 두 가지를 수행한다:
-1. **검증** — 구현이 concept, flow, plan, decision, rule·convention에 부합하는가
-2. **reflect** — 기존 rule·convention을 경험과 대조하고, 세션의 학습을 축적한다
+review는 이번 세션의 구현과 산출물이 concept, flow, plan, decision, rule·convention에 부합하는지 감사하고, 발견을 심각도와 함께 보고한다. concept이나 decision을 직접 수정하지 않는다 — 수정 방향은 사용자가 판단한다.
 
 ## Step 0 — 컨텍스트 로드
 
@@ -60,7 +57,7 @@ rule은 이 프로젝트에서 항상 지켜져야 하는 강제적 합의, conv
 
 ## Step 3 — rule·convention 검증
 
-구현이 rule과 convention에 부합하는지 검증한다.
+구현과 이번 세션 concept이 rule·convention에 부합하는지 검증한다.
 
 ### 룰 카탈로그 활용
 
@@ -69,7 +66,12 @@ rule은 이 프로젝트에서 항상 지켜져야 하는 강제적 합의, conv
 1. 지금 수행하려는 행동을 의식적으로 명시한다
 2. 카탈로그에서 그 행동에 적용될 가능성 있는 항목을 골라낸다
 3. 골라낸 항목의 본문 파일을 로드해 정의된 형태를 파악한다
-4. 본문에 따라 구현이 부합하는지 검증한다
+4. 본문에 따라 부합하는지 검증한다
+
+### 검증 대상
+
+- **구현**: 이번 세션 구현이 적용되는 rule·convention의 정의와 어긋나지 않는가
+- **concept**: 이번 세션에서 생성·수정된 concept의 설계 방향과 트레이드오프가 rule·convention의 적용 범위·정의와 충돌하지 않는가
 
 ### 위반 분류
 
@@ -83,41 +85,9 @@ Step 2, 3에서 발견한 문제를 심각도와 함께 정리한다:
 - **수정 필요**: 구현 수준에서 해결 가능한 문제
 - **관찰**: 문제는 아니지만 주목할 만한 패턴
 
-## Step 4 — Reflect
+## 그래프 갱신
 
-이번 사이클의 경험을 기존 원칙과 대조하고, 세션의 학습을 축적한다.
-
-### Concept-rule 정합성
-
-이번 세션에서 생성되거나 수정된 concept이 있다면, rule·convention과 정합한지 검증한다:
-
-- concept의 설계 방향이 관련 rule·convention의 적용 범위와 부합하는가
-- concept의 트레이드오프가 rule·convention의 정의와 충돌하지 않는가
-
-### rule·convention 유효성
-
-기존 rule·convention을 이번 세션의 경험과 대조한다:
-
-- 이번 경험이 기존 rule·convention과 부합하는가
-- 기존 정의가 부정확하거나 적용 범위가 맞지 않는가
-- 기존 rule·convention의 전제가 여전히 유효한가
-
-불일치가 발견되면 해당 파일을 수정하고, `.loom/rules/index.md`도 함께 업데이트한다.
-
-### 세션 학습 축적
-
-이번 세션에서 얻은 교훈을 적절한 곳에 기록한다.
-
-- concept 보완 → `.loom/concepts/` 해당 파일 수정 (템플릿: `templates/concept.md`)
-- decision 후기 → `.loom/decisions/` 해당 파일에 추기 (템플릿: `templates/decision.md`)
-
-concept을 보완한 경우, `.loom/index.md`의 갱신이 필요한지 판단한다.
-
-새 rule·convention을 발견한 경우, 사용자에게 제안하고 승인 후 `.loom/rules/`에 작성한다. rule인지 convention인지 분류는 사용자와 함께 결정한다.
-
-### 그래프 갱신
-
-`.loom/` 내 문서를 생성하거나 수정한 후 `aeira sync -s {프로젝트의 .loom 경로}` 를 실행한다.
+`.loom/` 내 문서를 생성하거나 수정한 경우 `aeira sync -s {프로젝트의 .loom 경로}` 를 실행한다.
 
 ## Summary
 
@@ -126,9 +96,5 @@ review 완료 시 다음 형식으로 정리한다:
 ```
 ## Review Summary
 - 검증 결과: [회귀 N건 / 수정 N건 / 관찰 N건]
-- Reflect:
-  - Rules: [수정·신규 추가된 rule·convention]
-  - Concepts: [보완된 concept]
-  - Decisions: [후기가 추가된 decision]
 - 다음 단계: [회귀가 필요하면 어느 단계로, 아니면 완료]
 ```
