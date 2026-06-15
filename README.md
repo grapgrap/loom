@@ -26,8 +26,8 @@ loom operates through five skills.
 
 ### Feedback Loops
 
-- **review**: Session-scoped verification. Checks whether the implementation meets the design, and accumulates learnings.
-- **calibrate**: Detects accumulated drift. When preconditions or constraints have shifted or concepts and code have diverged, it reports findings and hands redesign back to shape.
+- **review**: Session-scoped verification. Audits whether the implementation meets the design and classifies rule·convention violations by severity.
+- **calibrate**: Detects accumulated drift. When preconditions or constraints have shifted or concepts and code have diverged, it reports findings without correcting them directly, leaving the decision to re-enter shape to the user.
 
 ## Components
 
