@@ -26,7 +26,7 @@ loom operates through five skills.
 
 ### Feedback Loops
 
-- **review**: Session-scoped verification. Audits whether the implementation meets the design and classifies rule·convention violations by severity.
+- **review**: Delegates this session's output to a separate reviewer that critiques it without the bias of the conversation that produced it, then curates the findings by severity. Runs after any step -- shape, plan, or task -- not only after implementation.
 - **calibrate**: Detects accumulated drift. When preconditions or constraints have shifted or concepts and code have diverged, it reports findings without correcting them directly, leaving the decision to re-enter shape to the user.
 
 ## Components
@@ -97,7 +97,7 @@ Once plan is complete, execute tasks with task.
 /loom:task
 ```
 
-After implementation, verify with review.
+After implementation, review the output with review.
 
 ```
 /loom:review
