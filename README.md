@@ -27,7 +27,7 @@ loom operates through five skills.
 ### Feedback Loops
 
 - **review**: Delegates this session's output to a separate reviewer that critiques it without the bias of the conversation that produced it, then curates the findings by severity. Runs after any step -- shape, plan, or task -- not only after implementation.
-- **calibrate**: Detects accumulated drift. When preconditions or constraints have shifted or concepts and code have diverged, it reports findings without correcting them directly, leaving the decision to re-enter shape to the user.
+- **calibrate**: Audits whether the purposes of accumulated concepts and flows still align with the project's goals. It reports findings without correcting them directly, leaving the decision to re-enter shape to the user.
 
 ## Components
 
@@ -103,7 +103,7 @@ After implementation, review the output with review.
 /loom:review
 ```
 
-When you sense drift between documentation and code over time, correct it with calibrate.
+When you sense that accumulated designs may have drifted from the project's goals, audit with calibrate.
 
 ```
 /loom:calibrate
