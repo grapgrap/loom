@@ -21,7 +21,7 @@ loom operates through five skills.
 **shape** -> **plan** -> **task** -> implement
 
 - **shape**: Refines ambiguous requirements to the design level. Covers approach strategies, constraints, and trade-offs. Produces concepts and flows, along with decisions -- including retention decisions when preconditions or constraints shift but the existing design is kept.
-- **plan**: Breaks down shape's output into executable tasks with dependencies.
+- **plan**: Breaks down shape's output into executable tasks with dependencies, then verifies each task with the user before finalizing.
 - **task**: Implements plan tasks through execution agreement with the user. Presents a direction draft, discusses it, then writes code.
 
 ### Feedback Loops
@@ -65,7 +65,7 @@ Covers agreed-upon unification of expression, structure, and tools -- the lighte
 ### Plan
 
 Documents that structure designs into executable tasks and dependencies.
-Breaks down shape's output into implementation units and tracks progress.
+Breaks down shape's output into implementation units, verifies each task with the user before finalizing, and tracks progress.
 
 ## Getting Started
 
