@@ -1,3 +1,4 @@
 .idea/
-.loom/plans
-.loom/rules
+!.loom/
+.loom/plans/
+.loom/rules/
