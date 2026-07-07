@@ -35,21 +35,21 @@ loom manages six entities in the `.loom/` directory.
 
 ### Concept
 
-Persistent documents that define the project's domain entities statically.
+Persistent documents that define the project's domains at the invariant level.
 They describe "what this system deals with," focusing on the domain rather than implementation.
 They serve as the project's ubiquitous language.
 
 ### Flow
 
-Persistent documents that describe the path of a collaboration in which events cross domain boundaries.
-Where a concept defines a domain as a node, a flow traces the path crossing those nodes -- both live on the same strategic layer.
-A flow appears as a conditional axis only when such an event path actually exists. Being nameable does not make coordination a concept; coordination earns a concept of its own only when it holds state or rules of its own. Drawing a flow doubles as a lens that reveals the boundaries between domains.
+Persistent documents that describe the orchestration that calls and composes multiple domains.
+Where a concept defines a domain (decomposition), a flow calls and composes those domains (composition). Both live at the same invariant level.
+One question tells them apart -- if it calls and composes multiple domains it is a flow; if it is behavior within a single domain, or a computation that closes many inputs into one result, it is a concept. Composition takes many forms: sequence, parallelism, branching, feedback. Nameability is not the criterion, and orchestration is never absorbed into a concept -- it stays in the flow. A flow stays at the invariant level; control detail goes to code.
 
 ### Decision
 
 Records the context behind decisions that shaped a concept's or flow's form.
 Preserves why something was decided, providing grounds for future re-evaluation.
-Each decision is independent and self-contained.
+Each decision is self-contained and append-only: old ones are never rewritten, and even when it references another it can be understood without the referenced one.
 Retention decisions capture why existing concepts or decisions are kept when their preconditions or constraints have shifted.
 
 ### Rule
