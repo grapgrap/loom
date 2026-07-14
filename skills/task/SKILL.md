@@ -16,9 +16,11 @@ plan의 태스크를 사용자와의 실행 합의를 거쳐 구현한다.
 ## Step 0 — 컨텍스트 로드
 
 1. 작업 대상 프로젝트의 `.loom/index.md`를 읽어 도메인 전체 지도를 파악한다.
-2. `loom:curator`에 입력 맥락을 전달해 관련 concept과 flow의 경로를 받는다. 탐색은 Agent 도구로 큐레이터에 위임하고, 메인은 받은 경로를 읽어 도메인 구성을 파악한다.
-3. decision은 이 단계에서 일괄로 읽지 않는다. 진행 중 발견을 처리하며 이전 결정을 확인하거나 제안을 평가할 필요가 생기면, 그 맥락으로 `loom:curator`에 decision을 요청한다. 받은 decision 가운데 같은 사안이 충돌하면 순번이 큰 것을 따른다 — decision concept의 최신 우선 규칙이다.
-4. 대상 plan 파일을 읽어 태스크 목록과 의존관계를 파악한다.
+2. 대상 plan 파일을 읽어 태스크 목록과 의존관계를 파악한다.
+3. 대상 태스크와 plan의 목적에서 좁은 검색어를 만들고 `aeira search -s {프로젝트의 .loom 경로} "{검색어}"`로 관련 concept과 flow 후보를 찾는다. 결과가 비면 표현을 바꿔 재시도한다.
+4. 후보 노드에 `aeira graph neighbors -s {프로젝트의 .loom 경로} --direction=outgoing "{노드}"`를 실행해 연결된 concept과 flow를 확장한다. 노드는 `.loom` 기준 경로 형식이다.
+5. 후보 문서를 읽고 대상 태스크에 맞는 concept과 flow만 선별해 구현의 도메인 구성을 파악한다.
+6. decision은 이 단계에서 일괄로 읽지 않는다. 진행 중 발견을 처리하며 이전 결정을 확인하거나 제안을 평가할 필요가 생긴 시점에만 해당 맥락으로 `aeira search -s {프로젝트의 .loom 경로} "{검색어}"`를 실행한다. 관련 concept이나 flow가 있으면 `aeira graph neighbors -s {프로젝트의 .loom 경로} --direction=incoming "{노드}"`로 이를 참조하는 decision 후보를 보강한다. 맥락에 맞는 decision만 읽고, 같은 사안이 충돌하면 순번이 큰 것을 따른다 — decision concept의 최신 우선 규칙이다.
 
 사용자가 특정 태스크를 지정한 경우 해당 태스크에 집중한다.
 지정하지 않은 경우, plan의 의존관계와 진행 상태를 기반으로 다음 태스크를 제안한다.
