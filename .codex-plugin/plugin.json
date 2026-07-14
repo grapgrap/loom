@@ -1,0 +1,35 @@
+{
+  "name": "loom",
+  "version": "0.17.1",
+  "description": "요구사항을 설계로, 설계를 실행으로 구체화하는 시스템. shape, plan, task, review, calibrate 다섯 단계의 루프를 통해 제품을 만들고 경험을 축적한다.",
+  "author": {
+    "name": "grapgrap",
+    "url": "https://github.com/grapgrap"
+  },
+  "homepage": "https://github.com/grapgrap/loom",
+  "repository": "https://github.com/grapgrap/loom",
+  "keywords": [
+    "product-development",
+    "planning",
+    "review",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Loom",
+    "shortDescription": "요구사항을 설계와 실행으로 구체화합니다.",
+    "longDescription": "shape, plan, task, review, calibrate의 다섯 단계 루프로 제품을 만들고 경험을 축적합니다.",
+    "developerName": "grapgrap",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/grapgrap/loom",
+    "defaultPrompt": [
+      "요구사항을 함께 shape 해봅시다.",
+      "합의된 설계를 실행 계획으로 만들어주세요.",
+      "현재 변경사항을 독립적으로 review 해주세요."
+    ]
+  }
+}
