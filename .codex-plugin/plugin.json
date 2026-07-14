@@ -1,6 +1,6 @@
 {
   "name": "loom",
-  "version": "0.17.1",
+  "version": "0.18.0",
   "description": "요구사항을 설계로, 설계를 실행으로 구체화하는 시스템. shape, plan, task, review, calibrate 다섯 단계의 루프를 통해 제품을 만들고 경험을 축적한다.",
   "author": {
     "name": "grapgrap",
