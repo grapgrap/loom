@@ -1,6 +1,6 @@
 # loom
 
-A Claude Code plugin that turns requirements into designs, and designs into implementation.
+A Claude Code and Codex plugin that turns requirements into designs, and designs into implementation.
 
 [English](README.md) [한국어](README.ko.md)
 
@@ -26,7 +26,7 @@ loom operates through five skills.
 
 ### Feedback Loops
 
-- **review**: Delegates this session's output to a separate reviewer that critiques it without the bias of the conversation that produced it, then curates the findings by severity. Runs after any step -- shape, plan, or task -- not only after implementation.
+- **review**: Adversarially reviews outputs in the same session. Session context identifies the scope, while raw files, diffs, and recorded agreements justify the findings. Runs after any step -- shape, plan, or task -- not only after implementation.
 - **calibrate**: Audits whether the purposes of accumulated concepts and flows still align with the project's goals. It reports findings without correcting them directly, leaving the decision to re-enter shape to the user.
 
 ## Components
@@ -75,36 +75,52 @@ Breaks down shape's output into implementation units, verifies each task with th
 
 ### Installation
 
-Install as a Claude Code plugin.
+#### Claude Code
 
 ```bash
-claude plugin add grapgrap/loom
+claude plugin marketplace add grapgrap/loom
+claude plugin install loom@loom-marketplace
 ```
+
+#### Codex
+
+```bash
+codex plugin marketplace add grapgrap/loom
+codex plugin add loom@loom-marketplace
+```
+
+Start a new Claude Code or Codex session after installation so the bundled skills are available.
 
 ### First Use
 
-When you have a requirement that needs design, start with shape.
+When you have a requirement that needs design, start with shape. Claude Code uses `/loom:skill`; Codex CLI and IDE use `$loom:skill` for explicit invocation. In the ChatGPT desktop app, choose Loom or one of its bundled skills with `@`.
 
-```
+```text
 /loom:shape I want to add user authentication
+$loom:shape I want to add user authentication
 ```
 
 Once shape is complete, it will guide you on whether to proceed with plan or implement directly.
 
 Once plan is complete, execute tasks with task.
 
-```
+```text
 /loom:task
+$loom:task
 ```
 
-After implementation, review the output with review.
+After shape, plan, or task, run review in the same session so it can identify the actual work from the session history. The findings must still be justified from raw artifacts rather than conversational intent.
 
-```
+```text
 /loom:review
+$loom:review
 ```
+
+For a stronger independent audit, start another session and provide an explicit commit, range, patch, or artifact scope. Do not rely on worktree status alone to reconstruct an earlier session.
 
 When you sense that accumulated designs may have drifted from the project's goals, audit with calibrate.
 
-```
+```text
 /loom:calibrate
+$loom:calibrate
 ```

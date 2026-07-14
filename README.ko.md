@@ -1,6 +1,6 @@
 # loom
 
-요구사항을 설계로, 설계를 실행으로 구체화하는 Claude Code 플러그인.
+요구사항을 설계로, 설계를 실행으로 구체화하는 Claude Code·Codex 플러그인.
 
 [English](README.md) [한국어](README.ko.md)
 
@@ -26,7 +26,7 @@ loom은 다섯 가지 스킬로 동작합니다.
 
 ### 피드백 루프
 
-- **review**: 이번 세션의 산출물을 검토자에게 위임해, 산출물을 빚은 대화의 편향 없이 비판하게 하고, 그 비판을 심각도와 함께 종합합니다. 구현뿐 아니라 shape·plan·task 어느 단계 뒤에도 사용합니다.
+- **review**: 같은 세션의 산출물을 적대적으로 검토합니다. 세션 맥락은 범위를 식별하는 데만 사용하고, raw 파일·diff·기록된 합의로 비판을 입증합니다. 구현뿐 아니라 shape·plan·task 어느 단계 뒤에도 사용합니다.
 - **calibrate**: 축적된 concept과 flow의 목적이 프로젝트 목표에 여전히 부합하는지 감사합니다. 발견을 리포트로 정리할 뿐 직접 교정하지 않으며, shape 재진입 여부는 사용자에게 맡깁니다.
 
 ## 컴포넌트
@@ -75,36 +75,52 @@ shape의 산출물을 구현 단위로 분해하고, 확정 전 각 태스크를
 
 ### 설치
 
-Claude Code의 플러그인으로 설치합니다.
+#### Claude Code
 
 ```bash
-claude plugin add grapgrap/loom
+claude plugin marketplace add grapgrap/loom
+claude plugin install loom@loom-marketplace
 ```
+
+#### Codex
+
+```bash
+codex plugin marketplace add grapgrap/loom
+codex plugin add loom@loom-marketplace
+```
+
+설치한 스킬을 사용할 수 있도록 새 Claude Code 또는 Codex 세션을 시작합니다.
 
 ### 첫 사용
 
-프로젝트에서 설계가 필요한 요구사항이 있을 때, shape부터 시작합니다.
+프로젝트에서 설계가 필요한 요구사항이 있을 때 shape부터 시작합니다. Claude Code에서는 `/loom:skill`, Codex CLI와 IDE에서는 `$loom:skill`로 명시적으로 호출합니다. ChatGPT 데스크톱 앱에서는 `@`로 Loom이나 포함된 스킬을 선택합니다.
 
-```
+```text
 /loom:shape 사용자 인증 기능을 추가하고 싶습니다
+$loom:shape 사용자 인증 기능을 추가하고 싶습니다
 ```
 
 shape이 완료되면 plan으로 이어갈지, 바로 구현할지 안내합니다.
 
 plan이 완료되면 task로 태스크를 실행합니다.
 
-```
+```text
 /loom:task
+$loom:task
 ```
 
-구현이 완료된 후에는 review로 산출물을 검토합니다.
+shape·plan·task 뒤에는 같은 세션에서 review를 실행합니다. 그래야 세션 이력으로 실제 작업 범위를 식별할 수 있으며, 비판 자체는 대화의 의도가 아니라 raw 산출물로 입증합니다.
 
-```
+```text
 /loom:review
+$loom:review
 ```
+
+더 강한 독립 감사에는 다른 세션을 열고 commit·range·patch 또는 산출물 범위를 명시합니다. 이전 세션의 범위를 작업 트리 상태만으로 추정하지 않습니다.
 
 축적된 설계가 프로젝트 목표에서 멀어졌다고 느껴지면 calibrate로 감사합니다.
 
-```
+```text
 /loom:calibrate
+$loom:calibrate
 ```
