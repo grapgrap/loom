@@ -29,6 +29,18 @@ loom operates through five skills.
 - **review**: Adversarially reviews outputs in the same session. Session context identifies the scope, while raw files, diffs, and recorded agreements justify the findings. Runs after any step -- shape, plan, or task -- not only after implementation.
 - **calibrate**: Audits whether the purposes of accumulated concepts and flows still align with the project's goals. It reports findings without correcting them directly, leaving the decision to re-enter shape to the user.
 
+## Document Quality
+
+loom bundles a document authoring guide for the documents it creates.
+The guide defines each document type's responsibility, routes content to the type that owns it, treats wiki links as structural relationships, and provides language-neutral technical writing criteria.
+
+shape, plan, and task load the guide before changing Loom documents and validate their changed documents against it when writing is complete.
+review applies the same guide when its confirmed scope contains Loom documents, without expanding that scope into a full `.loom/` audit.
+calibrate remains focused on purpose alignment and does not apply the guide.
+
+Templates provide document structure and minimal section prompts.
+They do not duplicate the cross-document judgments owned by the guide.
+
 ## Components
 
 loom manages six entities in the `.loom/` directory.
