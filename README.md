@@ -14,7 +14,13 @@ loom maintains feedback loops that keep these artifacts alive alongside the code
 
 ## Workflow
 
-loom operates through five skills.
+loom operates through propose, which raises a problem, and a five-step loop for design, execution, and feedback.
+
+### Proposal
+
+**propose** -> **shape** when adopted
+
+- **propose**: Writes a self-contained proposal that raises a problem and its solution direction in the project's shared vocabulary. It creates no other loom documents and shares the proposal with the team for confirmation. Once adopted, it grounds the design that follows.
 
 ### Work Flow
 
@@ -43,7 +49,7 @@ They do not duplicate the cross-document judgments owned by the guide.
 
 ## Components
 
-loom manages six entities in the `.loom/` directory.
+loom manages seven entities in the `.loom/` directory.
 
 ### Concept
 
@@ -63,6 +69,11 @@ Records the context behind decisions that shaped a concept's or flow's form.
 Preserves why something was decided, providing grounds for future re-evaluation.
 Each decision is self-contained and append-only: old ones are never rewritten, and even when it references another it can be understood without the referenced one.
 Retention decisions capture why existing concepts or decisions are kept when their preconditions or constraints have shifted.
+
+### Proposal
+
+A self-contained document that raises a problem and its solution direction in the project's shared vocabulary, before anything is committed to a persistent document.
+It is shared with the team for confirmation and references no loom documents, so it stands on its own. Once adopted, it grounds the design that follows; either way, it stays on file.
 
 ### Rule
 
@@ -104,6 +115,13 @@ codex plugin add loom@loom-marketplace
 Start a new Claude Code or Codex session after installation so the bundled skills are available.
 
 ### First Use
+
+To align on a problem and direction with the team first, raise it with propose. Once a proposal is confirmed and adopted, it grounds the shape that follows.
+
+```text
+/loom:propose I want to revisit our payment retry policy
+$loom:propose I want to revisit our payment retry policy
+```
 
 When you have a requirement that needs design, start with shape. Claude Code uses `/loom:skill`; Codex CLI and IDE use `$loom:skill` for explicit invocation. In the ChatGPT desktop app, choose Loom or one of its bundled skills with `@`.
 
