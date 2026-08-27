@@ -27,12 +27,12 @@ loom operates through propose, which raises a problem, and a five-step loop for 
 **shape** -> **plan** -> **task** -> implement
 
 - **shape**: Refines ambiguous requirements to the design level. Covers approach strategies, constraints, and trade-offs. Produces concepts and flows, along with decisions -- including retention decisions when preconditions or constraints shift but the existing design is kept.
-- **plan**: Breaks down shape's output into executable tasks with dependencies, then verifies each task with the user before finalizing.
-- **task**: Implements plan tasks through execution agreement with the user. Presents a direction draft, discusses it, then writes code. When a plan assumption conflicts with reality during the work, task updates the plan rather than forcing it through.
+- **plan**: Turns shape's output into tasks with verifiable completion outcomes. It creates an outcome dependency only when one task's outcome is a prerequisite for another, then validates each task's change, completion outcome, verification, and the full outcome chain with the user before finalizing.
+- **task**: Treats the plan's outcome contract as the implementation target. It agrees on the implementation and verification methods with the user, changes code or documents, and marks the task complete only after the outcome is verified. If a discovery changes the remaining execution path, the affected task or outcome dependency is updated immediately.
 
 ### Feedback Loops
 
-- **review**: Adversarially reviews outputs in the same session. Session context identifies the scope, while raw files, diffs, and recorded agreements justify the findings. Runs after any step -- shape, plan, or task -- not only after implementation.
+- **review**: Adversarially reviews outputs in the same session. Session context identifies the scope, while raw files, diffs, and recorded agreements justify the findings. For a plan, it verifies each task's outcome contract and the full outcome chain. Runs after any step -- shape, plan, or task -- not only after implementation.
 - **calibrate**: Audits whether the purposes of accumulated concepts and flows still align with the project's goals. It reports findings without correcting them directly, leaving the decision to re-enter shape to the user.
 
 ## Document Quality
@@ -87,8 +87,9 @@ Covers agreed-upon unification of expression, structure, and tools -- the lighte
 
 ### Plan
 
-Living documents that structure designs into executable tasks and dependencies, kept alive across writing and execution.
-Breaks down shape's output into implementation units, verifies each task with the user before finalizing, and tracks progress. During execution, task accumulates progress context -- handoffs and findings -- into the plan, so work carries across sessions without loss.
+A living document that structures a confirmed design into tasks with verifiable outcomes and outcome dependencies, and stays current across writing and execution.
+Each task states its purpose, the change it will make, its completion outcome, and its verification method. An outcome dependency exists only when one task's outcome is a prerequisite for another task.
+Progress is updated on each task. If an execution discovery affects the remaining execution path, task updates the affected task or outcome dependency instead of appending the discovery to a chronological global progress context. Task adds a temporary handoff to the current incomplete task only when the user explicitly requests it. Task removes the handoff when execution resumes or the task is complete.
 
 ## Getting Started
 
