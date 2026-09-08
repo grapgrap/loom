@@ -95,9 +95,7 @@ concept과 flow의 형태에 영향을 준 결정의 맥락을 기록합니다.
 
 ## 시작하기
 
-### 사전 요구
-
-- [aeira](https://github.com/grapgrap/aeira) -- `npm install -g @grapgrap/aeira`
+Loom은 파일·텍스트 검색으로 현재 워크트리의 `.loom/` 문서를 직접 탐색합니다. 별도 검색 서비스 설치나 인덱스 준비가 필요하지 않습니다.
 
 ### 설치
 

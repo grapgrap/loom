@@ -95,9 +95,7 @@ Progress is updated on each task. If an execution discovery affects the remainin
 
 ## Getting Started
 
-### Prerequisites
-
-- [aeira](https://github.com/grapgrap/aeira) -- `npm install -g @grapgrap/aeira`
+Loom reads documents directly from the current worktree’s `.loom/` directory using file and text search. No separate search service or index setup is required.
 
 ### Installation
 
