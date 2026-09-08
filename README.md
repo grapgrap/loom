@@ -27,8 +27,8 @@ loom operates through propose, which raises a problem, and a five-step loop for 
 **shape** -> **plan** -> **task** -> implement
 
 - **shape**: Refines ambiguous requirements to the design level. Covers approach strategies, constraints, and trade-offs. Produces concepts and flows, along with decisions -- including retention decisions when preconditions or constraints shift but the existing design is kept.
-- **plan**: Clarifies the problem and desired outcome, then investigates the current implementation. It discusses the implementation approach, before-and-after behavior, and side effects with the user. It derives tasks, completion outcomes, and verification methods from the reviewed changes. An outcome dependency exists only when one outcome is a prerequisite for another task.
-- **task**: Summarizes the work for this stage, expected behavior, precautions, and verification methods, then implements after user confirmation. It marks the task complete only after verifying the outcome. If a discovery changes a major judgment or a prerequisite for later work, it revisits the affected change plan and tasks with the user.
+- **plan**: Clarifies the problem and desired outcome, then investigates the current implementation. It proposes an implementation draft covering code structure, key interfaces, and core logic, and reviews each part and its effects with the user. It derives tasks, completion outcomes, and verification methods from the reviewed changes. An outcome dependency exists only when one outcome is a prerequisite for another task.
+- **task**: Checks whether the implementation draft fits the current code and preceding work. It agrees on the concrete application, necessary adjustments, and verification methods with the user before implementing. It marks the task complete only after verifying the outcome. If a discovery changes a major judgment or a prerequisite for later work, it revisits the affected change plan and tasks with the user.
 
 ### Feedback Loops
 
@@ -89,7 +89,7 @@ Covers agreed-upon unification of expression, structure, and tools -- the lighte
 
 A document that describes the problem, desired outcome, and findings from investigating the current implementation. It reviews the implementation approach and its effects with the user, derives execution tasks, and stays current during execution.
 The current implementation is examined to understand the problem and assess the effects of change. Whether to retain its structure is judged against the problem and desired outcome.
-It retains the current behavior, proposed changes, expected effects, and unresolved questions needed for judgment and execution. Even a single task can warrant a plan when its effects need review.
+It retains current behavior, the reviewed implementation draft, expected effects, and unresolved questions needed for judgment and execution. Work with unresolved code structure or core behavior is not finalized as ready for implementation. Even a single task can warrant a plan when its effects need review.
 Each task states its purpose, the change it will make, its completion outcome, and its verification method. An outcome dependency exists only when one task's outcome is a prerequisite for another task.
 Progress is updated on each task. If an execution discovery affects the remaining execution path, task updates the affected change plan, task, or outcome dependency instead of appending the discovery to a chronological global progress context. Task adds a temporary handoff to the current incomplete task only when the user explicitly requests it. Task removes the handoff when execution resumes or the task is complete.
 
