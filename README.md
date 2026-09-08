@@ -27,12 +27,12 @@ loom operates through propose, which raises a problem, and a five-step loop for 
 **shape** -> **plan** -> **task** -> implement
 
 - **shape**: Refines ambiguous requirements to the design level. Covers approach strategies, constraints, and trade-offs. Produces concepts and flows, along with decisions -- including retention decisions when preconditions or constraints shift but the existing design is kept.
-- **plan**: Turns shape's output into tasks with verifiable completion outcomes. It creates an outcome dependency only when one task's outcome is a prerequisite for another, then validates each task's change, completion outcome, verification, and the full outcome chain with the user before finalizing.
-- **task**: Treats the plan's outcome contract as the implementation target. It agrees on the implementation and verification methods with the user, changes code or documents, and marks the task complete only after the outcome is verified. If a discovery changes the remaining execution path, the affected task or outcome dependency is updated immediately.
+- **plan**: Clarifies the problem and desired outcome, then investigates the current implementation. It discusses the implementation approach, before-and-after behavior, and side effects with the user. It derives tasks, completion outcomes, and verification methods from the reviewed changes. An outcome dependency exists only when one outcome is a prerequisite for another task.
+- **task**: Summarizes the work for this stage, expected behavior, precautions, and verification methods, then implements after user confirmation. It marks the task complete only after verifying the outcome. If a discovery changes a major judgment or a prerequisite for later work, it revisits the affected change plan and tasks with the user.
 
 ### Feedback Loops
 
-- **review**: Adversarially reviews outputs in the same session. Session context identifies the scope, while raw files, diffs, and recorded agreements justify the findings. For a plan, it verifies each task's outcome contract and the full outcome chain. Runs after any step -- shape, plan, or task -- not only after implementation.
+- **review**: Adversarially reviews outputs in the same session. Session context identifies the scope, while raw files, diffs, and recorded agreements justify the findings. For a plan, it checks the code evidence for current behavior, whether the implementation approach solves the problem, how side effects are addressed, and whether the tasks implement the proposed changes. Runs after any step -- shape, plan, or task -- not only after implementation.
 - **calibrate**: Audits whether the purposes of accumulated concepts and flows still align with the project's goals. It reports findings without correcting them directly, leaving the decision to re-enter shape to the user.
 
 ## Document Quality
@@ -87,9 +87,11 @@ Covers agreed-upon unification of expression, structure, and tools -- the lighte
 
 ### Plan
 
-A living document that structures a confirmed design into tasks with verifiable outcomes and outcome dependencies, and stays current across writing and execution.
+A document that describes the problem, desired outcome, and findings from investigating the current implementation. It reviews the implementation approach and its effects with the user, derives execution tasks, and stays current during execution.
+The current implementation is examined to understand the problem and assess the effects of change. Whether to retain its structure is judged against the problem and desired outcome.
+It retains the current behavior, proposed changes, expected effects, and unresolved questions needed for judgment and execution. Even a single task can warrant a plan when its effects need review.
 Each task states its purpose, the change it will make, its completion outcome, and its verification method. An outcome dependency exists only when one task's outcome is a prerequisite for another task.
-Progress is updated on each task. If an execution discovery affects the remaining execution path, task updates the affected task or outcome dependency instead of appending the discovery to a chronological global progress context. Task adds a temporary handoff to the current incomplete task only when the user explicitly requests it. Task removes the handoff when execution resumes or the task is complete.
+Progress is updated on each task. If an execution discovery affects the remaining execution path, task updates the affected change plan, task, or outcome dependency instead of appending the discovery to a chronological global progress context. Task adds a temporary handoff to the current incomplete task only when the user explicitly requests it. Task removes the handoff when execution resumes or the task is complete.
 
 ## Getting Started
 
