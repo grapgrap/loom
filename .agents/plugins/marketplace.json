@@ -1,6 +1,6 @@
 {
   "name": "loom-marketplace",
-  "description": "Loom product development workflow plugins for Claude Code and Codex.",
+  "description": "Loom outcome-driven development plugin for Claude Code and Codex.",
   "interface": {
     "displayName": "Loom"
   },
@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "loom",
-      "description": "요구사항을 설계로, 설계를 실행으로 구체화하는 시스템. propose로 문제를 발제하고, shape·plan·task·review·calibrate 다섯 단계 루프로 제품을 만들고 경험을 축적한다.",
+      "description": "현재 설계를 이해하고 변경의 그림을 공유하며 실제 동작으로 결과를 증명하는 작업 방식.",
       "source": "./",
       "policy": {
         "installation": "AVAILABLE",

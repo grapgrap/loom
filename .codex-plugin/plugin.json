@@ -1,7 +1,7 @@
 {
   "name": "loom",
-  "version": "0.23.1",
-  "description": "요구사항을 설계로, 설계를 실행으로 구체화하는 시스템. propose로 문제를 발제하고, shape·plan·task·review·calibrate 다섯 단계 루프로 제품을 만들고 경험을 축적한다.",
+  "version": "2.0.0",
+  "description": "현재 설계를 이해하고 변경의 그림을 공유하며 실제 동작으로 결과를 증명하는 작업 방식.",
   "author": {
     "name": "grapgrap",
     "url": "https://github.com/grapgrap"
@@ -17,8 +17,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Loom",
-    "shortDescription": "요구사항을 설계와 실행으로 구체화합니다.",
-    "longDescription": "propose로 문제를 발제하고, shape·plan·task·review·calibrate 다섯 단계 루프로 제품을 만들고 경험을 축적합니다.",
+    "shortDescription": "변경을 이해하고 구현하며 증명합니다.",
+    "longDescription": "work가 작업에 필요한 이해·설계·구현·검증을 선택합니다. 현재와 변경 후의 그림을 설명하지만 영속 설계 문서를 기본으로 만들지 않습니다.",
     "developerName": "grapgrap",
     "category": "Productivity",
     "capabilities": [
@@ -27,9 +27,9 @@
     ],
     "websiteURL": "https://github.com/grapgrap/loom",
     "defaultPrompt": [
-      "요구사항을 함께 shape 해봅시다.",
-      "합의된 설계를 실행 계획으로 만들어주세요.",
-      "현재 변경사항을 독립적으로 review 해주세요."
+      "이 변경을 Loom 방식으로 진행하고 실제 동작으로 검증해 주세요.",
+      "이 기능의 현재 설계와 변경 후의 그림을 설명해 주세요.",
+      "현재 변경사항의 위험과 검증 증거를 검토해 주세요."
     ]
   }
 }

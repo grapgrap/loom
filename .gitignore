@@ -1,4 +1,6 @@
 .idea/
+node_modules/
+.yarn/install-state.gz
 !.loom/
 .loom/plans/
 .loom/rules/

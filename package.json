@@ -1,0 +1,11 @@
+{
+  "name": "loom-plugin-tools",
+  "private": true,
+  "packageManager": "yarn@4.18.1",
+  "scripts": {
+    "check": "node scripts/check-plugin.mjs"
+  },
+  "devDependencies": {
+    "yaml": "2.9.1"
+  }
+}
