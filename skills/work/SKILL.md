@@ -5,7 +5,7 @@ description: 소프트웨어 변경의 목표와 범위를 지키며 조사·설
 
 # Work
 
-맡긴 범위에서 근거 있게 판단하고 결과를 확인할 수 있게 한다. 프로젝트 지침과 사용자의 요청을 먼저 적용하고, [원칙](../../references/principles.md)의 적용 상황에서 현재 작업에 필요한 항목을 고른다.
+맡긴 범위에서 근거 있게 판단하고 결과를 확인할 수 있게 한다. 프로젝트 지침과 사용자의 요청을 먼저 적용한다. [원칙](../../references/principles.md)의 공통 설명과 적용 절차를 확인하고, 현재 작업에서 내려야 할 판단에 적용한다.
 
 ## 작업을 판단한다
 
@@ -42,15 +42,7 @@ description: 소프트웨어 변경의 목표와 범위를 지키며 조사·설
 
 검증이 실패하면 구현, 판단의 전제, 관찰 방법 중 무엇이 잘못됐는지 조사한다. 증거가 반박한 가설 때문에 자신이 추가한 변경은 걷어낸다. 사용자나 다른 작업의 변경은 보존한다. 범위 안의 문제는 수정하고 영향받는 조건을 다시 검증한다.
 
-전달 전에 자신의 diff를 읽고 정리한다.
-
-- 근거 없는 가드, 중복 검증, 불필요한 추상화와 흐름을 다시 설명하는 주석을 제거한다. 필요한 경계와 코드로 드러나지 않는 이유는 보존한다.
-- 새로 만들거나 바꾼 이름에는 [Domain Vocabulary](../../references/principles.md#domain-vocabulary)와 [Intention-Revealing Names](../../references/principles.md#intention-revealing-names)를 적용해 도메인 의미와 의도가 읽히는지 확인한다.
-- 변경한 공통 코드에는 [Essential vs Accidental Duplication](../../references/principles.md#essential-vs-accidental-duplication)을 적용해 서로 다른 변경 이유를 묶지 않았는지 확인한다.
-- 변경한 함수와 유사한 흐름에는 [Single Level of Abstraction](../../references/principles.md#single-level-of-abstraction)을 적용해 표현의 차이가 실제 책임이나 동작의 차이를 반영하는지 확인한다.
-- 오류 처리나 실패 계약을 바꿨다면 [Error Boundary Placement](../../references/principles.md#error-boundary-placement)와 [Meaningful Errors](../../references/principles.md#meaningful-errors)로 처리 책임과 전달되는 실패 정보를 확인한다.
-- 변경한 내부 인터페이스의 호출자를 옮기고 구 경로와 남은 참조를 정리한다. 외부 계약에는 필요한 마이그레이션 경로를 둔다.
-- 임시 진단 코드와 실험 잔여물을 정리하고 무관한 변경이 섞이지 않았는지 확인한다.
+전달 전에 자신의 diff를 읽고, 최종 변경이 선택한 설계와 작업에 적용되는 원칙을 충족하는지 확인한다. 임시 진단 코드와 실험 잔여물을 정리하고 무관한 변경이 섞이지 않았는지 확인한다.
 
 최종 상태를 [verify](../verify/SKILL.md)로 확인한다. 위험한 변경, 논쟁적인 설계 또는 요청받은 검토에는 [review](../review/SKILL.md)를 적용한다. 새 지적을 검증하고 범위 안의 결함을 고친 뒤 영향받는 검사를 다시 실행한다.
 

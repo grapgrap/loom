@@ -28,7 +28,7 @@ Size alone does not require human approval. Questions that observation or an exp
 
 Requests for explanation, design, verification, or review stay within that scope. Implementation and fixes follow the scope of the work entrusted to the agent.
 
-Loom's [principles](references/principles.md) guide relevant decisions; they are not a checklist to recite on every task. Subagents are not part of the default route.
+Loom's [principles](references/principles.md) describe the domain responsibilities, contracts, and dependencies a change must preserve. Skills follow this shared document's application procedure to select relevant principles from the task's purpose and impact. Each principle includes application situations and examples. Subagents are not part of the default route.
 
 ## Explain design without accumulating a design corpus
 
