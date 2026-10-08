@@ -1,7 +1,7 @@
 {
   "name": "loom",
   "description": "현재 설계를 이해하고 변경의 그림을 공유하며 실제 동작으로 결과를 증명하는 작업 방식.",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "author": {
     "name": "grapgrap",
     "url": "https://github.com/grapgrap"
