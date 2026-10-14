@@ -40,6 +40,18 @@ For a meaningful change, Loom explains what happens now, what will change, what 
 
 Use the [execution-plan template](templates/execution-plan.md) when a multi-phase effort needs a file to coordinate or resume work. Use the [verification-recipe template](templates/verification-recipe.md) when a real user path needs a reusable check. Ordinary work needs neither.
 
+## Carry context into later work
+
+`work` recalls prior decisions and progress when starting a task. Reusable choices and constraints retain their reasons and sources; work spanning sessions retains verified progress and next steps. The agent reads and writes these records without asking users to review files. Current requests and project instructions take precedence.
+
+The [context script](scripts/context.mjs) requires Node.js 20+ and Git, with no npm dependencies. Its default data root is `~/Library/Application Support/loom` on macOS, `%LOCALAPPDATA%\loom` on Windows, and `$XDG_DATA_HOME/loom` or `~/.local/share/loom` on Linux. Records live outside plugin installations and Git checkouts. Worktrees of the same local repository share them; separate clones and machines do not synchronize.
+
+If the sandbox blocks writes to the storage path, the agent explains the actual path and storage purpose when requesting permission through the host's existing approval flow. Once approved, it retries the write at the same path and reads the result back to verify it.
+
+Start recall through the [macOS/Linux launcher](scripts/context.sh) or [Windows launcher](scripts/context.cmd). Missing Node or Git produces a dependency error. The agent locates an existing executable or installs the dependency, verifies versions, and retries the original command. Git identifies the project shared by its worktrees.
+
+Users can ask Loom to recall, revise, or forget a memory. The `location` command reports storage paths. An absolute `LOOM_DATA_DIR` or `--data-dir` overrides the data root. [Work context](skills/work/references/context.md) defines invocation, scopes, revisions, and failure behavior.
+
 ## Improve and check the skills
 
 Use observed failures and omissions from real work to change the instructions or execution tools. Recheck the same conditions afterward. A structural check does not prove that a skill improves the agent's decisions or execution.
@@ -49,6 +61,7 @@ Repository scripts default to `.mjs`. Development dependencies use the Yarn vers
 ```bash
 yarn install --immutable
 yarn check
+yarn test
 ```
 
 On real tasks, inspect the process and artifacts for preserved goals and scope, required checks, and evidence of the outcome. A description of having followed a skill is not proof of success.

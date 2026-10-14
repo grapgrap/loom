@@ -3,7 +3,8 @@
   "private": true,
   "packageManager": "yarn@4.18.1",
   "scripts": {
-    "check": "node scripts/check-plugin.mjs"
+    "check": "node scripts/check-plugin.mjs",
+    "test": "node --test"
   },
   "devDependencies": {
     "yaml": "2.9.1"
