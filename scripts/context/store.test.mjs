@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
-import { resolveDataDirectory } from "./context-store.mjs";
+import { updateStoredRecord, readStoredRecord, resolveDataDirectory } from "./store.mjs";
 
 test("macOS stores Loom data in the user's Application Support directory", () => {
   assert.equal(resolveDataDirectory({ platform: "darwin", home: "/Users/example", env: {} }),
@@ -32,4 +35,30 @@ test("an explicit absolute path overrides configuration, and invalid Loom paths 
   assert.throws(() => resolveDataDirectory({ ...options, env: { LOOM_DATA_DIR: "" } }), /absolute path/);
   assert.equal(resolveDataDirectory({ platform: "win32", home: "C:\\Users\\example", env: {},
     override: "D:\\Loom" }), "D:\\Loom");
+});
+
+test("a record mutation keeps its lock through asynchronous work before another writer reads", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "loom-async-record-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "record.json");
+  const parse = (record) => {
+    assert.equal(typeof record.count, "number");
+    return record;
+  };
+  let notifyLocked;
+  let releaseFirst;
+  const locked = new Promise((resolve) => { notifyLocked = resolve; });
+  const released = new Promise((resolve) => { releaseFirst = resolve; });
+  const first = updateStoredRecord({ path, parse, async update() {
+    notifyLocked();
+    await released;
+    return { count: 1 };
+  } });
+  await locked;
+  const second = updateStoredRecord({ path, parse,
+    update: (record) => ({ count: record.count + 1 }) });
+  const writes = Promise.all([first, second]);
+  releaseFirst();
+  assert.deepEqual(await writes, [{ count: 1 }, { count: 2 }]);
+  assert.deepEqual(await readStoredRecord(path, parse), { count: 2 });
 });

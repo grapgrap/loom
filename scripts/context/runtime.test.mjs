@@ -6,8 +6,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
-const script = fileURLToPath(new URL("context.mjs", import.meta.url));
-const launcher = fileURLToPath(new URL(process.platform === "win32" ? "context.cmd" : "context.sh",
+const cliPath = fileURLToPath(new URL("cli.mjs", import.meta.url));
+const launcherPath = fileURLToPath(new URL(process.platform === "win32" ? "cli.cmd" : "cli.sh",
   import.meta.url));
 
 function fixture(t) {
@@ -28,7 +28,7 @@ function withoutExecutables(path) {
 }
 
 function launch(project, { env = process.env, args = ["location"], input } = {}) {
-  const options = [launcher, ...args, "--cwd", project.repo, "--data-dir", project.directory];
+  const options = [launcherPath, ...args, "--cwd", project.repo, "--data-dir", project.directory];
   if (process.platform === "win32") {
     const command = options.map((value) => `"${value}"`).join(" ");
     return spawnSync(process.env.ComSpec || join(process.env.SystemRoot, "System32", "cmd.exe"),
@@ -57,7 +57,7 @@ test("unsupported Node is reported by the launcher and by direct mjs invocation"
   const blocked = launch(project, { env });
   assert.equal(blocked.status, 2, blocked.stderr);
   assert.match(blocked.stderr, /LOOM_NODE_UNSUPPORTED/);
-  const direct = spawnSync(process.execPath, [script, "location", "--cwd", project.repo],
+  const direct = spawnSync(process.execPath, [cliPath, "location", "--cwd", project.repo],
     { env, encoding: "utf8" });
   assert.equal(direct.status, 2, direct.stderr);
   assert.match(direct.stderr, /LOOM_NODE_UNSUPPORTED/);
@@ -66,7 +66,7 @@ test("unsupported Node is reported by the launcher and by direct mjs invocation"
 
 test("missing Git has an actionable dependency error and can be retried after PATH repair", (t) => {
   const project = fixture(t);
-  const args = [script, "location", "--cwd", project.repo, "--data-dir", project.directory];
+  const args = [cliPath, "location", "--cwd", project.repo, "--data-dir", project.directory];
   const missing = spawnSync(process.execPath, args,
     { env: withoutExecutables(project.emptyPath), encoding: "utf8" });
   assert.equal(missing.status, 2, missing.stderr);
@@ -79,7 +79,7 @@ test("missing Git has an actionable dependency error and can be retried after PA
 
 test("a non-Git directory is not misreported as a missing Git installation", (t) => {
   const project = fixture(t);
-  const result = spawnSync(process.execPath, [script, "location", "--cwd", project.root,
+  const result = spawnSync(process.execPath, [cliPath, "location", "--cwd", project.root,
     "--data-dir", project.directory], { encoding: "utf8" });
   assert.equal(result.status, 1, result.stderr);
   assert.doesNotMatch(result.stderr, /LOOM_GIT_MISSING/);
@@ -92,7 +92,7 @@ test("a Git executable with a missing runtime reports an environment failure", {
   const project = fixture(t);
   writeFileSync(join(project.emptyPath, "git"),
     "#!/bin/sh\nprintf '%s\\n' 'Git runtime is unavailable' >&2\nexit 1\n", { mode: 0o755 });
-  const result = spawnSync(process.execPath, [script, "location", "--cwd", project.repo,
+  const result = spawnSync(process.execPath, [cliPath, "location", "--cwd", project.repo,
     "--data-dir", project.directory], { env: withoutExecutables(project.emptyPath), encoding: "utf8" });
   assert.equal(result.status, 2, result.stderr);
   assert.match(result.stderr, /LOOM_GIT_UNUSABLE/);

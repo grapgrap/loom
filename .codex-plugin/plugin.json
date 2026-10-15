@@ -1,6 +1,6 @@
 {
   "name": "loom",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "현재 설계를 이해하고 변경의 그림을 공유하며 실제 동작으로 결과를 증명하는 작업 방식.",
   "author": {
     "name": "grapgrap",
@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "Loom",
     "shortDescription": "변경을 이해하고 구현하며 증명합니다.",
-    "longDescription": "work가 작업에 필요한 이해·설계·구현·검증을 선택합니다. 현재와 변경 후의 그림을 설명하지만 영속 설계 문서를 기본으로 만들지 않습니다.",
+    "longDescription": "work가 작업에 필요한 이해·설계·구현·검증을 선택하고 짧은 작업 기록을 남깁니다. tidy가 누적 기록을 정돈해 이후 작업에 필요한 기억을 갱신합니다.",
     "developerName": "grapgrap",
     "category": "Productivity",
     "capabilities": [

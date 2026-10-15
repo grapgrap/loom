@@ -25,6 +25,7 @@ Size alone does not require human approval. Questions that observation or an exp
 | `architect` | Ground implementation and verification in usage examples, responsibilities, state, and interfaces. |
 | `verify` | Judge finish conditions on the real artifact and user path as confirmed, failed, or inconclusive. |
 | `review` | Find gaps in decisions and evidence through counterexamples, then check the findings themselves. |
+| `tidy` | Consolidate accumulated records into grounded project memories and work state while preserving originals. |
 
 Requests for explanation, design, verification, or review stay within that scope. Implementation and fixes follow the scope of the work entrusted to the agent.
 
@@ -42,13 +43,17 @@ Use the [execution-plan template](templates/execution-plan.md) when a multi-phas
 
 ## Carry context into later work
 
-`work` recalls prior decisions and progress when starting a task. Reusable choices and constraints retain their reasons and sources; work spanning sessions retains verified progress and next steps. The agent passes JSON directly to the CLI through stdin, and the CLI stores the records. The agent does not create storage payloads with file-editing tools or ask users to review memory files as task changes. Current requests and project instructions take precedence.
+`work` recalls prior decisions, work state, and relevant records added since the last consolidation. During work, the agent passes a short note and its actual source to `record`; the CLI assigns the record number and timestamp. Daily recording does not require rewriting a complete checkpoint or supplying graph links. It uses plain text through stdin, with no storage payload files or memory-file reviews. Current requests and project instructions take precedence.
 
-The [context script](scripts/context.mjs) requires Node.js 20+ and Git, with no npm dependencies. Its default data root is `~/Library/Application Support/loom` on macOS, `%LOCALAPPDATA%\loom` on Windows, and `$XDG_DATA_HOME/loom` or `~/.local/share/loom` on Linux. Records live outside plugin installations and Git checkouts. Worktrees of the same local repository share them; separate clones and machines do not synchronize.
+`tidy` reads an unprocessed batch, searches related originals with BM25, and applies only the memory and work-state changes justified by the evidence. Source references preserve provenance and decision changes. Unresolved judgments retain their status and work-specific facts retain their scope. A successful apply advances the processed range together with the consolidated view; new arrivals remain pending. Original records and existing memory/checkpoint revisions are retained.
+
+`recall` reports when consolidation is due: 20 pending originals or an oldest pending original at least 24 hours old. `work` checks at startup and stable work boundaries, including during a long-running conversation. Explicit `$loom:tidy` requests can run sooner. This is an invocation-time check; it does not install a background scheduler.
+
+The [context script](scripts/context/cli.mjs) requires Node.js 20+ and Git, with no npm dependencies. Its default data root is `~/Library/Application Support/loom` on macOS, `%LOCALAPPDATA%\loom` on Windows, and `$XDG_DATA_HOME/loom` or `~/.local/share/loom` on Linux. Records live outside plugin installations and Git checkouts. Worktrees of the same local repository share them; separate clones and machines do not synchronize.
 
 If the sandbox blocks writes to the storage path, the agent explains the actual path and storage purpose when requesting permission through the host's existing approval flow. Once approved, it retries the write at the same path and reads the result back to verify it.
 
-Start recall through the [macOS/Linux launcher](scripts/context.sh) or [Windows launcher](scripts/context.cmd). Missing Node or Git produces a dependency error. The agent locates an existing executable or installs the dependency, verifies versions, and retries the original command. Git identifies the project shared by its worktrees.
+Start recall through the [macOS/Linux launcher](scripts/context/cli.sh) or [Windows launcher](scripts/context/cli.cmd). Missing Node or Git produces a dependency error. The agent locates an existing executable or installs the dependency, verifies versions, and retries the original command. Git identifies the project shared by its worktrees.
 
 Users can ask Loom to recall, revise, or forget a memory. The `location` command reports storage paths. An absolute `LOOM_DATA_DIR` or `--data-dir` overrides the data root. [Work context](skills/work/references/context.md) defines invocation, scopes, revisions, and failure behavior.
 

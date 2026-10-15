@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
-const script = fileURLToPath(new URL("context.mjs", import.meta.url));
+const cliPath = fileURLToPath(new URL("cli.mjs", import.meta.url));
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), "loom-context-"));
@@ -25,7 +25,7 @@ function git(cwd, ...args) {
 
 function invoke(project, command, { args = [], input, cwd = project.repo } = {}) {
   return spawnSync(process.execPath,
-    [script, command, "--cwd", cwd, "--data-dir", project.directory, ...args],
+    [cliPath, command, "--cwd", cwd, "--data-dir", project.directory, ...args],
     { encoding: "utf8", input: input === undefined ? undefined : JSON.stringify(input) });
 }
 
@@ -52,7 +52,7 @@ function checkpoint(overrides = {}) {
     goal: "Add context recall to Loom.",
     status: "active",
     progress: "Storage behavior has been verified; skill integration remains.",
-    evidence: ["node --test scripts/context.test.mjs: storage checks passed"],
+    evidence: ["node --test scripts/context/cli.test.mjs: storage checks passed"],
     next: ["Connect recall and checkpoint commands to work."],
     source: { type: "agent", reference: "Chat: observed CLI results." },
     ...overrides,
@@ -167,13 +167,29 @@ test("forget removes every revision and an old create request cannot revive it",
   assert.equal(invoke(project, "remember", { args, input: memory() }).status, 1);
 });
 
-test("malformed input, path traversal, scope changes and incomplete completion are rejected", (t) => {
+test("input parsing uses known fields without enforcing a closed object schema", (t) => {
+  const project = fixture(t);
+  const savedMemory = run(project, "remember", {
+    args: ["--id", "location"], input: memory({ metadata: "Caller-only metadata." }),
+  });
+  assert.equal(savedMemory.text, memory().text);
+  assert.equal(Object.hasOwn(savedMemory, "metadata"), false);
+  const savedCheckpoint = run(project, "checkpoint", {
+    args: ["--work", "storage"], input: checkpoint({ metadata: "Caller-only metadata." }),
+  });
+  assert.equal(savedCheckpoint.progress, checkpoint().progress);
+  assert.equal(Object.hasOwn(savedCheckpoint, "metadata"), false);
+  assert.equal(run(project, "recall").memories[0].text, memory().text);
+  assert.equal(run(project, "recall", { args: ["--work", "storage"] }).work.progress, checkpoint().progress);
+});
+
+test("invalid values, path traversal, scope changes and incomplete completion are rejected", (t) => {
   const project = fixture(t);
   for (const id of ["../other-project", "CON", "a/b", ""]) {
     assert.equal(invoke(project, "remember", { args: ["--id", id], input: memory() }).status, 1);
   }
-  for (const input of [memory({ source: { type: "assistant-proposal", reference: "draft" } }),
-    memory({ expectedRevision: -1 }), memory({ unexpected: true }), memory({ reason: "" })]) {
+  for (const input of [memory({ source: { type: "user", reference: "" } }),
+    memory({ expectedRevision: -1 }), memory({ text: " " }), memory({ reason: "" })]) {
     assert.equal(invoke(project, "remember", { args: ["--id", "bad"], input }).status, 1);
   }
   assert.equal(existsSync(project.directory), false);
@@ -210,11 +226,11 @@ test("a CLI launched from the checkout reads JSON files and paths containing spa
   const input = join(project.root, "memory input.json");
   const submitted = memory({ text: "다른 워크트리에서 합의된 맥락을 다시 읽는다." });
   writeFileSync(input, JSON.stringify(submitted));
-  const stored = spawnSync(process.execPath, [script, "remember", "--data-dir", directory,
+  const stored = spawnSync(process.execPath, [cliPath, "remember", "--data-dir", directory,
     "--id", "shared-context", "--input", input], { cwd: project.repo, encoding: "utf8" });
   assert.equal(stored.status, 0, stored.stderr);
   assert.equal(JSON.parse(stored.stdout).text, submitted.text);
-  const recalled = spawnSync(process.execPath, [script, "recall"], { cwd: project.repo,
+  const recalled = spawnSync(process.execPath, [cliPath, "recall"], { cwd: project.repo,
     encoding: "utf8", env: { ...process.env, LOOM_DATA_DIR: directory } });
   assert.equal(recalled.status, 0, recalled.stderr);
   assert.equal(JSON.parse(recalled.stdout).memories[0].text, submitted.text);
@@ -242,7 +258,7 @@ test("an abandoned write lock reports failure without changing the record", (t) 
 function invokeConcurrent(project, command, options) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath,
-      [script, command, "--cwd", project.repo, "--data-dir", project.directory, ...options.args]);
+      [cliPath, command, "--cwd", project.repo, "--data-dir", project.directory, ...options.args]);
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => { stdout += chunk; });

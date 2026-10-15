@@ -12,8 +12,8 @@ if [ "$runtime_status" -ne 0 ]; then
 fi
 
 case "$0" in
-  */*) context_script="${0%/*}/context.mjs" ;;
-  *) context_script="./context.mjs" ;;
+  */*) cli_script="${0%/*}/cli.mjs" ;;
+  *) cli_script="./cli.mjs" ;;
 esac
 
-exec node "$context_script" "$@"
+exec node "$cli_script" "$@"
