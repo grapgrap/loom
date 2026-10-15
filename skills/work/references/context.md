@@ -74,15 +74,14 @@ Git은 같은 저장소의 워크트리들을 식별하는 데 사용한다. 기
 
 합의가 바뀌거나 재사용할 판단을 확인했을 때 기억을 갱신한다. 여러 세션에 걸칠 작업은 검증한 단위가 끝났을 때 진행 상태를 저장한다. 세션 종료까지 저장을 미루지 않는다. 단순한 작업마다 진행 상태를 만들 필요는 없다.
 
-쓰기 명령은 JSON을 표준 입력 또는 `--input` 파일로 받는다. 셸 인용이 복잡한 내용은 임시 JSON 파일을 만들고 `--input`으로 전달한 뒤 정리한다. 출력은 저장된 현재 기록이다. 성공 여부를 확인한 뒤에만 저장됐다고 말한다.
+기억과 진행 상태의 저장은 맥락 CLI가 맡는다. 에이전트는 JSON을 표준 입력으로 직접 전달한다. 입력 JSON이나 저장 기록을 `apply_patch` 같은 파일 편집 도구로 작성하지 않으며, 임시 입력 파일도 만들지 않는다. 기억 저장이 작업의 파일 변경에 섞이지 않게 한다. 출력은 저장된 현재 기록이다. 성공 여부를 확인한 뒤에만 저장됐다고 말한다.
 
-```text
-node "<plugin-root>/scripts/context.mjs" remember --cwd "<checkout>" --id context-location --input "<input.json>"
-```
+macOS·Linux·WSL에서는 인용한 here-document로 JSON을 전달한다. 인용한 구분자는 JSON 안의 셸 변수나 명령이 확장되지 않게 한다.
 
-새 기억의 입력 예:
+새 기억을 저장하는 예:
 
-```json
+```sh
+node "<plugin-root>/scripts/context.mjs" remember --cwd "<checkout>" --id context-location <<'LOOM_CONTEXT_JSON'
 {
   "expectedRevision": 0,
   "scope": { "type": "project" },
@@ -90,15 +89,13 @@ node "<plugin-root>/scripts/context.mjs" remember --cwd "<checkout>" --id contex
   "reason": "워크트리를 삭제해도 다음 작업에서 합의된 맥락을 다시 사용하기 위해서다.",
   "source": { "type": "user", "reference": "실제 사용자 합의의 발언 또는 대화 위치" }
 }
+LOOM_CONTEXT_JSON
 ```
 
-```text
-node "<plugin-root>/scripts/context.mjs" checkpoint --cwd "<checkout>" --work context-cli --input "<input.json>"
-```
+새 작업의 진행 상태를 저장하는 예:
 
-새 작업의 진행 상태 입력 예:
-
-```json
+```sh
+node "<plugin-root>/scripts/context.mjs" checkpoint --cwd "<checkout>" --work context-cli <<'LOOM_CONTEXT_JSON'
 {
   "expectedRevision": 0,
   "goal": "작업 맥락의 저장과 조회를 연결한다.",
@@ -108,6 +105,15 @@ node "<plugin-root>/scripts/context.mjs" checkpoint --cwd "<checkout>" --work co
   "next": ["work 지침을 연결하고 플러그인 검사를 실행한다."],
   "source": { "type": "agent", "reference": "실제 작업 대화 또는 관찰 결과의 위치" }
 }
+LOOM_CONTEXT_JSON
+```
+
+Windows PowerShell에서는 위 JSON을 각각 `$contextJson`과 `$checkpointJson`에 here-string으로 담아 파이프로 전달한다. 한글을 보존하도록 현재 PowerShell 프로세스의 네이티브 명령 입력 인코딩을 UTF-8로 설정한다.
+
+```powershell
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$contextJson | & "<plugin-root>\scripts\context.cmd" remember --cwd "<checkout>" --id context-location
+$checkpointJson | & "<plugin-root>\scripts\context.cmd" checkpoint --cwd "<checkout>" --work context-cli
 ```
 
 새 기록의 `expectedRevision`은 `0`이다. 수정할 때는 조회한 현재 `revision`을 넣는다. 같은 입력의 직후 재시도는 리비전을 추가하지 않는다. 리비전 충돌은 다시 조회하고 실제 변경을 조정한 뒤 재시도한다. 충돌을 없애려고 최신 리비전 숫자만 바꾸어 이전 내용을 덮어쓰지 않는다. 기억의 범위는 수정할 수 없다.

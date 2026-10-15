@@ -42,7 +42,7 @@ Use the [execution-plan template](templates/execution-plan.md) when a multi-phas
 
 ## Carry context into later work
 
-`work` recalls prior decisions and progress when starting a task. Reusable choices and constraints retain their reasons and sources; work spanning sessions retains verified progress and next steps. The agent reads and writes these records without asking users to review files. Current requests and project instructions take precedence.
+`work` recalls prior decisions and progress when starting a task. Reusable choices and constraints retain their reasons and sources; work spanning sessions retains verified progress and next steps. The agent passes JSON directly to the CLI through stdin, and the CLI stores the records. The agent does not create storage payloads with file-editing tools or ask users to review memory files as task changes. Current requests and project instructions take precedence.
 
 The [context script](scripts/context.mjs) requires Node.js 20+ and Git, with no npm dependencies. Its default data root is `~/Library/Application Support/loom` on macOS, `%LOCALAPPDATA%\loom` on Windows, and `$XDG_DATA_HOME/loom` or `~/.local/share/loom` on Linux. Records live outside plugin installations and Git checkouts. Worktrees of the same local repository share them; separate clones and machines do not synchronize.
 
