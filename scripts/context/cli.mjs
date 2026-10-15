@@ -1,19 +1,20 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import {
-  reviseCheckpointRecord, parseCheckpointInput, parseCheckpointRecord, parseMemoryInput,
-  parseMemoryRecord, presentLatestRevision, parseRecordId, createRecordParser, reviseMemoryRecord, parseRevisionNumber,
-} from "./records.mjs";
+import { parseRecordId, parseRevisionNumber } from "./records.mjs";
+import { remember, checkpoint } from "./legacy.mjs";
 import { appendWorkNote } from "./journal.mjs";
 import { eraseContext } from "./forget.mjs";
 import { recallContext } from "./recall.mjs";
 import {
-  checkpointRecordPath, memoryRecordPath, parseSourceReference, readSourceArchive,
-  requireSourceByReference, matchesContextScope,
+  parseSourceReference,
+  readSource,
+  readSourceArchive,
+  matchesContextScope,
 } from "./sources.mjs";
 import { rankSourcesByQuery } from "./search.mjs";
-import { applyTidyChanges, getLatestConsolidation, prepareTidyBatch, readConsolidationHistory, calculateTidyStatus } from "./tidy.mjs";
-import { updateStoredRecord, resolveProjectLocation } from "./store.mjs";
+import { applyTidyChanges, prepareTidyBatch, readConsolidationHistory } from "./tidy.mjs";
+import { getLatestConsolidation, calculateTidyStatus } from "./consolidation.mjs";
+import { resolveProjectLocation } from "./store.mjs";
 
 const usage = `Usage: node <plugin>/scripts/context/cli.mjs <command> [options]
 
@@ -40,7 +41,8 @@ Options:
   --by <user|agent>  Source type for record (default: agent).
   --key <id>         Reuse a daily record's returned requestKey only when retrying it.
   --ref <reference>  Exact original reference returned by record, search or tidy.
-  --limit <n>        Result/batch limit, 1-200 (search: 10; recall/prepare: 50).
+  --limit <n>        Per-list/batch limit, 1-200 (search: 10; recall/prepare: 50).
+  --offset <n>       Skip entries in recall lists or tidy prepare current-state lists.
   --input <path>    Read write-command JSON from a file instead of stdin.
   --help            Show usage.
 
@@ -50,37 +52,76 @@ Legacy remember/checkpoint inputs require expectedRevision; record does not.
 See skills/work/references/context.md for schemas and recording policy.`;
 
 function parseCommandLine() {
-  const { values: options, positionals: commandWords, tokens: argumentTokens } = parseArgs({ allowPositionals: true, tokens: true,
+  const {
+    values: options,
+    positionals: words,
+    tokens,
+  } = parseArgs({
+    allowPositionals: true,
+    tokens: true,
     options: {
-      cwd: { type: "string" }, "data-dir": { type: "string" }, id: { type: "string" },
-      work: { type: "string" }, revision: { type: "string" }, query: { type: "string" },
-      input: { type: "string" }, history: { type: "boolean" }, help: { type: "boolean" },
-      source: { type: "string" }, by: { type: "string" }, key: { type: "string" },
-      ref: { type: "string" }, limit: { type: "string" },
-    } });
-  const optionNames = argumentTokens.filter(({ kind }) => kind === "option").map(({ name: optionName }) => optionName);
-  if (new Set(optionNames).size !== optionNames.length) throw new Error("Options cannot be repeated");
+      cwd: { type: "string" },
+      "data-dir": { type: "string" },
+      id: { type: "string" },
+      work: { type: "string" },
+      revision: { type: "string" },
+      query: { type: "string" },
+      input: { type: "string" },
+      history: { type: "boolean" },
+      help: { type: "boolean" },
+      source: { type: "string" },
+      by: { type: "string" },
+      key: { type: "string" },
+      ref: { type: "string" },
+      limit: { type: "string" },
+      offset: { type: "string" },
+    },
+  });
+  const names = tokens.filter(({ kind }) => kind === "option").map(({ name }) => name);
+  if (new Set(names).size !== names.length) throw new Error("Options cannot be repeated");
   if (options.help) return { help: true };
-  const command = commandWords[0] === "tidy" ? `tidy:${commandWords[1]}` : commandWords[0];
-  if (commandWords.length !== (commandWords[0] === "tidy" ? 2 : 1)) throw new Error(usage);
+  const command = words[0] === "tidy" ? `tidy:${words[1]}` : words[0];
+  if (words.length !== (words[0] === "tidy" ? 2 : 1)) throw new Error(usage);
   const optionsByCommand = {
-    location: [], recall: ["work", "query", "history", "limit"], remember: ["id", "input"],
-    checkpoint: ["work", "input"], forget: ["id", "revision", "ref"],
-    record: ["work", "source", "by", "key"], search: ["query", "work", "limit"], read: ["ref"],
-    "tidy:prepare": ["limit"], "tidy:apply": ["input"], "tidy:status": [],
+    location: [],
+    recall: ["work", "query", "history", "limit", "offset"],
+    remember: ["id", "input"],
+    checkpoint: ["work", "input"],
+    forget: ["id", "revision", "ref"],
+    record: ["work", "source", "by", "key"],
+    search: ["query", "work", "limit"],
+    read: ["ref"],
+    "tidy:prepare": ["limit", "offset"],
+    "tidy:apply": ["input"],
+    "tidy:status": [],
   };
-  if (!Object.hasOwn(optionsByCommand, command)) throw new Error(`Unknown command: ${command}\n${usage}`);
+  if (!Object.hasOwn(optionsByCommand, command))
+    throw new Error(`Unknown command: ${command}\n${usage}`);
   const allowedOptions = ["cwd", "data-dir", ...optionsByCommand[command]];
-  if (optionNames.some((optionName) => !allowedOptions.includes(optionName))) throw new Error(`Unsupported option for ${command}`);
-  if (command === "remember" || (command === "forget" && options.ref === undefined)) parseRecordId(options.id);
-  if (["checkpoint", "record"].includes(command) || options.work !== undefined) parseRecordId(options.work);
-  if (options.limit !== undefined && (!/^[1-9][0-9]*$/.test(options.limit) || Number(options.limit) > 200)) {
+  if (names.some((name) => !allowedOptions.includes(name)))
+    throw new Error(`Unsupported option for ${command}`);
+  if (command === "remember" || (command === "forget" && options.ref === undefined))
+    parseRecordId(options.id);
+  if (["checkpoint", "record"].includes(command) || options.work !== undefined)
+    parseRecordId(options.work);
+  if (
+    options.limit !== undefined &&
+    (!/^[1-9][0-9]*$/.test(options.limit) || Number(options.limit) > 200)
+  ) {
     throw new Error("--limit must be an integer from 1 to 200");
   }
-  options.limit = options.limit === undefined ? (command === "search" ? 10 : 50) : Number(options.limit);
-  if (command === "search" && !options.query?.trim()) throw new Error("search requires --query <text>");
+  options.limit =
+    options.limit === undefined ? (command === "search" ? 10 : 50) : Number(options.limit);
+  if (
+    options.offset !== undefined &&
+    (!/^\d+$/.test(options.offset) || !Number.isSafeInteger(Number(options.offset)))
+  ) {
+    throw new Error("--offset must be a non-negative integer");
+  }
+  options.offset = Number(options.offset ?? 0);
+  if (command === "search" && !options.query?.trim())
+    throw new Error("search requires --query <text>");
   if (command === "read" && !options.ref) throw new Error("read requires --ref <kind:id@revision>");
-  if (command === "read") parseSourceReference(options.ref);
   if (command === "forget") {
     if (options.ref !== undefined) {
       const note = parseSourceReference(options.ref);
@@ -98,7 +139,8 @@ function parseCommandLine() {
 }
 
 function readJsonInput(inputPath) {
-  if (inputPath === undefined && process.stdin.isTTY) throw new Error("Provide JSON via --input or stdin");
+  if (inputPath === undefined && process.stdin.isTTY)
+    throw new Error("Provide JSON via --input or stdin");
   try {
     return JSON.parse(readFileSync(inputPath ?? 0, "utf8"));
   } catch (error) {
@@ -108,59 +150,88 @@ function readJsonInput(inputPath) {
 
 async function runCli() {
   if (Number(process.versions.node.split(".")[0]) < 20) {
-    throw Object.assign(new Error(`Node.js ${process.versions.node} is unsupported. The agent should configure a supported Node.js LTS (20+), verify node --version, and retry this command.`),
-    { code: "LOOM_NODE_UNSUPPORTED" });
+    throw Object.assign(
+      new Error(
+        `Node.js ${process.versions.node} is unsupported. The agent should configure a supported Node.js LTS (20+), verify node --version, and retry this command.`,
+      ),
+      { code: "LOOM_NODE_UNSUPPORTED" },
+    );
   }
-  const parsedCommand = parseCommandLine();
-  if (parsedCommand.help) { console.log(usage); return; }
-  const { command, options } = parsedCommand;
+  const parsed = parseCommandLine();
+  if (parsed.help) {
+    console.log(usage);
+    return;
+  }
+  const { command, options } = parsed;
   let writeInput;
-  if (command === "remember") writeInput = parseMemoryInput(readJsonInput(options.input));
-  if (command === "checkpoint") writeInput = parseCheckpointInput(readJsonInput(options.input));
-  if (command === "tidy:apply") writeInput = readJsonInput(options.input);
-  const projectLocation = await resolveProjectLocation({ cwd: options.cwd, directory: options["data-dir"] });
-  let commandResult;
+  if (["remember", "checkpoint", "tidy:apply"].includes(command))
+    writeInput = readJsonInput(options.input);
+  const location = await resolveProjectLocation({
+    cwd: options.cwd,
+    directory: options["data-dir"],
+  });
+  let result;
   switch (command) {
-    case "location": commandResult = projectLocation; break;
-    case "recall": commandResult = await recallContext(projectLocation, options); break;
+    case "location":
+      result = location;
+      break;
+    case "recall":
+      result = await recallContext(location, options);
+      break;
     case "record":
-      commandResult = await appendWorkNote(projectLocation, { work: options.work, text: readFileSync(0, "utf8"), key: options.key,
-        source: { type: options.by ?? "agent", reference: options.source } });
+      result = await appendWorkNote(location, {
+        work: options.work,
+        text: readFileSync(0, "utf8"),
+        key: options.key,
+        source: { type: options.by ?? "agent", reference: options.source },
+      });
       break;
     case "search": {
-      const sourceArchive = await readSourceArchive(projectLocation);
-      const matchingSources = options.work === undefined ? sourceArchive.sources
-        : sourceArchive.sources.filter((source) => matchesContextScope(source, options.work));
-      commandResult = { results: rankSourcesByQuery(matchingSources, options.query, options.limit) };
+      const sourceArchive = await readSourceArchive(location);
+      const matchingSources =
+        options.work === undefined
+          ? sourceArchive.sources
+          : sourceArchive.sources.filter((source) => matchesContextScope(source, options.work));
+      result = { results: rankSourcesByQuery(matchingSources, options.query, options.limit) };
       break;
     }
-    case "read": commandResult = requireSourceByReference(await readSourceArchive(projectLocation), options.ref); break;
-    case "tidy:prepare": commandResult = await prepareTidyBatch(projectLocation, options.limit); break;
-    case "tidy:apply": commandResult = await applyTidyChanges(projectLocation, writeInput); break;
+    case "read":
+      result = await readSource(location, options.ref);
+      break;
+    case "tidy:prepare":
+      result = await prepareTidyBatch(location, options.limit, options.offset);
+      break;
+    case "tidy:apply":
+      result = await applyTidyChanges(location, writeInput);
+      break;
     case "tidy:status": {
-      const [sourceArchive, consolidationHistory] = await Promise.all([readSourceArchive(projectLocation), readConsolidationHistory(projectLocation)]);
-      commandResult = calculateTidyStatus(sourceArchive, getLatestConsolidation(consolidationHistory));
+      const [sourceArchive, consolidationHistory] = await Promise.all([
+        readSourceArchive(location),
+        readConsolidationHistory(location),
+      ]);
+      result = calculateTidyStatus(sourceArchive, getLatestConsolidation(consolidationHistory));
       break;
     }
     case "remember":
-      commandResult = presentLatestRevision(await updateStoredRecord({ path: memoryRecordPath(projectLocation, options.id),
-        parse: createRecordParser(options.id, parseMemoryRecord),
-        update: (storedMemory) => reviseMemoryRecord(storedMemory, options.id, writeInput) }));
+      result = await remember(location, options.id, writeInput);
       break;
     case "checkpoint":
-      commandResult = presentLatestRevision(await updateStoredRecord({ path: checkpointRecordPath(projectLocation, options.work),
-        parse: createRecordParser(options.work, parseCheckpointRecord),
-        update: (storedCheckpoint) => reviseCheckpointRecord(storedCheckpoint, options.work, writeInput) }));
+      result = await checkpoint(location, options.work, writeInput);
       break;
-    case "forget": commandResult = await eraseContext(projectLocation, options.erasureRequest); break;
+    case "forget":
+      result = await eraseContext(location, options.erasureRequest);
+      break;
   }
-  console.log(JSON.stringify(commandResult, null, 2));
+  console.log(JSON.stringify(result, null, 2));
 }
 
 try {
   await runCli();
 } catch (error) {
   console.error(`Loom context: ${error.code ? `[${error.code}] ` : ""}${error.message}`);
-  process.exitCode = ["LOOM_NODE_UNSUPPORTED", "LOOM_GIT_MISSING", "LOOM_GIT_UNUSABLE"]
-    .includes(error.code) ? 2 : 1;
+  process.exitCode = ["LOOM_NODE_UNSUPPORTED", "LOOM_GIT_MISSING", "LOOM_GIT_UNUSABLE"].includes(
+    error.code,
+  )
+    ? 2
+    : 1;
 }

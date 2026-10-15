@@ -1,29 +1,51 @@
 import { eraseWorkNote } from "./journal.mjs";
-import { forgetMemoryRecord, parseMemoryRecord, presentLatestRevision, createRecordParser } from "./records.mjs";
+import {
+  forgetMemoryRecord,
+  parseMemoryRecord,
+  presentLatestRevision,
+  createRecordParser,
+} from "./records.mjs";
 import { memoryRecordPath } from "./sources.mjs";
 import { updateStoredRecord } from "./store.mjs";
-import { getLatestConsolidation, eraseFromConsolidationHistory, parseConsolidationHistory, consolidationHistoryPath } from "./tidy.mjs";
+import { consolidationHistoryPath } from "./tidy.mjs";
+import {
+  getLatestConsolidation,
+  eraseFromConsolidationHistory,
+  parseConsolidationHistory,
+} from "./consolidation.mjs";
 
-export async function eraseContext(projectLocation, erasureRequest) {
-  let erasedOriginalRecord;
-  const updatedHistory = await updateStoredRecord({ path: consolidationHistoryPath(projectLocation), parse: parseConsolidationHistory,
-    async update(consolidationHistory) {
-      if (erasureRequest.note) {
-        const { id: workId, revision: noteNumber } = erasureRequest.note;
-        erasedOriginalRecord = await eraseWorkNote(projectLocation, { work: workId, revision: noteNumber });
-        return eraseFromConsolidationHistory(consolidationHistory, { sourceRef: `note:${workId}@${noteNumber}` });
+export async function eraseContext(location, request) {
+  let erased;
+  const updatedHistory = await updateStoredRecord({
+    path: consolidationHistoryPath(location),
+    parse: parseConsolidationHistory,
+    async update(history) {
+      if (request.note) {
+        const { id: workId, revision: noteNumber } = request.note;
+        erased = await eraseWorkNote(location, { work: workId, revision: noteNumber });
+        return eraseFromConsolidationHistory(history, {
+          sourceRef: `note:${workId}@${noteNumber}`,
+        });
       }
-      const { memoryId, expectedRevision } = erasureRequest;
-      const erasedMemoryRecord = await updateStoredRecord({ path: memoryRecordPath(projectLocation, memoryId),
+      const { memoryId, expectedRevision } = request;
+      const memory = await updateStoredRecord({
+        path: memoryRecordPath(location, memoryId),
         parse: createRecordParser(memoryId, parseMemoryRecord),
-        update: (storedMemory) => storedMemory === null ? null : forgetMemoryRecord(storedMemory, expectedRevision) });
-      if (erasedMemoryRecord) {
-        erasedOriginalRecord = presentLatestRevision(erasedMemoryRecord);
-        return eraseFromConsolidationHistory(consolidationHistory, { memoryId });
+        update: (memory) => (memory === null ? null : forgetMemoryRecord(memory, expectedRevision)),
+      });
+      if (memory) {
+        erased = presentLatestRevision(memory);
+        return eraseFromConsolidationHistory(history, { memoryId });
       }
-      return eraseFromConsolidationHistory(consolidationHistory, erasureRequest);
-    } });
-  if (erasedOriginalRecord) return erasedOriginalRecord;
+      return eraseFromConsolidationHistory(history, request);
+    },
+  });
+  if (erased) return erased;
   const consolidation = getLatestConsolidation(updatedHistory);
-  return { id: erasureRequest.memoryId, forgotten: true, revision: consolidation.revision, recordedAt: consolidation.recordedAt };
+  return {
+    id: request.memoryId,
+    forgotten: true,
+    revision: consolidation.revision,
+    recordedAt: consolidation.recordedAt,
+  };
 }

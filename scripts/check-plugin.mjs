@@ -50,15 +50,20 @@ function checkSkill(path) {
   );
   check(name === basename(dirname(path)), `${path}: name does not match its directory`);
   check(
-    typeof description === "string" && description.trim().length > 0 &&
-      [...description].length <= 1024 && !/[<>]/.test(description),
+    typeof description === "string" &&
+      description.trim().length > 0 &&
+      [...description].length <= 1024 &&
+      !/[<>]/.test(description),
     `${path}: invalid description`,
   );
 }
 
 function headingAnchors(text) {
   return [...text.matchAll(/^#{1,6}\s+(.+)$/gm)].map(([, heading]) =>
-    heading.toLowerCase().replace(/[^\p{L}\p{N}_ -]/gu, "").replaceAll(" ", "-"),
+    heading
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}_ -]/gu, "")
+      .replaceAll(" ", "-"),
   );
 }
 
@@ -94,7 +99,10 @@ function checkPlugin(root) {
   const claude = readJson(join(root, ".claude-plugin/plugin.json"));
   const marketplace = readJson(join(root, ".agents/plugins/marketplace.json"));
   for (const field of ["name", "version", "description"]) {
-    check(typeof codex[field] === "string" && codex[field].length > 0, `Codex manifest: missing ${field}`);
+    check(
+      typeof codex[field] === "string" && codex[field].length > 0,
+      `Codex manifest: missing ${field}`,
+    );
     check(codex[field] === claude[field], `Plugin manifests disagree on ${field}`);
   }
   const { plugins } = marketplace;
@@ -106,7 +114,10 @@ function checkPlugin(root) {
   check(entry, "Marketplace does not contain this plugin");
   check(entry.description === codex.description, "Marketplace description differs from the plugin");
   check(typeof entry.source === "string", "Marketplace source must be a local path");
-  check(localPath(root, root, entry.source) === root, "Marketplace source must point to this plugin");
+  check(
+    localPath(root, root, entry.source) === root,
+    "Marketplace source must point to this plugin",
+  );
   check(typeof codex.skills === "string", "Codex manifest: missing skills path");
   const skillsDirectory = localPath(root, root, codex.skills);
   const skills = readdirSync(skillsDirectory, { withFileTypes: true })
@@ -127,7 +138,9 @@ function checkPlugin(root) {
     ...readmes,
   ].sort();
   for (const path of markdown) checkLinks(root, path);
-  console.log(`PASS: ${skills.length} skills, 3 manifests, ${markdown.length} Markdown files and local links`);
+  console.log(
+    `PASS: ${skills.length} skills, 3 manifests, ${markdown.length} Markdown files and local links`,
+  );
 }
 
 try {

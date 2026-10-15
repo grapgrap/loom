@@ -18,14 +18,14 @@ Size alone does not require human approval. Questions that observation or an exp
 
 ## Skills
 
-| Skill | Responsibility |
-| --- | --- |
-| `work` | Own routing, implementation, cleanup, verification, and delivery within the goal and scope. |
+| Skill        | Responsibility                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `work`       | Own routing, implementation, cleanup, verification, and delivery within the goal and scope.                           |
 | `understand` | Reconstruct the current picture from code, runtime evidence, and history. Direct invocation investigates and reports. |
-| `architect` | Ground implementation and verification in usage examples, responsibilities, state, and interfaces. |
-| `verify` | Judge finish conditions on the real artifact and user path as confirmed, failed, or inconclusive. |
-| `review` | Find gaps in decisions and evidence through counterexamples, then check the findings themselves. |
-| `tidy` | Consolidate accumulated records into grounded project memories and work state while preserving originals. |
+| `architect`  | Ground implementation and verification in usage examples, responsibilities, state, and interfaces.                    |
+| `verify`     | Judge finish conditions on the real artifact and user path as confirmed, failed, or inconclusive.                     |
+| `review`     | Find gaps in decisions and evidence through counterexamples, then check the findings themselves.                      |
+| `tidy`       | Consolidate accumulated records into grounded project memories and work state while preserving originals.             |
 
 Requests for explanation, design, verification, or review stay within that scope. Implementation and fixes follow the scope of the work entrusted to the agent.
 
@@ -45,6 +45,8 @@ Use the [execution-plan template](templates/execution-plan.md) when a multi-phas
 
 `work` recalls prior decisions, work state, and relevant records added since the last consolidation. During work, the agent passes a short note and its actual source to `record`; the CLI assigns the record number and timestamp. Daily recording does not require rewriting a complete checkpoint or supplying graph links. It uses plain text through stdin, with no storage payload files or memory-file reviews. Current requests and project instructions take precedence.
 
+Before consolidation, first and latest note excerpts help identify the relevant work. Recall lists support limits and offsets, and an exact source reference reads only its own file. An apply response includes only the entries changed by that request.
+
 `tidy` reads an unprocessed batch, searches related originals with BM25, and applies only the memory and work-state changes justified by the evidence. Source references preserve provenance and decision changes. Unresolved judgments retain their status and work-specific facts retain their scope. A successful apply advances the processed range together with the consolidated view; new arrivals remain pending. Original records and existing memory/checkpoint revisions are retained.
 
 `recall` reports when consolidation is due: 20 pending originals or an oldest pending original at least 24 hours old. `work` checks at startup and stable work boundaries, including during a long-running conversation. Explicit `$loom:tidy` requests can run sooner. This is an invocation-time check; it does not install a background scheduler.
@@ -61,13 +63,25 @@ Users can ask Loom to recall, revise, or forget a memory. The `location` command
 
 Use observed failures and omissions from real work to change the instructions or execution tools. Recheck the same conditions afterward. A structural check does not prove that a skill improves the agent's decisions or execution.
 
-Repository scripts default to `.mjs`. Development dependencies use the Yarn version pinned in `package.json`, with the `pnpm` node linker. Install them, then check metadata, manifest consistency, and local file and heading references:
+Repository scripts default to `.mjs`. Development tooling supports Node.js 22.x from 22.12, 24.x, or 26+. Development dependencies use the Yarn version pinned in `package.json`, with the `pnpm` node linker. Install them and set up the Git hooks once per clone:
 
 ```bash
 yarn install --immutable
+yarn hooks:install
+```
+
+Oxlint checks JavaScript, and Oxfmt formats source files, configuration, and Markdown. Historical records in `.loom/` are excluded. Lefthook runs repository-wide lint and format checks before each commit without modifying or staging files. Run `yarn lint:fix` and `yarn format` to apply fixes, then stage the changes you intend to commit.
+
+Run the checks and tests explicitly:
+
+```bash
+yarn lint
+yarn format:check
 yarn check
 yarn test
 ```
+
+`yarn check` validates metadata, manifest consistency, and local file and heading references. `yarn test` runs the Vitest suite once, separately from the commit hook. Use `yarn test:watch` for watch mode or `yarn test scripts/context/records.test.mjs` for a single file. Changes to context CLI sources and launchers rerun the suite in watch mode, including tests that invoke separate Node processes.
 
 On real tasks, inspect the process and artifacts for preserved goals and scope, required checks, and evidence of the outcome. A description of having followed a skill is not proof of success.
 

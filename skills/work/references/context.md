@@ -26,10 +26,10 @@ Windows PowerShell의 첫 조회:
 node "<plugin-root>/scripts/context/cli.mjs" recall --cwd "<checkout>" --work context-cli
 ```
 
-기본 조회는 프로젝트 기억과 업무별 ID·목표·상태를 반환한다. 현재 요청에 해당하는 업무를 선택한 뒤 `--work`로 그 업무의 기억과 상태를 읽는다. 최근 기록이라는 이유만으로 다른 업무를 재개하지 않는다. 한 세션에서 업무를 계속하거나 여러 세션에서 서로 다른 업무를 다룰 수 있으므로, 세션과 업무를 일대일로 대응시키지 않는다. 새 업무의 목표와 맡긴 범위는 첫 기록에 남긴다.
+기본 조회는 프로젝트 기억과 업무별 ID·목표·상태를 반환한다. 기록이 있는 업무에는 `firstNote`·`latestNote`로 첫 기록과 최근 기록의 ref·발췌도 제공한다. 정리 전에는 목표·상태가 `null`일 수 있으므로 발췌로 관련 업무를 찾고, 필요한 본문은 `read --ref`로 확인한다. 현재 요청에 해당하는 업무를 선택한 뒤 `--work`로 그 업무의 기억과 상태를 읽는다. 최근 기록이라는 이유만으로 다른 업무를 재개하지 않는다. 한 세션에서 업무를 계속하거나 여러 세션에서 서로 다른 업무를 다룰 수 있으므로, 세션과 업무를 일대일로 대응시키지 않는다. 새 업무의 목표와 맡긴 범위는 첫 기록에 남긴다.
 
 - `pending`은 조회 범위의 미처리 원본이다. 정리된 기억·업무 상태와 함께 읽는다.
-- `pendingRemaining`은 응답에 담지 못한 미처리 원본 수다. 필요한 기록이 남아 있으면 `--limit`을 늘리거나 검색·원본 조회로 보충한다. `recall`의 기본 limit은 50, 최대 200이다.
+- `--limit`은 기억·업무 목록·미처리 원본 각각에 적용하며 기본 50, 최대 200이다. `memoriesRemaining`·`worksRemaining`·`pendingRemaining`은 각 목록의 다음 페이지에 남은 항목 수다. 필요한 항목이 남으면 `--offset`을 limit만큼 늘려 같은 조건으로 조회하거나 검색·원본 조회로 보충한다. 선택한 업무의 전체 상태인 `work`는 페이지와 무관하게 반환한다.
 - `unresolved`는 미확정 판단이다. 업무에 한정된 사실은 해당 범위에서 적용하고, 완료로 기록된 결과도 현재 산출물과 대조한다.
 - `--query`를 붙이면 내용·이유에 모든 검색어가 포함된 현재 기억만 반환한다. 과거 원본을 조사할 때는 `search`를 사용한다.
 - `--history`는 기억·업무 상태의 이전 리비전을 확인할 때 사용한다.
@@ -85,18 +85,20 @@ node "<plugin-root>/scripts/context/cli.mjs" read --cwd "<checkout>" --ref "note
 
 원본 ref는 `memory:<id>@<revision>`, `checkpoint:<work>@<revision>`, `note:<work>@<number>`다. 정리된 기억의 `sources`는 판단 근거, `supersedes`는 대체한 원본과의 연결이다.
 
+`read --ref`는 지정한 원본 파일만 읽는다. 다른 업무의 파일이 손상되어 전체 검색이나 조회가 실패하더라도 정상 원본을 직접 읽을 수 있다.
+
 정리된 항목의 `revision`과 `recordedAt`은 정리 결과의 버전과 반영 시각이다. 원본 기록의 시각은 `sources`의 ref로 조회한다. 정리 결과의 반영 시각을 발언·관찰 시각이나 마지막 검증 시각으로 해석하지 않는다.
 
 ## 실행 환경을 준비한다
 
 Node.js 20 이상과 Git이 필요하다. npm 의존성을 설치하지 않아도 CLI를 실행할 수 있다. 실행 환경 오류는 종료 코드 `2`와 다음 식별자로 구분한다.
 
-| 오류 | 필요한 조치 |
-| --- | --- |
-| `LOOM_NODE_MISSING` | 설치된 Node 경로를 연결하거나 Node를 설치한다. |
+| 오류                    | 필요한 조치                                          |
+| ----------------------- | ---------------------------------------------------- |
+| `LOOM_NODE_MISSING`     | 설치된 Node 경로를 연결하거나 Node를 설치한다.       |
 | `LOOM_NODE_UNSUPPORTED` | Node.js 20 이상인 지원 중 LTS를 선택하거나 설치한다. |
-| `LOOM_GIT_MISSING` | 설치된 Git 경로를 연결하거나 Git을 설치한다. |
-| `LOOM_GIT_UNUSABLE` | Git의 경로·권한·런타임을 확인하고 복구한다. |
+| `LOOM_GIT_MISSING`      | 설치된 Git 경로를 연결하거나 Git을 설치한다.         |
+| `LOOM_GIT_UNUSABLE`     | Git의 경로·권한·런타임을 확인하고 복구한다.          |
 
 같은 실행 환경에서 `node --version`, `git --version`을 확인한다. 호스트가 제공하는 런타임과 기존 버전 관리 도구를 먼저 확인한다. 사용할 실행 파일이 없으면 기존 패키지 관리자 또는 [Node](https://nodejs.org/en/download)·[Git](https://git-scm.com/install/) 공식 배포본으로 준비한다. 프로젝트의 Node 버전 설정은 유지한다.
 
@@ -120,11 +122,11 @@ CLI는 잠금과 임시 파일 교체로 기록을 보호한다. 잠금이 남�
 
 ## 저장 위치와 사용자 제어
 
-| 실행 환경 | 기본 데이터 루트 |
-| --- | --- |
-| macOS | `~/Library/Application Support/loom` |
-| Windows | `%LOCALAPPDATA%\loom` |
-| Linux | `$XDG_DATA_HOME/loom`, 미설정 시 `~/.local/share/loom` |
+| 실행 환경 | 기본 데이터 루트                                       |
+| --------- | ------------------------------------------------------ |
+| macOS     | `~/Library/Application Support/loom`                   |
+| Windows   | `%LOCALAPPDATA%\loom`                                  |
+| Linux     | `$XDG_DATA_HOME/loom`, 미설정 시 `~/.local/share/loom` |
 
 데이터 루트는 `--data-dir`, `LOOM_DATA_DIR`, OS 기본값 순으로 선택한다. 직접 지정하는 경로는 절대 경로여야 한다. 프로젝트 ID는 Git 공통 디렉터리의 실제 경로에서 구한다. 같은 로컬 저장소의 워크트리는 기억을 공유하며, 별도 클론·기기 간 동기화는 제공하지 않는다. WSL은 Linux 경로를 사용한다.
 
@@ -139,11 +141,11 @@ CLI는 잠금과 임시 파일 교체로 기록을 보호한다. 잠금이 남�
 
 사용자가 조회나 수정을 요청하면 관련 원본과 정리 결과를 확인한다. 정정할 내용은 새 기록으로 남기고 tidy로 반영한다. 삭제에는 다음 명령을 사용한다.
 
-| 삭제 대상 | 명령과 리비전 기준 |
-| --- | --- |
+| 삭제 대상                   | 명령과 리비전 기준                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `remember` 원본이 있는 기억 | `forget --id <id> --revision <n>`. `read`로 확인한 원본의 현재 리비전을 사용하며 모든 원본 리비전을 제거한다. |
-| tidy에서만 만든 기억 | `forget --id <id> --revision <n>`. `recall`의 리비전을 사용하며 정리 이력에서 제거한다. |
-| `record` 원본 | `forget --ref note:<work>@<number>` |
+| tidy에서만 만든 기억        | `forget --id <id> --revision <n>`. `recall`의 리비전을 사용하며 정리 이력에서 제거한다.                       |
+| `record` 원본               | `forget --ref note:<work>@<number>`                                                                           |
 
 원본을 삭제하면 그 원본을 `sources`·`evidence`의 근거로 삼는 정리 결과도 모든 정리 이력에서 제거한다. 삭제된 입력의 재시도나 오래된 `snapshot`으로 내용을 복원하지 못하게 한다. `supersedes`로만 연결된 기억은 현재 근거가 남아 있으므로 연결만 제거하고 기억은 유지한다.
 

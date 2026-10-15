@@ -1,6 +1,6 @@
 {
   "name": "loom",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "현재 설계를 이해하고 변경의 그림을 공유하며 실제 동작으로 결과를 증명하는 작업 방식.",
   "author": {
     "name": "grapgrap",
@@ -8,12 +8,7 @@
   },
   "homepage": "https://github.com/grapgrap/loom",
   "repository": "https://github.com/grapgrap/loom",
-  "keywords": [
-    "product-development",
-    "planning",
-    "review",
-    "workflow"
-  ],
+  "keywords": ["product-development", "planning", "review", "workflow"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Loom",
@@ -21,10 +16,7 @@
     "longDescription": "work가 작업에 필요한 이해·설계·구현·검증을 선택하고 짧은 작업 기록을 남깁니다. tidy가 누적 기록을 정돈해 이후 작업에 필요한 기억을 갱신합니다.",
     "developerName": "grapgrap",
     "category": "Productivity",
-    "capabilities": [
-      "Interactive",
-      "Write"
-    ],
+    "capabilities": ["Interactive", "Write"],
     "websiteURL": "https://github.com/grapgrap/loom",
     "defaultPrompt": [
       "이 변경을 Loom 방식으로 진행하고 실제 동작으로 검증해 주세요.",

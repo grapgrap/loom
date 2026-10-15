@@ -24,53 +24,53 @@
 
 ### 목적에서 설계를 도출한다
 
-| 적용 상황 | 원칙 | 판단 기준 |
-| --- | --- | --- |
-| 기능이나 설계 변경을 시작할 때 | [Outcome-Oriented Execution](principles/outcome_oriented_execution.md) | 원하는 도메인 동작과 계약에서 필요한 책임과 구조를 역산한다. |
-| 개념이나 구조를 추가할 때 | [Foundational Thinking](principles/foundational_thinking.md) | 기존 책임과 계약의 조합으로 충분한지 먼저 확인한다. |
-| 전례 없는 책임·계약 선택을 할 때 | [Exhaust the Design Space](principles/exhaust_design_space.md) | 기존 방식과 새로운 방식의 책임·계약·의존 관계를 구체적으로 비교한다. |
-| 요구사항이 기존 설계의 전제를 바꿀 때 | [Redesign From First Principles](principles/redesign_from_first_principles.md) | 바뀐 목적과 제약에서 영향받는 책임과 계약을 다시 도출한다. |
+| 적용 상황                             | 원칙                                                                           | 판단 기준                                                            |
+| ------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| 기능이나 설계 변경을 시작할 때        | [Outcome-Oriented Execution](principles/outcome_oriented_execution.md)         | 원하는 도메인 동작과 계약에서 필요한 책임과 구조를 역산한다.         |
+| 개념이나 구조를 추가할 때             | [Foundational Thinking](principles/foundational_thinking.md)                   | 기존 책임과 계약의 조합으로 충분한지 먼저 확인한다.                  |
+| 전례 없는 책임·계약 선택을 할 때      | [Exhaust the Design Space](principles/exhaust_design_space.md)                 | 기존 방식과 새로운 방식의 책임·계약·의존 관계를 구체적으로 비교한다. |
+| 요구사항이 기존 설계의 전제를 바꿀 때 | [Redesign From First Principles](principles/redesign_from_first_principles.md) | 바뀐 목적과 제약에서 영향받는 책임과 계약을 다시 도출한다.           |
 
 ### 책임과 경계를 유지한다
 
-| 적용 상황 | 원칙 | 판단 기준 |
-| --- | --- | --- |
-| 검증 위치나 관심사의 책임을 정할 때 | [Draw Clear Boundaries](principles/draw_clear_boundaries.md) | 데이터 검증, 상태 소유와 변경 이유의 경계를 분명히 한다. |
-| 모듈이나 추상화를 분리·통합할 때 | [Earn Your Boundary](principles/earn_your_boundary.md) | 고유한 입력, 제약이나 역할을 소유하는 경계를 둔다. |
-| 도메인의 코드를 배치할 때 | [Domain as Folder](principles/domain_as_folder.md) | 도메인별로 코드를 모으고, 논리적 관계는 공개 계약으로 드러낸다. |
-| 파일을 나누거나 코드를 함께 둘 때 | [File Cohesion](principles/file_cohesion.md) | 같은 도메인과 역할에서 함께 이해하고 변경할 코드를 모은다. |
-| 유사한 구현을 공유하려 할 때 | [Essential vs Accidental Duplication](principles/essential_vs_accidental_duplication.md) | 외관보다 같은 변경 이유를 근거로 공유 여부를 판단한다. |
-| 재사용을 위한 추상화를 도입할 때 | [Premature Abstraction Avoidance](principles/premature_abstraction_avoidance.md) | 현재의 사용 사례와 책임에서 확인한 증거로 추상화를 정당화한다. |
+| 적용 상황                           | 원칙                                                                                     | 판단 기준                                                       |
+| ----------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| 검증 위치나 관심사의 책임을 정할 때 | [Draw Clear Boundaries](principles/draw_clear_boundaries.md)                             | 데이터 검증, 상태 소유와 변경 이유의 경계를 분명히 한다.        |
+| 모듈이나 추상화를 분리·통합할 때    | [Earn Your Boundary](principles/earn_your_boundary.md)                                   | 고유한 입력, 제약이나 역할을 소유하는 경계를 둔다.              |
+| 도메인의 코드를 배치할 때           | [Domain as Folder](principles/domain_as_folder.md)                                       | 도메인별로 코드를 모으고, 논리적 관계는 공개 계약으로 드러낸다. |
+| 파일을 나누거나 코드를 함께 둘 때   | [File Cohesion](principles/file_cohesion.md)                                             | 같은 도메인과 역할에서 함께 이해하고 변경할 코드를 모은다.      |
+| 유사한 구현을 공유하려 할 때        | [Essential vs Accidental Duplication](principles/essential_vs_accidental_duplication.md) | 외관보다 같은 변경 이유를 근거로 공유 여부를 판단한다.          |
+| 재사용을 위한 추상화를 도입할 때    | [Premature Abstraction Avoidance](principles/premature_abstraction_avoidance.md)         | 현재의 사용 사례와 책임에서 확인한 증거로 추상화를 정당화한다.  |
 
 ### 의존과 조합의 방향을 지킨다
 
-| 적용 상황 | 원칙 | 판단 기준 |
-| --- | --- | --- |
-| 모듈 참조나 외부 구현을 연결할 때 | [Dependency Direction](principles/dependency_direction.md) | 모델과 하위 책임을 소비자의 사정에 묶지 않는다. |
-| 여러 도메인을 연결할 때 | [Cross-Domain Coupling](principles/cross_domain_coupling.md) | 공개 모델과 인터페이스를 사용하고 조율 책임을 공통 부모나 조합 지점에 둔다. |
-| 화면과 입력 흐름을 설계할 때 | [View Boundary](principles/view_boundary.md) | 표시·입력을 외부 형식의 해석과 도메인 규칙에서 분리한다. |
+| 적용 상황                         | 원칙                                                         | 판단 기준                                                                   |
+| --------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| 모듈 참조나 외부 구현을 연결할 때 | [Dependency Direction](principles/dependency_direction.md)   | 모델과 하위 책임을 소비자의 사정에 묶지 않는다.                             |
+| 여러 도메인을 연결할 때           | [Cross-Domain Coupling](principles/cross_domain_coupling.md) | 공개 모델과 인터페이스를 사용하고 조율 책임을 공통 부모나 조합 지점에 둔다. |
+| 화면과 입력 흐름을 설계할 때      | [View Boundary](principles/view_boundary.md)                 | 표시·입력을 외부 형식의 해석과 도메인 규칙에서 분리한다.                    |
 
 ### 도메인의 의미와 계약을 드러낸다
 
-| 적용 상황 | 원칙 | 판단 기준 |
-| --- | --- | --- |
-| 모델과 동작의 이름을 정할 때 | [Domain Vocabulary](principles/domain_vocabulary.md) | 도메인의 개념과 역할이 코드의 어휘에서 읽히게 한다. |
-| 동작을 조율하거나 구현 단위를 나눌 때 | [Single Level of Abstraction](principles/single_level_of_abstraction.md) | 표현의 수준과 차이가 실제 책임·동작·제약을 반영하게 한다. |
-| 제공하거나 요구할 계약을 정할 때 | [Public Interface](principles/public_interface.md) | 동작·값·실패·호출 조건을 명시하고 내부 구현은 공개하지 않는다. |
-| 계약의 이름과 동작을 정하거나 바꿀 때 | [Least Astonishment](principles/least_astonishment.md) | 호출자가 예상하는 의미와 동작을 일치시키고 기존 전제를 변경 비용에 포함한다. |
-| 외부 값이나 다른 도메인의 값을 받을 때 | [Parse at Boundaries](principles/parse_at_boundaries.md) | 경계에서 자기 도메인의 형식과 계약을 확보한다. |
-| 허용하는 상태와 데이터를 정의할 때 | [Model Valid States](principles/model_valid_states.md) | 상태마다 필요한 값을 보장하고 허용하지 않는 조합과 전이를 막는다. |
-| 실패에 대응하는 위치를 정할 때 | [Error Boundary Placement](principles/error_boundary_placement.md) | 대응할 책임과 능력이 있는 경계에서 처리한다. |
-| 실패를 생성하거나 변환할 때 | [Meaningful Errors](principles/meaningful_errors.md) | 실패 종류·원인·맥락을 계약으로 보존하여 대응을 선택할 수 있게 한다. |
+| 적용 상황                              | 원칙                                                                     | 판단 기준                                                                    |
+| -------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| 모델과 동작의 이름을 정할 때           | [Domain Vocabulary](principles/domain_vocabulary.md)                     | 도메인의 개념과 역할이 코드의 어휘에서 읽히게 한다.                          |
+| 동작을 조율하거나 구현 단위를 나눌 때  | [Single Level of Abstraction](principles/single_level_of_abstraction.md) | 표현의 수준과 차이가 실제 책임·동작·제약을 반영하게 한다.                    |
+| 제공하거나 요구할 계약을 정할 때       | [Public Interface](principles/public_interface.md)                       | 동작·값·실패·호출 조건을 명시하고 내부 구현은 공개하지 않는다.               |
+| 계약의 이름과 동작을 정하거나 바꿀 때  | [Least Astonishment](principles/least_astonishment.md)                   | 호출자가 예상하는 의미와 동작을 일치시키고 기존 전제를 변경 비용에 포함한다. |
+| 외부 값이나 다른 도메인의 값을 받을 때 | [Parse at Boundaries](principles/parse_at_boundaries.md)                 | 경계에서 자기 도메인의 형식과 계약을 확보한다.                               |
+| 허용하는 상태와 데이터를 정의할 때     | [Model Valid States](principles/model_valid_states.md)                   | 상태마다 필요한 값을 보장하고 허용하지 않는 조합과 전이를 막는다.            |
+| 실패에 대응하는 위치를 정할 때         | [Error Boundary Placement](principles/error_boundary_placement.md)       | 대응할 책임과 능력이 있는 경계에서 처리한다.                                 |
+| 실패를 생성하거나 변환할 때            | [Meaningful Errors](principles/meaningful_errors.md)                     | 실패 종류·원인·맥락을 계약으로 보존하여 대응을 선택할 수 있게 한다.          |
 
 ### 변경 후에도 일관성을 보장한다
 
-| 적용 상황 | 원칙 | 판단 기준 |
-| --- | --- | --- |
-| 반복되거나 재시도되는 상태 변경을 설계할 때 | [Make Operations Idempotent](principles/make_operations_idempotent.md) | 같은 요청의 반복이 의도한 상태로 수렴하게 한다. |
-| 동시에 변경하는 상태를 설계할 때 | [Separate Before Serializing Shared State](principles/separate_before_serializing_shared_state.md) | 상태 소유와 불변 조건에서 필요한 공유와 동기화를 도출한다. |
-| 인터페이스를 교체할 때 | [Migrate Callers Then Delete Legacy](principles/migrate_callers_delete_legacy.md) | 호출자를 전환하고 이전 계약을 제거하며 외부 소비자의 전환 경로를 보장한다. |
-| 결함을 수정할 때 | [Fix Root Causes](principles/fix_root_causes.md) | 근본 원인을 수정하여 같은 원인에서 발생한 문제들의 해소를 확인한다. |
-| 책임·모델·계약을 변경한 뒤 | [Verify Domain Contracts](principles/verify_domain_contracts.md) | 도메인의 불변 조건, 공개 동작과 의존 관계가 보존되는지 증거로 확인한다. |
+| 적용 상황                                   | 원칙                                                                                               | 판단 기준                                                                  |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 반복되거나 재시도되는 상태 변경을 설계할 때 | [Make Operations Idempotent](principles/make_operations_idempotent.md)                             | 같은 요청의 반복이 의도한 상태로 수렴하게 한다.                            |
+| 동시에 변경하는 상태를 설계할 때            | [Separate Before Serializing Shared State](principles/separate_before_serializing_shared_state.md) | 상태 소유와 불변 조건에서 필요한 공유와 동기화를 도출한다.                 |
+| 인터페이스를 교체할 때                      | [Migrate Callers Then Delete Legacy](principles/migrate_callers_delete_legacy.md)                  | 호출자를 전환하고 이전 계약을 제거하며 외부 소비자의 전환 경로를 보장한다. |
+| 결함을 수정할 때                            | [Fix Root Causes](principles/fix_root_causes.md)                                                   | 근본 원인을 수정하여 같은 원인에서 발생한 문제들의 해소를 확인한다.        |
+| 책임·모델·계약을 변경한 뒤                  | [Verify Domain Contracts](principles/verify_domain_contracts.md)                                   | 도메인의 불변 조건, 공개 동작과 의존 관계가 보존되는지 증거로 확인한다.    |
 
 도메인별 배치, 도메인이 요구하는 계약과 외부 구현의 분리, 진입점의 조합을 보여주는 사례는 [Structure Effect by Domain](https://ratstack.sh/lore/structure-effect-by-domain)에서 볼 수 있다.
