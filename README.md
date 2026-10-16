@@ -25,11 +25,14 @@ Size alone does not require human approval. Questions that observation or an exp
 | `architect`  | Ground implementation and verification in usage examples, responsibilities, state, and interfaces.                    |
 | `verify`     | Judge finish conditions on the real artifact and user path as confirmed, failed, or inconclusive.                     |
 | `review`     | Find gaps in decisions and evidence through counterexamples, then check the findings themselves.                      |
+| `write`      | Connect problems, evidence, judgments, and conclusions; refine wording while preserving meaning and constraints.      |
 | `tidy`       | Consolidate accumulated records into grounded project memories and work state while preserving originals.             |
 
 Requests for explanation, design, verification, or review stay within that scope. Implementation and fixes follow the scope of the work entrusted to the agent.
 
 Loom's [principles](references/principles.md) describe the domain responsibilities, contracts, and dependencies a change must preserve. Skills follow this shared document's application procedure to select relevant principles from the task's purpose and impact. Each principle includes application situations and examples. Subagents are not part of the default route.
+
+`work` and `review` select relevant [code rules](references/rules.md) by application situation and decision criteria, then read the individual files for practical guidance on names, functions, state, validation, error handling, and tests. Both use `write` when writing or reviewing prose. `write` owns scope and delivery, applies [clarity criteria](skills/write/references/clarity.md) to all prose, and adds [document framing](skills/write/references/framing.md) when the request involves building or reviewing the reasoning. Editing and summarization preserve the source's direction and judgments.
 
 ## Explain design without accumulating a design corpus
 
@@ -107,6 +110,7 @@ Start a new session so the installed skills are available. Invoke `/loom:work` i
 /loom:work Notifications are sent twice after a retry. Reproduce the problem, fix its cause, and verify the same path.
 $loom:architect Show the current ownership and proposed user experience first. Do not implement yet.
 $loom:understand Explain how payment failures work now and why the system was shaped this way.
+$loom:write Connect this design proposal's problem, evidence, judgment, and scope, then refine the wording.
 ```
 
 ## Migrate from v1
