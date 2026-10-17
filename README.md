@@ -18,21 +18,30 @@ Size alone does not require human approval. Questions that observation or an exp
 
 ## Skills
 
-| Skill        | Responsibility                                                                                                        |
-| ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `work`       | Own routing, implementation, cleanup, verification, and delivery within the goal and scope.                           |
-| `understand` | Reconstruct the current picture from code, runtime evidence, and history. Direct invocation investigates and reports. |
-| `architect`  | Ground implementation and verification in usage examples, responsibilities, state, and interfaces.                    |
-| `verify`     | Judge finish conditions on the real artifact and user path as confirmed, failed, or inconclusive.                     |
-| `review`     | Find gaps in decisions and evidence through counterexamples, then check the findings themselves.                      |
-| `write`      | Connect problems, evidence, judgments, and conclusions; refine wording while preserving meaning and constraints.      |
-| `tidy`       | Consolidate accumulated records into grounded project memories and work state while preserving originals.             |
+| Skill         | Responsibility                                                                                                        |
+| ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `work`        | One agent owns routing, implementation, cleanup, verification, and delivery within the goal and scope.                |
+| `orchestrate` | Coordinate multiple agents in one worktree through shared records, assignments, result judgments, and follow-up work. |
+| `understand`  | Reconstruct the current picture from code, runtime evidence, and history. Direct invocation investigates and reports. |
+| `architect`   | Ground implementation and verification in usage examples, responsibilities, state, and interfaces.                    |
+| `verify`      | Judge finish conditions on the real artifact and user path as confirmed, failed, or inconclusive.                     |
+| `review`      | Find gaps in decisions and evidence through counterexamples, then check the findings themselves.                      |
+| `write`       | Connect problems, evidence, judgments, and conclusions; refine wording while preserving meaning and constraints.      |
+| `tidy`        | Consolidate accumulated records into grounded project memories and work state while preserving originals.             |
 
 Requests for explanation, design, verification, or review stay within that scope. Implementation and fixes follow the scope of the work entrusted to the agent.
 
-Loom's [principles](references/principles.md) describe the domain responsibilities, contracts, and dependencies a change must preserve. Skills follow this shared document's application procedure to select relevant principles from the task's purpose and impact. Each principle includes application situations and examples. Subagents are not part of the default route.
+Loom's [principles](references/principles.md) describe the domain responsibilities, contracts, and dependencies a change must preserve. Skills follow this shared document's application procedure to select relevant principles from the task's purpose and impact. Each principle includes application situations and examples. `work` is the default single-agent route; use `orchestrate` for multi-agent collaboration.
 
 `work` and `review` select relevant [code rules](references/rules.md) by application situation and decision criteria, then read the individual files for practical guidance on names, functions, state, validation, error handling, and tests. Both use `write` when writing or reviewing prose. `write` owns scope and delivery, applies [clarity criteria](skills/write/references/clarity.md) to all prose, and adds [document framing](skills/write/references/framing.md) when the request involves building or reviewing the reasoning. Editing and summarization preserve the source's direction and judgments.
+
+## Coordinate multiple agents in one worktree
+
+When multi-agent collaboration is requested, `orchestrate` defines the overall outcome and acceptance criteria, then assigns work through the host's agent tools. Every subagent uses `work` for its assigned scope. Model selection follows user and project policy; if no selection exists, the coordinator asks before the first launch.
+
+The coordinator assigns files so concurrent writers do not overlap in the shared worktree, and orders work that depends on earlier results or changes to common files. Each worker receives its scope, acceptance criteria, necessary context, and recording and reporting instructions. Scope changes, further delegation, and coordination between workers belong to the coordinator.
+
+The overall task and each child task use separate work IDs in the existing shared context store. Workers record progress and verification evidence, then return the reference to their result summary. The coordinator directly applies `review`, prioritizing whether the acceptance criteria are met. It compares each criterion with artifacts and verification evidence, accepts results or requests corrections, creates follow-up work, and reviews the combined result. The coordinator owns shared `tidy` runs. Work relationships and assignments live in coordination records; the current CLI does not automatically aggregate children or enforce assignments.
 
 ## Explain design without accumulating a design corpus
 
@@ -108,6 +117,7 @@ Start a new session so the installed skills are available. Invoke `/loom:work` i
 
 ```text
 /loom:work Notifications are sent twice after a retry. Reproduce the problem, fix its cause, and verify the same path.
+$loom:orchestrate Divide this change among agents in the same worktree and verify their combined result.
 $loom:architect Show the current ownership and proposed user experience first. Do not implement yet.
 $loom:understand Explain how payment failures work now and why the system was shaped this way.
 $loom:write Connect this design proposal's problem, evidence, judgment, and scope, then refine the wording.
