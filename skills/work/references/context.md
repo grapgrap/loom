@@ -34,6 +34,8 @@ node "<plugin-root>/scripts/context/cli.mjs" recall --cwd "<checkout>" --work co
 - `--query`를 붙이면 내용·이유에 모든 검색어가 포함된 현재 기억만 반환한다. 과거 원본을 조사할 때는 `search`를 사용한다.
 - `--history`는 기억·업무 상태의 이전 리비전을 확인할 때 사용한다.
 
+`graph`에는 관련 대상·진술과 원본 근거의 연결이 담긴다. 새 기록을 `pending`에서 함께 읽고, 적용 범위·미확정 상태와 조건을 확인한다. 관계를 더 조사하거나 `tidy`에서 진술을 구성할 때는 [그래프 계약](context-graph.md)을 읽는다.
+
 ## 정리 시점을 판단한다
 
 착수할 때와 검증한 단위가 끝났을 때 `recall`의 `tidy.due` 또는 `tidy status`로 정리 필요 여부를 확인한다. 미처리 원본이 20개 이상이거나 가장 오래된 미처리 원본이 24시간 이상 지났으면 [tidy](../../tidy/SKILL.md)를 실행한다. 사용자가 정리를 요청하면 이 조건을 기다리지 않는다.
@@ -135,7 +137,7 @@ CLI는 잠금과 임시 파일 교체로 기록을 보호한다. 잠금이 남�
 ```text
 <data-root>/projects/<project-id>/
 ├── works/<work-id>/notes.json       일상 추가 기록
-├── tidy.json                       정리된 기억·업무 상태와 처리 지점
+├── tidy.json                       기억·업무 상태·그래프·결과 리포트와 처리 지점
 ├── tidy-snapshots/<id>.json         준비한 범위의 메타데이터
 ├── context/<memory-id>.json         기존 기억 원본
 └── works/<work-id>/checkpoint.json  기존 진행 상태 원본
@@ -151,4 +153,4 @@ CLI는 잠금과 임시 파일 교체로 기록을 보호한다. 잠금이 남�
 
 원본을 삭제하면 그 원본을 `sources`·`evidence`의 근거로 삼는 정리 결과도 모든 정리 이력에서 제거한다. 삭제된 입력의 재시도나 오래된 `snapshot`으로 내용을 복원하지 못하게 한다. `supersedes`로만 연결된 기억은 현재 근거가 남아 있으므로 연결만 제거하고 기억은 유지한다.
 
-`remember`·`checkpoint` 호출과 데이터도 지원한다. 두 명령을 직접 다룰 때는 [remember·checkpoint 계약](context-legacy.md)을 읽는다. `location`·`recall`·`search`·`read`·`tidy status`는 조회만으로 저장 디렉터리를 만들지 않는다.
+`remember`·`checkpoint` 호출과 데이터도 지원한다. 두 명령을 직접 다룰 때는 [remember·checkpoint 계약](context-legacy.md)을 읽는다. `location`·`recall`·`search`·`read`·`graph`·`tidy status`는 조회만으로 저장 디렉터리를 만들지 않는다.

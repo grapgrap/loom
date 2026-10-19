@@ -15,24 +15,23 @@ import {
   advanceRevisionCursor,
   getCursorRevision,
   createRevisionCursor,
-  parseSourceReference,
   findUnprocessedSources,
   requireSourceByReference,
+  collectKnownWorkIds,
+  validateSourceReferences,
+  validateRequiredSourceReferences,
 } from "./sources.mjs";
+import {
+  emptyGraph,
+  parseGraphChanges,
+  validateGraph,
+  applyGraphChanges,
+  eraseFromGraph,
+} from "./graph.mjs";
+import { createTidyReport, eraseFromTidyReport } from "./tidy-report.mjs";
 
 function assertCondition(condition, message) {
   if (!condition) throw new Error(message);
-}
-
-function validateSourceReferences(refs, label) {
-  validateArray(refs, label);
-  refs.forEach(parseSourceReference);
-  assertCondition(new Set(refs).size === refs.length, `${label} contains duplicate references`);
-}
-
-function validateRequiredSourceReferences(refs, label) {
-  validateSourceReferences(refs, label);
-  assertCondition(refs.length > 0, `${label} must contain at least one reference`);
 }
 
 function validateRevisionCursor(cursor) {
@@ -95,7 +94,7 @@ export function parseTidySnapshot(snapshot) {
 export function parseConsolidationHistory(history) {
   validateObject(history, "history");
   validateArray(history.forgotten, "forgotten");
-  assertCondition(history.version === 1, "Unsupported tidy store version");
+  assertCondition([1, 2].includes(history.version), "Unsupported tidy store version");
   history.forgotten.forEach((id) => parseRecordId(id));
   validateRecordRevisions(history.revisions, (revision) => {
     if (revision.snapshot !== null) parseRecordId(revision.snapshot);
@@ -104,6 +103,7 @@ export function parseConsolidationHistory(history) {
     validateArray(revision.works, "works");
     revision.memories.forEach(validateConsolidatedMemory);
     revision.works.forEach(validateConsolidatedWorkState);
+    if (revision.graph) validateGraph(revision.graph);
   });
   return history;
 }
@@ -174,6 +174,7 @@ export function parseTidyChanges(input) {
     works: input.works === undefined ? [] : input.works,
     retire: input.retire === undefined ? [] : input.retire,
   };
+  if (input.graph !== undefined) changes.graph = parseGraphChanges(input.graph);
   for (const field of ["memories", "works", "retire"]) validateArray(changes[field], field);
   changes.memories = changes.memories.map((input) => {
     validateObject(input, "memory");
@@ -298,15 +299,26 @@ export function eraseFromConsolidationHistory(
     memoryId === undefined
       ? (ref) => ref === erasedSourceRef
       : (ref) => ref.startsWith(`memory:${memoryId}@`);
-  const sanitizedRevisions = history.revisions.map((revision) => ({
-    ...revision,
-    memories: revision.memories
-      .map((memory) => pruneMemoryAfterErasure(memory, { memoryId, matchesReference }))
-      .filter(Boolean),
-    works: revision.works.filter(
-      (work) => ![...work.sources, ...work.evidence].some(matchesReference),
-    ),
-  }));
+  const sanitizedRevisions = history.revisions.map((revision) => {
+    const sanitized = {
+      ...revision,
+      memories: revision.memories
+        .map((memory) => pruneMemoryAfterErasure(memory, { memoryId, matchesReference }))
+        .filter(Boolean),
+      works: revision.works.filter(
+        (work) => ![...work.sources, ...work.evidence].some(matchesReference),
+      ),
+    };
+    if (revision.graph) sanitized.graph = eraseFromGraph(revision.graph, matchesReference);
+    if (revision.report)
+      sanitized.report = eraseFromTidyReport(
+        revision.report,
+        sanitized,
+        matchesReference,
+        memoryId,
+      );
+    return sanitized;
+  });
   const forgottenMemoryIds =
     memoryId === undefined ? history.forgotten : [...new Set([...history.forgotten, memoryId])];
   if (
@@ -316,7 +328,7 @@ export function eraseFromConsolidationHistory(
     return history;
   const latestSanitized = sanitizedRevisions.at(-1);
   return {
-    version: 1,
+    version: history.version,
     forgotten: forgottenMemoryIds,
     revisions: [
       ...sanitizedRevisions,
@@ -351,6 +363,11 @@ export function validatePreparedSources(archive, snapshot, changes) {
     ...changes.memories,
     ...changes.works,
     ...changes.retire,
+    ...[
+      ...(changes.graph?.entities ?? []),
+      ...(changes.graph?.statements ?? []),
+      ...(changes.graph?.retire ?? []),
+    ].map(({ sources }) => ({ sources })),
   ]);
   return prepared;
 }
@@ -364,12 +381,13 @@ export function assertTidyRevision(current, snapshot) {
 
 export function buildConsolidation({ history, archive, snapshot, prepared, recordedAt }, changes) {
   const current = getLatestConsolidation(history);
-  const knownWorkIds = new Set([...archive.checkpoints, ...archive.journals].map(({ id }) => id));
+  const knownWorkIds = collectKnownWorkIds(archive);
   for (const work of changes.works)
     assertCondition(knownWorkIds.has(work.id), `Unknown work: ${work.id}`);
+  const existingMemories = collectMemoryBaseline(archive, current, snapshot.bounds);
   const memories = applyMemoryChanges(
     {
-      existingMemories: collectMemoryBaseline(archive, current, snapshot.bounds),
+      existingMemories,
       forgottenMemoryIds: history?.forgotten ?? [],
       memoryRecords: archive.memories,
     },
@@ -377,6 +395,11 @@ export function buildConsolidation({ history, archive, snapshot, prepared, recor
   );
   const works = new Map(current.works.map((work) => [work.id, work]));
   for (const work of changes.works) works.set(work.id, work);
+  const graph = applyGraphChanges(
+    current.graph ?? emptyGraph(),
+    changes.graph ?? parseGraphChanges(),
+    knownWorkIds,
+  );
   const revision = {
     revision: current.revision + 1,
     recordedAt,
@@ -385,9 +408,16 @@ export function buildConsolidation({ history, archive, snapshot, prepared, recor
     cursor: advanceRevisionCursor(current.cursor, prepared),
     memories,
     works: [...works.values()].sort((left, right) => left.id.localeCompare(right.id)),
+    graph,
   };
+  revision.report = createTidyReport(
+    { memories: existingMemories, works: current.works, graph: current.graph ?? emptyGraph() },
+    revision,
+    prepared.map(({ ref }) => ref),
+    findUnprocessedSources(archive, revision.cursor).length,
+  );
   return {
-    version: 1,
+    version: 2,
     forgotten: history?.forgotten ?? [],
     revisions: [...(history?.revisions ?? []), revision],
   };

@@ -5,6 +5,7 @@ import {
   parseRecordId,
   createRecordParser,
   parseRevisionNumber,
+  validateArray,
 } from "./records.mjs";
 import { workJournalPath, parseWorkJournal } from "./journal.mjs";
 import { readDirectoryEntries, readStoredRecord } from "./store.mjs";
@@ -22,6 +23,26 @@ export function parseSourceReference(reference) {
   if (!referenceParts) throw new Error(`Invalid source reference: ${reference}`);
   const [, kind, recordId, revisionText] = referenceParts;
   return { kind, id: parseRecordId(recordId), revision: parseRevisionNumber(Number(revisionText)) };
+}
+
+export function validateSourceReferences(refs, label) {
+  validateArray(refs, label);
+  refs.forEach((ref) => parseSourceReference(ref));
+  if (new Set(refs).size !== refs.length) throw new Error(`${label} contains duplicate references`);
+}
+
+export function validateRequiredSourceReferences(refs, label) {
+  validateSourceReferences(refs, label);
+  if (!refs.length) throw new Error(`${label} must contain at least one reference`);
+}
+
+export function collectKnownWorkIds(archive) {
+  const workIds = [...archive.checkpoints, ...archive.journals].map(({ id }) => id);
+  for (const memory of archive.memories) {
+    if (memory.forgotten || memory.scope.type !== "work") continue;
+    workIds.push(memory.scope.id);
+  }
+  return new Set(workIds);
 }
 
 export async function readSource(location, reference) {

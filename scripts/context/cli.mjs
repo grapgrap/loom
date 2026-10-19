@@ -15,6 +15,7 @@ import { rankSourcesByQuery } from "./search.mjs";
 import { applyTidyChanges, prepareTidyBatch, readConsolidationHistory } from "./tidy.mjs";
 import { getLatestConsolidation, calculateTidyStatus } from "./consolidation.mjs";
 import { resolveProjectLocation } from "./store.mjs";
+import { queryGraph } from "./graph-query.mjs";
 
 const usage = `Usage: node <plugin>/scripts/context/cli.mjs <command> [options]
 
@@ -24,6 +25,7 @@ Commands:
   record      Append daily plain text from stdin: --work <id> --source <reference>.
   search      Rank original records with BM25: --query <text>.
   read        Read an exact original record: --ref <kind:id@revision>.
+  graph       Read statements and their evidence paths: --entity <id> or --query <text>.
   tidy prepare  Freeze an unprocessed batch for the tidy skill.
   tidy apply    Apply grounded changes from JSON stdin using the prepared snapshot.
   tidy status   Show pending count and whether consolidation is due.
@@ -37,6 +39,8 @@ Options:
   --work <id>        Include this work's scoped memories and full checkpoint in recall.
   --query <text>     Filter recalled memories by words in current text and reason.
   --history         Include prior revisions in recall; current revisions are the default.
+  --entity <id>      Start graph traversal at this entity.
+  --depth <n>        Graph traversal depth, 1-5 (default: 2).
   --source <text>    Actual source of a daily record.
   --by <user|agent>  Source type for record (default: agent).
   --key <id>         Reuse a daily record's returned requestKey only when retrying it.
@@ -75,6 +79,8 @@ function parseCommandLine() {
       ref: { type: "string" },
       limit: { type: "string" },
       offset: { type: "string" },
+      entity: { type: "string" },
+      depth: { type: "string" },
     },
   });
   const names = tokens.filter(({ kind }) => kind === "option").map(({ name }) => name);
@@ -84,13 +90,14 @@ function parseCommandLine() {
   if (words.length !== (words[0] === "tidy" ? 2 : 1)) throw new Error(usage);
   const optionsByCommand = {
     location: [],
-    recall: ["work", "query", "history", "limit", "offset"],
+    recall: ["work", "query", "history", "limit", "offset", "entity", "depth"],
     remember: ["id", "input"],
     checkpoint: ["work", "input"],
     forget: ["id", "revision", "ref"],
     record: ["work", "source", "by", "key"],
     search: ["query", "work", "limit"],
     read: ["ref"],
+    graph: ["work", "query", "history", "limit", "entity", "depth"],
     "tidy:prepare": ["limit", "offset"],
     "tidy:apply": ["input"],
     "tidy:status": [],
@@ -119,6 +126,12 @@ function parseCommandLine() {
     throw new Error("--offset must be a non-negative integer");
   }
   options.offset = Number(options.offset ?? 0);
+  if (options.entity !== undefined) parseRecordId(options.entity);
+  if (options.entity !== undefined && options.query !== undefined)
+    throw new Error("Choose --entity or --query for graph lookup");
+  if (options.depth !== undefined && !/^[1-5]$/.test(options.depth))
+    throw new Error("--depth must be an integer from 1 to 5");
+  options.depth = Number(options.depth ?? 2);
   if (command === "search" && !options.query?.trim())
     throw new Error("search requires --query <text>");
   if (command === "read" && !options.ref) throw new Error("read requires --ref <kind:id@revision>");
@@ -178,6 +191,14 @@ async function runCli() {
     case "recall":
       result = await recallContext(location, options);
       break;
+    case "graph": {
+      const [archive, history] = await Promise.all([
+        readSourceArchive(location),
+        readConsolidationHistory(location),
+      ]);
+      result = queryGraph(getLatestConsolidation(history), archive, options);
+      break;
+    }
     case "record":
       result = await appendWorkNote(location, {
         work: options.work,

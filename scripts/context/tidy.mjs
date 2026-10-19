@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { createRecordParser } from "./records.mjs";
 import { findUnprocessedSources, readSourceArchive } from "./sources.mjs";
 import { updateStoredRecord, readStoredRecord } from "./store.mjs";
+import { emptyGraph } from "./graph.mjs";
 import {
   parseConsolidationHistory,
   getLatestConsolidation,
@@ -43,6 +44,7 @@ function currentPage(archive, consolidation, limit, offset) {
     worksRemaining: Math.max(0, consolidation.works.length - end),
     retired: retired.slice(offset, end),
     retiredRemaining: Math.max(0, retired.length - end),
+    graph: consolidation.graph ?? emptyGraph(),
   };
 }
 

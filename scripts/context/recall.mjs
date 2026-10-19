@@ -7,6 +7,7 @@ import {
 } from "./sources.mjs";
 import { readConsolidationHistory } from "./tidy.mjs";
 import { getLatestConsolidation, calculateTidyStatus } from "./consolidation.mjs";
+import { queryGraph } from "./graph-query.mjs";
 
 const noteExcerptLength = 300;
 
@@ -150,6 +151,7 @@ export function buildRecall(archive, history, options) {
     work: works.get(options.work) ?? null,
     pending: pending.slice(offset, end),
     pendingRemaining: Math.max(0, pending.length - end),
+    graph: queryGraph(current, archive, options),
     tidy: calculateTidyStatus(archive, current),
   };
 }
