@@ -36,6 +36,25 @@ node "<plugin-root>/scripts/context/cli.mjs" recall --cwd "<checkout>" --work co
 
 `graph`에는 관련 대상·진술과 원본 근거의 연결이 담긴다. 새 기록을 `pending`에서 함께 읽고, 적용 범위·미확정 상태와 조건을 확인한다. 관계를 더 조사하거나 `tidy`에서 진술을 구성할 때는 [그래프 계약](context-graph.md)을 읽는다.
 
+## 관련 업무와 적용 조건을 찾는다
+
+업무 ID나 원본 ref가 없는 새 요청은 목적과 제약을 검색어로 나누어 관련 원본의 후보를 찾는다. 도메인·행동·산출물·버전처럼 판단에 필요한 단어를 포함하고, 이미 알고 있는 업무나 현재 대화에서 확인한 유효한 ref가 있으면 그 근거를 먼저 재사용한다. 모든 업무에 전체 검색을 반복하지 않는다.
+
+```sh
+node "<plugin-root>/scripts/context/cli.mjs" search --cwd "<checkout>" --query "<목적과 제약>"
+node "<plugin-root>/scripts/context/cli.mjs" recall --cwd "<checkout>" --work "<candidate-work>"
+node "<plugin-root>/scripts/context/cli.mjs" graph --cwd "<checkout>" --work "<candidate-work>" --query "<판단이나 대상>"
+node "<plugin-root>/scripts/context/cli.mjs" read --cwd "<checkout>" --ref "<selected-ref>"
+```
+
+`search` 결과의 `scope`에서 work ID 후보를 모은다. work scope 후보는 `--work`를 붙여 현재 상태를 읽고, project scope 후보는 `--work` 없이 프로젝트 공통 상태를 읽는다. 검색 결과 자체를 현재 판단으로 채택하지 말고, 후보마다 현재 `recall`과 관련 `graph`를 읽어 목표·상태·진행, `pending`, 활성·미확정 진술, 대체·제외된 진술과 `conditions`·`sources`를 확인한다. 대체 관계를 비교할 때만 `graph --history`를 사용한다. 후보를 좁힌 뒤 필요한 원본의 정확한 ref만 `read`로 읽고, 현재 요청·checkout의 코드·브랜치/커밋·실행 조건·업무 범위와 대조해 채택 여부를 정한다. 채택한 중요한 근거 ref와 적용 조건은 현재 업무의 짧은 `record`에 남긴다.
+
+`search`는 원본의 BM25 후보를 반환하므로 오래된 정책이나 다른 업무의 관찰이 상위에 나와도 정상이다. `latest: true`는 해당 원본 파일의 최신 리비전이라는 뜻이며 판단이 현재 유효하다는 보장이 아니다. `active`도 사실성이나 검증 완료를 보장하지 않는다. 프로젝트 합의, 특정 커밋에서 확인한 관찰, 미확정 제안은 `scope`·`conditions`·`sources`를 보존한 별도 근거로 다룬다. 같은 저장소의 여러 브랜치에서 상반된 코드 관찰이 동시에 맞을 수 있으므로 기록 시각이나 최신 브랜치 이름만으로 하나를 덮어쓰지 않는다.
+
+## 채택한 맥락을 다시 확인한다
+
+채택한 근거에 의존하는 중요한 판단이나 논리적 작업 단위를 끝내고 다음 단계로 넘어가기 전에 영향받는 업무의 현재 `recall`, 관련 `graph`, `pending`을 다시 읽는다. 기본 `graph`는 `superseded` 진술을 제외하므로 현재 결과에서 새 진술의 `supersedes`가 채택한 진술을 가리키는지 비교하고, 대체된 이전 상태와 연결을 확인할 때만 `graph --history`로 다시 조회한다. 처음 채택한 exact ref를 `read`로 확인하는 것은 불변 원문을 다시 읽는 일일 뿐 새 결정을 찾는 방법이 아니다. 현재 조회에서 채택 진술이 대체·미확정으로 바뀌었거나 관련 원본이 새로 `pending`에 들어왔거나 `conditions`의 브랜치·커밋·실행 범위가 현재 작업과 달라졌을 때만 영향을 받은 판단을 다시 선택한다. 리비전 증가나 브랜치 이름 변화 자체는 무효화 사유가 아니다. 재확인 결과가 판단을 바꾸면 새로 채택한 근거 ref와 적용 조건을 기존 업무의 짧은 `record`에 남긴다.
+
 ## 정리 시점을 판단한다
 
 착수할 때와 검증한 단위가 끝났을 때 `recall`의 `tidy.due` 또는 `tidy status`로 정리 필요 여부를 확인한다. 미처리 원본이 20개 이상이거나 가장 오래된 미처리 원본이 24시간 이상 지났으면 [tidy](../../tidy/SKILL.md)를 실행한다. 사용자가 정리를 요청하면 이 조건을 기다리지 않는다.
