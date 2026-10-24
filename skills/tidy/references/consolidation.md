@@ -42,7 +42,11 @@ node "<plugin-root>/scripts/context/cli.mjs" tidy prepare --cwd "<checkout>" --l
 
 같은 기억의 `scope`는 바꿀 수 없다. 적용 범위를 확장할 때는 새 ID를 사용한다.
 
-`works`의 각 항목에는 `id`, `goal`, `status`, `progress`, `evidence`, `next`, `sources`를 전달한다. 상태는 `active` 또는 `complete`다. `evidence`에는 실제 검증 결과가 담긴 원본 ref를 넣는다. `complete`는 그 근거가 완료를 입증하고 `next`가 비어 있을 때만 사용한다.
+`works`의 각 항목에는 `id`, `goal`, `status`, `progress`, `evidence`, `next`, `sources`를 전달한다. 상태는 `active`·`blocked`·`paused`·`complete`·`cancelled`다. `evidence`에는 실제 검증 결과가 담긴 원본 ref를 넣는다. `complete`는 그 근거가 원래 목표의 완료를 입증하고 `next`가 비어 있을 때만 사용한다. `blocked`·`paused`에는 남은 행동과 `progress`의 이유·재개 조건이 필요하다. `cancelled`에는 사용자의 취소 근거를 보존하고 `next`를 비운다. 의미와 재개 판단은 [미완료 업무 규약](../../work/references/context.md#미완료-업무를-확인하고-재개한다)에 따른다.
+
+검토한 묶음의 체크포인트는 업무별로 가장 높은 원본 리비전의 상태가 기본 반영된다. 해당 업무를 `works`로 명시하면 근거를 대조한 그 판단을 적용한다. `works`를 생략해도 새 체크포인트가 과거 정리 상태에 가려지지 않는다. 자동 반영한 상태도 `report.changes`에 포함된다.
+
+업무 상태에는 준비 당시 확인한 체크포인트 리비전도 보존한다. 명시적으로 반영한 최신 판단을 이후 묶음의 과거 체크포인트가 덮어쓰지 않으며, 준비 후 작성한 새 체크포인트는 다음 조회에서 우선 반영된다.
 
 `retire`의 각 항목은 `{"id":"기억-id","reason":"제외 이유","sources":["원본-ref"]}`다. 해당 기억을 현재 조회에서 제외하고 원본과 정리 이력은 보존한다. 원본을 삭제할 때는 `forget`을 사용한다.
 

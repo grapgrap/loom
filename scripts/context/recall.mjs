@@ -66,12 +66,23 @@ function restoreWorks(archive, presentation) {
   const works = new Map(
     archive.checkpoints.map((checkpoint) => [
       checkpoint.id,
-      presentLatestRevision(checkpoint, presentation.includeHistory),
+      {
+        ...presentLatestRevision(checkpoint, presentation.includeHistory),
+        checkpointRevision: checkpoint.revisions.at(-1).revision,
+      },
     ]),
   );
   for (const work of presentation.current.works) {
+    const checkpointRevision = works.get(work.id)?.checkpointRevision ?? 0;
+    const acceptedCheckpointRevision =
+      work.checkpointRevision ??
+      getCursorRevision(presentation.current.cursor, "checkpoint", work.id);
+    if (checkpointRevision > acceptedCheckpointRevision) continue;
     if (work.sources.every((ref) => presentation.availableRefs.has(ref))) {
-      works.set(work.id, presentEntry(work, { ...presentation, collection: "works" }));
+      works.set(work.id, {
+        ...presentEntry(work, { ...presentation, collection: "works" }),
+        checkpointRevision,
+      });
     }
   }
   return works;
@@ -85,9 +96,9 @@ function previewNote(work, note) {
 
 function summarizeWorks(works, journals) {
   const summaries = new Map(
-    [...works.values()].map(({ id, goal, status, revision, recordedAt }) => [
+    [...works.values()].map(({ id, goal, status, revision, checkpointRevision, recordedAt }) => [
       id,
-      { id, goal, status, revision, recordedAt },
+      { id, goal, status, revision, checkpointRevision, recordedAt },
     ]),
   );
   for (const journal of journals) {
@@ -100,6 +111,7 @@ function summarizeWorks(works, journals) {
         id: journal.id,
         goal: null,
         status: null,
+        checkpointRevision: 0,
         revision: latest.revision,
         recordedAt: latest.recordedAt,
       }),
@@ -114,6 +126,21 @@ function summarizeWorks(works, journals) {
         left.latestRecordAt ?? left.recordedAt,
       ) || left.id.localeCompare(right.id),
   );
+}
+
+function findUnreviewedWorks(summaries, works, pendingSources) {
+  return summaries.filter((summary) => {
+    const state = works.get(summary.id);
+    if (!state) return true;
+    return pendingSources.some(
+      (source) =>
+        source.kind === "note" &&
+        source.id === summary.id &&
+        !state.sources?.includes(source.ref) &&
+        !state.evidence.includes(source.ref) &&
+        (state.sources !== undefined || source.recordedAt > state.recordedAt),
+    );
+  });
 }
 
 export function buildRecall(archive, history, options) {
@@ -135,12 +162,18 @@ export function buildRecall(archive, history, options) {
     .sort((left, right) => left.id.localeCompare(right.id));
   const works = restoreWorks(archive, presentation);
   const summaries = summarizeWorks(works, archive.journals);
-  const pending = findUnprocessedSources(archive, current.cursor).filter(
+  const pendingSources = findUnprocessedSources(archive, current.cursor).filter(
+    (source) => !source.forgotten,
+  );
+  const pending = pendingSources.filter(
     (source) =>
-      !source.forgotten &&
       matchesContextScope(source, options.work) &&
       (source.kind === "note" || (history && source.latest)),
   );
+  const unfinishedWorks = summaries
+    .filter(({ status }) => ["active", "blocked", "paused"].includes(status))
+    .map((summary) => ({ ...works.get(summary.id), ...summary }));
+  const unreviewedWorks = findUnreviewedWorks(summaries, works, pendingSources);
   const offset = options.offset ?? 0;
   const end = offset + (options.limit ?? 50);
   return {
@@ -148,6 +181,10 @@ export function buildRecall(archive, history, options) {
     memoriesRemaining: Math.max(0, memories.length - end),
     works: summaries.slice(offset, end),
     worksRemaining: Math.max(0, summaries.length - end),
+    unfinishedWorks: unfinishedWorks.slice(offset, end),
+    unfinishedWorksRemaining: Math.max(0, unfinishedWorks.length - end),
+    unreviewedWorks: unreviewedWorks.slice(offset, end),
+    unreviewedWorksRemaining: Math.max(0, unreviewedWorks.length - end),
     work: works.get(options.work) ?? null,
     pending: pending.slice(offset, end),
     pendingRemaining: Math.max(0, pending.length - end),

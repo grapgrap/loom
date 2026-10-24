@@ -68,6 +68,8 @@ function validateConsolidatedWorkState(work) {
   parseRecordId(work.id);
   validateWorkProgress(work, validateSourceReferences);
   validateRequiredSourceReferences(work.sources, "sources");
+  if (work.checkpointRevision !== undefined)
+    parseRevisionNumber(work.checkpointRevision, "checkpointRevision");
 }
 
 function validateRetirementEvidence(retirement) {
@@ -394,7 +396,34 @@ export function buildConsolidation({ history, archive, snapshot, prepared, recor
     changes,
   );
   const works = new Map(current.works.map((work) => [work.id, work]));
-  for (const work of changes.works) works.set(work.id, work);
+  const checkpoints = new Map();
+  for (const source of prepared) {
+    if (source.kind !== "checkpoint") continue;
+    const acceptedRevision = Math.max(
+      getCursorRevision(current.cursor, "checkpoint", source.id),
+      works.get(source.id)?.checkpointRevision ?? 0,
+    );
+    if (source.revision <= acceptedRevision) continue;
+    if (source.revision > (checkpoints.get(source.id)?.revision ?? 0))
+      checkpoints.set(source.id, source);
+  }
+  for (const source of checkpoints.values()) {
+    works.set(source.id, {
+      id: source.id,
+      goal: source.goal,
+      status: source.status,
+      progress: source.progress,
+      evidence: source.evidence.length ? [source.ref] : [],
+      next: source.next,
+      sources: [source.ref],
+      checkpointRevision: source.revision,
+    });
+  }
+  for (const work of changes.works)
+    works.set(work.id, {
+      ...work,
+      checkpointRevision: getCursorRevision(snapshot.bounds, "checkpoint", work.id),
+    });
   const graph = applyGraphChanges(
     current.graph ?? emptyGraph(),
     changes.graph ?? parseGraphChanges(),

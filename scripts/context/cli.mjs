@@ -21,7 +21,7 @@ const usage = `Usage: node <plugin>/scripts/context/cli.mjs <command> [options]
 
 Commands:
   location    Show the resolved project and storage paths without creating files.
-  recall      Read current project memories and work summaries.
+  recall      Read memories, work summaries, unfinished work and state-review candidates.
   record      Append daily plain text from stdin: --work <id> --source <reference>.
   search      Rank original records with BM25: --query <text>.
   read        Read an exact original record: --ref <kind:id@revision>.
@@ -30,7 +30,7 @@ Commands:
   tidy apply    Apply grounded changes from JSON stdin using the prepared snapshot.
   tidy status   Show pending count and whether consolidation is due.
   remember    Create or revise a memory: --id <id>, JSON input.
-  checkpoint  Save verified progress: --work <id>, JSON input.
+  checkpoint  Save work status, progress and next actions: --work <id>, JSON input.
   forget      Erase a memory: --id <id> --revision <n>; or a daily original: --ref note:work@n.
 
 Options:
@@ -52,7 +52,7 @@ Options:
 
 Requires Node.js 20+ and Git. Use cli.sh (macOS/Linux) or cli.cmd (Windows) to diagnose missing Node.
 Exit code 2 requests dependency setup by the agent; other failures use exit code 1.
-Legacy remember/checkpoint inputs require expectedRevision; record does not.
+remember/checkpoint inputs require expectedRevision; record does not.
 See skills/work/references/context.md for schemas and recording policy.`;
 
 function parseCommandLine() {

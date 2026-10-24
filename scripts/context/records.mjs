@@ -67,7 +67,11 @@ function validateTextArray(items, label) {
 
 export function validateWorkProgress(workState, validateEvidence = validateTextArray) {
   validateObject(workState, "work");
-  validateChoice(workState.status, ["active", "complete"], "status");
+  validateChoice(
+    workState.status,
+    ["active", "blocked", "paused", "complete", "cancelled"],
+    "status",
+  );
   validateText(workState.goal, "goal");
   validateText(workState.progress, "progress");
   validateEvidence(workState.evidence, "evidence");
@@ -76,6 +80,14 @@ export function validateWorkProgress(workState, validateEvidence = validateTextA
     workState.status !== "complete" ||
       (workState.evidence.length > 0 && workState.next.length === 0),
     "A complete checkpoint needs evidence and no remaining next steps",
+  );
+  assertCondition(
+    !["blocked", "paused"].includes(workState.status) || workState.next.length > 0,
+    "Blocked or paused work needs next steps and its resumption condition in progress",
+  );
+  assertCondition(
+    workState.status !== "cancelled" || workState.next.length === 0,
+    "Cancelled work cannot retain remaining next steps",
   );
 }
 
