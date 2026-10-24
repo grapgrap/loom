@@ -1,6 +1,6 @@
 # remember·checkpoint 계약
 
-`remember`의 기존 데이터나 업무의 즉시 상태를 저장하는 `checkpoint`를 다룰 때 참조한다. 일상 관찰은 [record](context.md#새-내용을-짧게-기록한다)로 추가하고, 업무 착수·전환·종료는 [미완료 업무 규약](context.md#미완료-업무를-확인하고-재개한다)에 따라 `checkpoint`로 저장한다. [tidy](../../tidy/SKILL.md)는 원본과 현재 기억·업무 상태를 정리한다.
+remember의 기존 데이터나 managed 표시가 없는 checkpoint 업무를 다룰 때 참조한다. 새 업무의 정의·진행·검증·완료에는 [공통 업무 CLI](context-work.md)를 사용한다. managed 업무에 checkpoint를 쓰면 거부한다. 기존 업무를 계속 수행할 때는 현재 recall과 원문을 읽고 work create의 adopt: true로 새 명세를 정의한다. 이전 데이터와 ref는 보존하며 이전 완료 선언을 새 조건의 met 증거로 자동 변환하지 않는다.
 
 두 명령은 JSON을 stdin으로 받는다. `expectedRevision`은 새 기록이면 `0`, 수정이면 조회한 원본의 현재 리비전이다. `checkpoint`는 `recall`의 `work.checkpointRevision`을 사용하며 정리 결과의 `work.revision`과 구분한다. 같은 입력을 직후에 재시도하면 리비전을 추가하지 않는다. 리비전이 충돌하면 원본을 다시 읽고 변경분을 조정한다. 기억의 `scope`는 바꿀 수 없다.
 

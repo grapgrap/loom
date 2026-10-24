@@ -8,6 +8,7 @@ import {
 import { readConsolidationHistory } from "./tidy.mjs";
 import { getLatestConsolidation, calculateTidyStatus } from "./consolidation.mjs";
 import { queryGraph } from "./graph-query.mjs";
+import { presentWork } from "./work.mjs";
 
 const noteExcerptLength = 300;
 
@@ -85,6 +86,14 @@ function restoreWorks(archive, presentation) {
       });
     }
   }
+  for (const record of archive.works ?? [])
+    works.set(
+      record.id,
+      presentWork(
+        record.revisions.at(-1),
+        presentation.includeHistory ? record.revisions : undefined,
+      ),
+    );
   return works;
 }
 
@@ -138,6 +147,7 @@ function findUnreviewedWorks(summaries, works, pendingSources) {
         source.id === summary.id &&
         !state.sources?.includes(source.ref) &&
         !state.evidence.includes(source.ref) &&
+        state.source?.reference !== source.ref &&
         (state.sources !== undefined || source.recordedAt > state.recordedAt),
     );
   });
@@ -171,9 +181,12 @@ export function buildRecall(archive, history, options) {
       (source.kind === "note" || (history && source.latest)),
   );
   const unfinishedWorks = summaries
-    .filter(({ status }) => ["active", "blocked", "paused"].includes(status))
+    .filter(({ status }) => ["active", "blocked", "paused", "submitted"].includes(status))
     .map((summary) => ({ ...works.get(summary.id), ...summary }));
   const unreviewedWorks = findUnreviewedWorks(summaries, works, pendingSources);
+  const awaitingReviewWorks = summaries
+    .filter(({ status }) => status === "submitted")
+    .map((summary) => ({ ...works.get(summary.id), ...summary }));
   const offset = options.offset ?? 0;
   const end = offset + (options.limit ?? 50);
   return {
@@ -185,6 +198,8 @@ export function buildRecall(archive, history, options) {
     unfinishedWorksRemaining: Math.max(0, unfinishedWorks.length - end),
     unreviewedWorks: unreviewedWorks.slice(offset, end),
     unreviewedWorksRemaining: Math.max(0, unreviewedWorks.length - end),
+    awaitingReviewWorks: awaitingReviewWorks.slice(offset, end),
+    awaitingReviewWorksRemaining: Math.max(0, awaitingReviewWorks.length - end),
     work: works.get(options.work) ?? null,
     pending: pending.slice(offset, end),
     pendingRemaining: Math.max(0, pending.length - end),

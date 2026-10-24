@@ -16,10 +16,14 @@ import { applyTidyChanges, prepareTidyBatch, readConsolidationHistory } from "./
 import { getLatestConsolidation, calculateTidyStatus } from "./consolidation.mjs";
 import { resolveProjectLocation } from "./store.mjs";
 import { queryGraph } from "./graph-query.mjs";
+import { runWorkCommand } from "./work-store.mjs";
 
 const usage = `Usage: node <plugin>/scripts/context/cli.mjs <command> [options]
 
 Commands:
+  work create/revise/assign/report/submit/accept/request-changes/complete/cancel/reopen
+              Change structured work through JSON stdin: --work <id>.
+  work show   Read structured work, readiness and review gaps: --work <id> [--tree].
   location    Show the resolved project and storage paths without creating files.
   recall      Read memories, work summaries, unfinished work and state-review candidates.
   record      Append daily plain text from stdin: --work <id> --source <reference>.
@@ -39,6 +43,7 @@ Options:
   --work <id>        Include this work's scoped memories and full checkpoint in recall.
   --query <text>     Filter recalled memories by words in current text and reason.
   --history         Include prior revisions in recall; current revisions are the default.
+  --tree            Include descendants in work show.
   --entity <id>      Start graph traversal at this entity.
   --depth <n>        Graph traversal depth, 1-5 (default: 2).
   --source <text>    Actual source of a daily record.
@@ -81,13 +86,15 @@ function parseCommandLine() {
       offset: { type: "string" },
       entity: { type: "string" },
       depth: { type: "string" },
+      tree: { type: "boolean" },
     },
   });
   const names = tokens.filter(({ kind }) => kind === "option").map(({ name }) => name);
   if (new Set(names).size !== names.length) throw new Error("Options cannot be repeated");
   if (options.help) return { help: true };
-  const command = words[0] === "tidy" ? `tidy:${words[1]}` : words[0];
-  if (words.length !== (words[0] === "tidy" ? 2 : 1)) throw new Error(usage);
+  const grouped = ["tidy", "work"].includes(words[0]);
+  const command = grouped ? `${words[0]}:${words[1]}` : words[0];
+  if (words.length !== (grouped ? 2 : 1)) throw new Error(usage);
   const optionsByCommand = {
     location: [],
     recall: ["work", "query", "history", "limit", "offset", "entity", "depth"],
@@ -101,7 +108,21 @@ function parseCommandLine() {
     "tidy:prepare": ["limit", "offset"],
     "tidy:apply": ["input"],
     "tidy:status": [],
+    "work:show": ["work", "tree", "history"],
   };
+  for (const action of [
+    "create",
+    "revise",
+    "assign",
+    "report",
+    "submit",
+    "accept",
+    "request-changes",
+    "complete",
+    "cancel",
+    "reopen",
+  ])
+    optionsByCommand[`work:${action}`] = ["work", "input"];
   if (!Object.hasOwn(optionsByCommand, command))
     throw new Error(`Unknown command: ${command}\n${usage}`);
   const allowedOptions = ["cwd", "data-dir", ...optionsByCommand[command]];
@@ -109,7 +130,11 @@ function parseCommandLine() {
     throw new Error(`Unsupported option for ${command}`);
   if (command === "remember" || (command === "forget" && options.ref === undefined))
     parseRecordId(options.id);
-  if (["checkpoint", "record"].includes(command) || options.work !== undefined)
+  if (
+    ["checkpoint", "record"].includes(command) ||
+    command.startsWith("work:") ||
+    options.work !== undefined
+  )
     parseRecordId(options.work);
   if (
     options.limit !== undefined &&
@@ -177,12 +202,26 @@ async function runCli() {
   }
   const { command, options } = parsed;
   let writeInput;
-  if (["remember", "checkpoint", "tidy:apply"].includes(command))
+  if (
+    ["remember", "checkpoint", "tidy:apply"].includes(command) ||
+    (command.startsWith("work:") && command !== "work:show")
+  )
     writeInput = readJsonInput(options.input);
   const location = await resolveProjectLocation({
     cwd: options.cwd,
     directory: options["data-dir"],
   });
+  if (command.startsWith("work:")) {
+    const result = await runWorkCommand(
+      location,
+      command.slice(5),
+      options.work,
+      writeInput,
+      options,
+    );
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
   let result;
   switch (command) {
     case "location":

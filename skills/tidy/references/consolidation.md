@@ -1,6 +1,6 @@
 # 정리 결과의 반영 계약
 
-`tidy apply`에는 원본을 검토해 결정한 기억·업무 상태·그래프의 변경분을 전달한다. CLI는 입력 값의 제약·근거의 존재·동시 갱신을 검사한다. 근거가 주장을 뒷받침하는지는 에이전트가 판단한다.
+tidy apply에는 원본을 검토해 결정한 기억·그래프와 기존 업무 요약의 변경분을 전달한다. managed 업무 상태는 [업무 CLI](../../work/references/context-work.md)가 소유한다. CLI는 입력 값의 제약·근거의 존재·동시 갱신을 검사한다. 근거가 주장을 뒷받침하는지는 에이전트가 판단한다.
 
 ## 준비
 
@@ -11,10 +11,11 @@ node "<plugin-root>/scripts/context/cli.mjs" tidy prepare --cwd "<checkout>" --l
 ```
 
 - `snapshot`: 반영할 때 전달할 준비 결과의 ID다. 미처리 기록이 없으면 `null`이다.
-- `records`: 이번 묶음에서 모두 검토할 원본이다. `remember`·`checkpoint`의 이전 리비전도 포함한다.
+- `records`: 이번 묶음에서 모두 검토할 원본이다. remember·checkpoint·work의 이전 리비전도 포함한다.
 - `current`: 보존하거나 갱신할 현재 기억과 업무 상태다. `current.memories`에는 `remember`로 저장한 기억도 원본 ref와 함께 포함한다.
 - `current.retired`: 이미 현재 기억에서 제외한 항목의 ID·범위·제외 이유다. 과거 원본을 찾았다는 이유만으로 다시 활성화하지 않는다.
 - `current.graph`: 기존 대상과 진술이다. 대체·제외된 진술도 보존하므로 상태를 확인한다.
+- `current.managedWorks`: 업무 CLI의 현재 상태이며 읽기 전용이다. managedWorksRemaining으로 다음 페이지를 확인한다. current.works는 기존 업무 요약만 포함한다.
 - `remaining`: 묶음 밖에 남은 미처리 원본 수다.
 
 `--limit`은 `records`와 `current`의 기억·업무·제외 목록 각각에 적용한다. `current.memoriesRemaining`·`worksRemaining`·`retiredRemaining`으로 남은 항목을 확인한다. 현재 상태의 다음 페이지가 필요하면 같은 limit과 증가한 `--offset`으로 다시 준비한다. offset은 `current`의 목록에만 적용하며 미처리 원본을 건너뛰지 않는다. 각 호출은 새 snapshot을 반환한다. 페이지를 읽는 동안 `baseRevision`이나 `records`의 ref 목록이 바뀌면 새 준비 결과를 기준으로 검토하고, 마지막으로 검토한 snapshot을 반영한다.
@@ -42,7 +43,7 @@ node "<plugin-root>/scripts/context/cli.mjs" tidy prepare --cwd "<checkout>" --l
 
 같은 기억의 `scope`는 바꿀 수 없다. 적용 범위를 확장할 때는 새 ID를 사용한다.
 
-`works`의 각 항목에는 `id`, `goal`, `status`, `progress`, `evidence`, `next`, `sources`를 전달한다. 상태는 `active`·`blocked`·`paused`·`complete`·`cancelled`다. `evidence`에는 실제 검증 결과가 담긴 원본 ref를 넣는다. `complete`는 그 근거가 원래 목표의 완료를 입증하고 `next`가 비어 있을 때만 사용한다. `blocked`·`paused`에는 남은 행동과 `progress`의 이유·재개 조건이 필요하다. `cancelled`에는 사용자의 취소 근거를 보존하고 `next`를 비운다. 의미와 재개 판단은 [미완료 업무 규약](../../work/references/context.md#미완료-업무를-확인하고-재개한다)에 따른다.
+works는 기존 checkpoint·record 업무의 요약만 갱신한다. managed ID를 포함하면 반영을 거부하며 처리 지점을 유지한다. 기존 항목에는 id, goal, status, progress, evidence, next, sources를 전달한다. 상태는 active·blocked·paused·complete·cancelled다. evidence에는 실제 검증 결과가 담긴 원본 ref를 넣는다. complete는 근거가 원래 목표의 완료를 입증하고 next가 비어 있을 때만 사용한다. blocked·paused에는 남은 행동과 progress의 이유·재개 조건이 필요하다. cancelled에는 사용자의 취소 근거를 보존하고 next를 비운다. 의미와 재개 판단은 [미완료 업무 규약](../../work/references/context.md#미완료-업무를-확인하고-재개한다)에 따른다.
 
 검토한 묶음의 체크포인트는 업무별로 가장 높은 원본 리비전의 상태가 기본 반영된다. 해당 업무를 `works`로 명시하면 근거를 대조한 그 판단을 적용한다. `works`를 생략해도 새 체크포인트가 과거 정리 상태에 가려지지 않는다. 자동 반영한 상태도 `report.changes`에 포함된다.
 
@@ -50,7 +51,7 @@ node "<plugin-root>/scripts/context/cli.mjs" tidy prepare --cwd "<checkout>" --l
 
 `retire`의 각 항목은 `{"id":"기억-id","reason":"제외 이유","sources":["원본-ref"]}`다. 해당 기억을 현재 조회에서 제외하고 원본과 정리 이력은 보존한다. 원본을 삭제할 때는 `forget`을 사용한다.
 
-ref는 조회 결과의 `note:업무-id@번호`, `memory:기억-id@리비전`, `checkpoint:업무-id@리비전`을 사용한다. 근거로 인용할 원본을 실제로 읽고, 준비 시점까지 존재한 원본만 이번 결과에 연결한다.
+ref는 조회 결과의 note:업무-id@번호, memory:기억-id@리비전, checkpoint:업무-id@리비전, work:업무-id@리비전을 사용한다. 근거로 인용할 원본을 실제로 읽고 준비 시점까지 존재한 원본만 이번 결과에 연결한다. 새 업무의 상태와 정리 상태는 별도 리비전이며 tidy를 기다리지 않고 work show에서 현재 진행을 확인한다.
 
 다음은 두 원본을 읽고 두 번째 원본의 정렬 기준이 첫 번째 원본의 결정을 대체했음을 확인한 경우의 예다. 실제 반영에는 `prepare`에서 받은 `snapshot`과 읽은 원본의 ref를 사용한다.
 

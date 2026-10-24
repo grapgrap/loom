@@ -9,6 +9,8 @@ import {
 } from "./records.mjs";
 import { workJournalPath, parseWorkJournal } from "./journal.mjs";
 import { readDirectoryEntries, readStoredRecord } from "./store.mjs";
+import { readWorkLedger } from "./work-store.mjs";
+import { presentWork } from "./work.mjs";
 
 export function memoryRecordPath(location, memoryId) {
   return join(location.projectDirectory, "context", `${memoryId}.json`);
@@ -19,7 +21,7 @@ export function checkpointRecordPath(location, workId) {
 }
 
 export function parseSourceReference(reference) {
-  const referenceParts = /^(memory|checkpoint|note):([^@]+)@([1-9][0-9]*)$/.exec(reference);
+  const referenceParts = /^(memory|checkpoint|note|work):([^@]+)@([1-9][0-9]*)$/.exec(reference);
   if (!referenceParts) throw new Error(`Invalid source reference: ${reference}`);
   const [, kind, recordId, revisionText] = referenceParts;
   return { kind, id: parseRecordId(recordId), revision: parseRevisionNumber(Number(revisionText)) };
@@ -37,7 +39,9 @@ export function validateRequiredSourceReferences(refs, label) {
 }
 
 export function collectKnownWorkIds(archive) {
-  const workIds = [...archive.checkpoints, ...archive.journals].map(({ id }) => id);
+  const workIds = [...archive.checkpoints, ...archive.journals, ...(archive.works ?? [])].map(
+    ({ id }) => id,
+  );
   for (const memory of archive.memories) {
     if (memory.forgotten || memory.scope.type !== "work") continue;
     workIds.push(memory.scope.id);
@@ -47,6 +51,19 @@ export function collectKnownWorkIds(archive) {
 
 export async function readSource(location, reference) {
   const { kind, id, revision } = parseSourceReference(reference);
+  if (kind === "work") {
+    const ledger = await readWorkLedger(location);
+    const record = ledger?.works.find((work) => work.id === id);
+    const work = record?.revisions.find((entry) => entry.revision === revision);
+    if (!work) throw new Error(`Source reference is missing or forgotten: ${reference}`);
+    return {
+      kind,
+      ...presentWork(work),
+      workScope: work.scope,
+      scope: { type: "work", id },
+      latest: revision === record.revisions.at(-1).revision,
+    };
+  }
   const [path, parse] =
     kind === "memory"
       ? [memoryRecordPath(location, id), parseMemoryRecord]
@@ -74,7 +91,7 @@ export function createRevisionCursor() {
 }
 
 export function getCursorRevision(revisionCursor, sourceKind, recordId) {
-  return Object.hasOwn(revisionCursor[sourceKind], recordId)
+  return Object.hasOwn(revisionCursor[sourceKind] ?? {}, recordId)
     ? revisionCursor[sourceKind][recordId]
     : 0;
 }
@@ -82,12 +99,14 @@ export function getCursorRevision(revisionCursor, sourceKind, recordId) {
 export function advanceRevisionCursor(revisionCursor, sources) {
   const advancedCursor = structuredClone(revisionCursor);
   for (const { kind, id, revision } of sources) {
+    advancedCursor[kind] ??= {};
     advancedCursor[kind][id] = Math.max(getCursorRevision(advancedCursor, kind, id), revision);
   }
   return advancedCursor;
 }
 
 export async function readSourceArchive(location) {
+  const workLedger = await readWorkLedger(location);
   const memoryRecords = [];
   const checkpointRecords = [];
   const workJournals = [];
@@ -121,6 +140,7 @@ export async function readSourceArchive(location) {
     ["memory", memoryRecords],
     ["checkpoint", checkpointRecords],
     ["note", workJournals],
+    ["work", workLedger?.works ?? []],
   ]) {
     for (const sourceRecord of sourceRecords) {
       if (sourceRecord.forgotten) {
@@ -141,6 +161,7 @@ export async function readSourceArchive(location) {
           id: sourceRecord.id,
           scope,
           ...sourceRevision,
+          ...(kind === "work" ? { workScope: sourceRevision.scope, scope } : {}),
           ref: `${kind}:${sourceRecord.id}@${sourceRevision.revision}`,
           ...(kind === "note"
             ? {}
@@ -153,6 +174,7 @@ export async function readSourceArchive(location) {
     memories: memoryRecords,
     checkpoints: checkpointRecords,
     journals: workJournals,
+    works: workLedger?.works ?? [],
     sources,
     bounds: advanceRevisionCursor(createRevisionCursor(), sources),
   };

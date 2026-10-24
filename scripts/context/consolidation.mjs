@@ -43,6 +43,13 @@ function validateRevisionCursor(cursor) {
       parseRevisionNumber(revision);
     }
   }
+  if (cursor.work !== undefined) {
+    validateObject(cursor.work, "cursor.work");
+    for (const [id, revision] of Object.entries(cursor.work)) {
+      parseRecordId(id);
+      parseRevisionNumber(revision);
+    }
+  }
 }
 
 function validateConsolidatedMemoryFields(memory) {
@@ -384,8 +391,13 @@ export function assertTidyRevision(current, snapshot) {
 export function buildConsolidation({ history, archive, snapshot, prepared, recordedAt }, changes) {
   const current = getLatestConsolidation(history);
   const knownWorkIds = collectKnownWorkIds(archive);
-  for (const work of changes.works)
+  for (const work of changes.works) {
     assertCondition(knownWorkIds.has(work.id), `Unknown work: ${work.id}`);
+    assertCondition(
+      !(archive.works ?? []).some(({ id }) => id === work.id),
+      `Managed work ${work.id} must be changed with a work command, not tidy`,
+    );
+  }
   const existingMemories = collectMemoryBaseline(archive, current, snapshot.bounds);
   const memories = applyMemoryChanges(
     {

@@ -4,6 +4,7 @@ import { createRecordParser } from "./records.mjs";
 import { findUnprocessedSources, readSourceArchive } from "./sources.mjs";
 import { updateStoredRecord, readStoredRecord } from "./store.mjs";
 import { emptyGraph } from "./graph.mjs";
+import { presentWork } from "./work.mjs";
 import {
   parseConsolidationHistory,
   getLatestConsolidation,
@@ -30,6 +31,9 @@ function snapshotPath(location, id) {
 }
 
 function currentPage(archive, consolidation, limit, offset) {
+  const legacyWorks = consolidation.works.filter(
+    (work) => !(archive.works ?? []).some(({ id }) => id === work.id),
+  );
   const memories = collectMemoryBaseline(archive, consolidation).filter(
     ({ status }) => status !== "retired",
   );
@@ -40,8 +44,12 @@ function currentPage(archive, consolidation, limit, offset) {
   return {
     memories: memories.slice(offset, end),
     memoriesRemaining: Math.max(0, memories.length - end),
-    works: consolidation.works.slice(offset, end),
-    worksRemaining: Math.max(0, consolidation.works.length - end),
+    works: legacyWorks.slice(offset, end),
+    worksRemaining: Math.max(0, legacyWorks.length - end),
+    managedWorks: (archive.works ?? [])
+      .slice(offset, end)
+      .map((record) => presentWork(record.revisions.at(-1))),
+    managedWorksRemaining: Math.max(0, (archive.works ?? []).length - end),
     retired: retired.slice(offset, end),
     retiredRemaining: Math.max(0, retired.length - end),
     graph: consolidation.graph ?? emptyGraph(),

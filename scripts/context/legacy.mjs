@@ -10,6 +10,7 @@ import {
 } from "./records.mjs";
 import { memoryRecordPath, checkpointRecordPath } from "./sources.mjs";
 import { updateStoredRecord } from "./store.mjs";
+import { assertLegacyWorkWritable } from "./work-store.mjs";
 
 export async function remember(location, id, input) {
   const memory = parseMemoryInput(input);
@@ -22,6 +23,7 @@ export async function remember(location, id, input) {
 }
 
 export async function checkpoint(location, work, input) {
+  await assertLegacyWorkWritable(location, work);
   const progress = parseCheckpointInput(input);
   const record = await updateStoredRecord({
     path: checkpointRecordPath(location, work),
