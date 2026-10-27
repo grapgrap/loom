@@ -24,12 +24,12 @@
 
 ### 목적에서 설계를 도출한다
 
-| 적용 상황                             | 원칙                                                                           | 판단 기준                                                            |
-| ------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| 기능이나 설계 변경을 시작할 때        | [Outcome-Oriented Execution](principles/outcome_oriented_execution.md)         | 원하는 도메인 동작과 계약에서 필요한 책임과 구조를 역산한다.         |
-| 개념이나 구조를 추가할 때             | [Foundational Thinking](principles/foundational_thinking.md)                   | 기존 책임과 계약의 조합으로 충분한지 먼저 확인한다.                  |
-| 전례 없는 책임·계약 선택을 할 때      | [Exhaust the Design Space](principles/exhaust_design_space.md)                 | 기존 방식과 새로운 방식의 책임·계약·의존 관계를 구체적으로 비교한다. |
-| 요구사항이 기존 설계의 전제를 바꿀 때 | [Redesign From First Principles](principles/redesign_from_first_principles.md) | 바뀐 목적과 제약에서 영향받는 책임과 계약을 다시 도출한다.           |
+| 적용 상황                             | 원칙                                                                           | 판단 기준                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| 기능이나 설계 변경을 시작할 때        | [Outcome-Oriented Execution](principles/outcome_oriented_execution.md)         | 원하는 도메인 동작과 계약에서 필요한 책임과 구조를 역산한다.                        |
+| 개념·구조·보장을 추가할 때            | [Foundational Thinking](principles/foundational_thinking.md)                   | 현재 목적·계약과 실패의 영향에서 필요성을 판단하고 기존 구성으로 충분한지 확인한다. |
+| 전례 없는 책임·계약 선택을 할 때      | [Exhaust the Design Space](principles/exhaust_design_space.md)                 | 기존 방식과 새로운 방식의 책임·계약·의존 관계를 구체적으로 비교한다.                |
+| 요구사항이 기존 설계의 전제를 바꿀 때 | [Redesign From First Principles](principles/redesign_from_first_principles.md) | 바뀐 목적과 제약에서 영향받는 책임과 계약을 다시 도출한다.                          |
 
 ### 책임과 경계를 유지한다
 
@@ -52,16 +52,16 @@
 
 ### 도메인의 의미와 계약을 드러낸다
 
-| 적용 상황                              | 원칙                                                                     | 판단 기준                                                                    |
-| -------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| 모델과 동작의 이름을 정할 때           | [Domain Vocabulary](principles/domain_vocabulary.md)                     | 도메인의 개념과 역할이 코드의 어휘에서 읽히게 한다.                          |
-| 동작을 조율하거나 구현 단위를 나눌 때  | [Single Level of Abstraction](principles/single_level_of_abstraction.md) | 표현의 수준과 차이가 실제 책임·동작·제약을 반영하게 한다.                    |
-| 제공하거나 요구할 계약을 정할 때       | [Public Interface](principles/public_interface.md)                       | 동작·값·실패·호출 조건을 명시하고 내부 구현은 공개하지 않는다.               |
-| 계약의 이름과 동작을 정하거나 바꿀 때  | [Least Astonishment](principles/least_astonishment.md)                   | 호출자가 예상하는 의미와 동작을 일치시키고 기존 전제를 변경 비용에 포함한다. |
-| 외부 값이나 다른 도메인의 값을 받을 때 | [Parse at Boundaries](principles/parse_at_boundaries.md)                 | 경계에서 자기 도메인의 형식과 계약을 확보한다.                               |
-| 허용하는 상태와 데이터를 정의할 때     | [Model Valid States](principles/model_valid_states.md)                   | 상태마다 필요한 값을 보장하고 허용하지 않는 조합과 전이를 막는다.            |
-| 실패에 대응하는 위치를 정할 때         | [Error Boundary Placement](principles/error_boundary_placement.md)       | 대응할 책임과 능력이 있는 경계에서 처리한다.                                 |
-| 실패를 생성하거나 변환할 때            | [Meaningful Errors](principles/meaningful_errors.md)                     | 실패 종류·원인·맥락을 계약으로 보존하여 대응을 선택할 수 있게 한다.          |
+| 적용 상황                                         | 원칙                                                                     | 판단 기준                                                                            |
+| ------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| 모델과 동작의 이름을 정할 때                      | [Domain Vocabulary](principles/domain_vocabulary.md)                     | 도메인의 개념과 역할이 코드의 어휘에서 읽히게 한다.                                  |
+| 분기·유사한 흐름을 구성하거나 구현 단위를 나눌 때 | [Single Level of Abstraction](principles/single_level_of_abstraction.md) | 동등한 책임·동작을 일관되게 표현하고 표현의 차이가 실제 의미의 차이를 드러내게 한다. |
+| 제공하거나 요구할 계약을 정할 때                  | [Public Interface](principles/public_interface.md)                       | 동작·값·실패·호출 조건을 명시하고 내부 구현은 공개하지 않는다.                       |
+| 계약의 이름과 동작을 정하거나 바꿀 때             | [Least Astonishment](principles/least_astonishment.md)                   | 호출자가 예상하는 의미와 동작을 일치시키고 기존 전제를 변경 비용에 포함한다.         |
+| 외부 값이나 다른 도메인의 값을 받을 때            | [Parse at Boundaries](principles/parse_at_boundaries.md)                 | 경계에서 자기 도메인의 형식과 계약을 확보한다.                                       |
+| 허용하는 상태와 데이터를 정의할 때                | [Model Valid States](principles/model_valid_states.md)                   | 상태마다 필요한 값을 보장하고 허용하지 않는 조합과 전이를 막는다.                    |
+| 실패에 대응하는 위치를 정할 때                    | [Error Boundary Placement](principles/error_boundary_placement.md)       | 대응할 책임과 능력이 있는 경계에서 처리한다.                                         |
+| 실패를 생성하거나 변환할 때                       | [Meaningful Errors](principles/meaningful_errors.md)                     | 실패 종류·원인·맥락을 계약으로 보존하여 대응을 선택할 수 있게 한다.                  |
 
 ### 변경 후에도 일관성을 보장한다
 
