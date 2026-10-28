@@ -33,14 +33,14 @@
 
 ### 책임과 경계를 유지한다
 
-| 적용 상황                           | 원칙                                                                                     | 판단 기준                                                       |
-| ----------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| 검증 위치나 관심사의 책임을 정할 때 | [Draw Clear Boundaries](principles/draw_clear_boundaries.md)                             | 데이터 검증, 상태 소유와 변경 이유의 경계를 분명히 한다.        |
-| 모듈이나 추상화를 분리·통합할 때    | [Earn Your Boundary](principles/earn_your_boundary.md)                                   | 고유한 입력, 제약이나 역할을 소유하는 경계를 둔다.              |
-| 도메인의 코드를 배치할 때           | [Domain as Folder](principles/domain_as_folder.md)                                       | 도메인별로 코드를 모으고, 논리적 관계는 공개 계약으로 드러낸다. |
-| 파일을 나누거나 코드를 함께 둘 때   | [File Cohesion](principles/file_cohesion.md)                                             | 같은 도메인과 역할에서 함께 이해하고 변경할 코드를 모은다.      |
-| 유사한 구현을 공유하려 할 때        | [Essential vs Accidental Duplication](principles/essential_vs_accidental_duplication.md) | 외관보다 같은 변경 이유를 근거로 공유 여부를 판단한다.          |
-| 재사용을 위한 추상화를 도입할 때    | [Premature Abstraction Avoidance](principles/premature_abstraction_avoidance.md)         | 현재의 사용 사례와 책임에서 확인한 증거로 추상화를 정당화한다.  |
+| 적용 상황                         | 원칙                                                                                     | 판단 기준                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 모듈의 책임과 협력 관계를 정할 때 | [Draw Clear Boundaries](principles/draw_clear_boundaries.md)                             | 각 판단과 상태 변화의 소유자를 정하고 필요한 보장을 계약으로 연결한다. |
+| 모듈이나 추상화를 분리·통합할 때  | [Earn Your Boundary](principles/earn_your_boundary.md)                                   | 고유한 입력, 제약이나 역할을 소유하는 경계를 둔다.                     |
+| 도메인의 코드를 배치할 때         | [Domain as Folder](principles/domain_as_folder.md)                                       | 도메인별로 코드를 모으고, 논리적 관계는 공개 계약으로 드러낸다.        |
+| 파일을 나누거나 코드를 함께 둘 때 | [File Cohesion](principles/file_cohesion.md)                                             | 같은 도메인과 역할에서 함께 이해하고 변경할 코드를 모은다.             |
+| 유사한 구현을 공유하려 할 때      | [Essential vs Accidental Duplication](principles/essential_vs_accidental_duplication.md) | 외관보다 같은 변경 이유를 근거로 공유 여부를 판단한다.                 |
+| 재사용을 위한 추상화를 도입할 때  | [Premature Abstraction Avoidance](principles/premature_abstraction_avoidance.md)         | 현재의 사용 사례와 책임에서 확인한 증거로 추상화를 정당화한다.         |
 
 ### 의존과 조합의 방향을 지킨다
 
@@ -52,16 +52,16 @@
 
 ### 도메인의 의미와 계약을 드러낸다
 
-| 적용 상황                                         | 원칙                                                                     | 판단 기준                                                                            |
-| ------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| 모델과 동작의 이름을 정할 때                      | [Domain Vocabulary](principles/domain_vocabulary.md)                     | 도메인의 개념과 역할이 코드의 어휘에서 읽히게 한다.                                  |
-| 분기·유사한 흐름을 구성하거나 구현 단위를 나눌 때 | [Single Level of Abstraction](principles/single_level_of_abstraction.md) | 동등한 책임·동작을 일관되게 표현하고 표현의 차이가 실제 의미의 차이를 드러내게 한다. |
-| 제공하거나 요구할 계약과 공개 이름을 정할 때      | [Public Interface](principles/public_interface.md)                       | 소유자의 역할로 이름을 정하고 동작·값·실패·호출 조건을 명시하며 내부 구현을 감춘다.  |
-| 계약의 이름과 동작을 정하거나 바꿀 때             | [Least Astonishment](principles/least_astonishment.md)                   | 호출자가 예상하는 의미와 동작을 일치시키고 기존 전제를 변경 비용에 포함한다.         |
-| 외부 값이나 다른 도메인의 값을 받을 때            | [Parse at Boundaries](principles/parse_at_boundaries.md)                 | 경계에서 자기 도메인의 형식과 계약을 확보한다.                                       |
-| 허용하는 상태와 데이터를 정의할 때                | [Model Valid States](principles/model_valid_states.md)                   | 상태마다 필요한 값을 보장하고 허용하지 않는 조합과 전이를 막는다.                    |
-| 실패에 대응하는 위치를 정할 때                    | [Error Boundary Placement](principles/error_boundary_placement.md)       | 대응할 책임과 능력이 있는 경계에서 처리한다.                                         |
-| 실패를 생성하거나 변환할 때                       | [Meaningful Errors](principles/meaningful_errors.md)                     | 실패 종류·원인·맥락을 계약으로 보존하여 대응을 선택할 수 있게 한다.                  |
+| 적용 상황                                    | 원칙                                                               | 판단 기준                                                                             |
+| -------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| 모듈·모델·동작의 이름을 정할 때              | [Domain Vocabulary](principles/domain_vocabulary.md)               | 도메인의 개념, 맡은 역할과 실제 계약이 코드의 어휘에서 읽히게 한다.                   |
+| 분기·단계·관련 함수의 흐름을 구성할 때       | [Consistent Expression](principles/consistent_expression.md)       | 전체 흐름이 같은 방식으로 읽히게 하며, 헬퍼는 그 일관성을 만드는 데 필요할 때만 둔다. |
+| 제공하거나 요구할 계약과 공개 이름을 정할 때 | [Public Interface](principles/public_interface.md)                 | 소유자의 역할로 이름을 정하고 동작·값·실패·호출 조건을 명시하며 내부 구현을 감춘다.   |
+| 계약의 이름과 동작을 정하거나 바꿀 때        | [Least Astonishment](principles/least_astonishment.md)             | 호출자가 예상하는 의미와 동작을 일치시키고 기존 전제를 변경 비용에 포함한다.          |
+| 외부 값이나 다른 도메인의 값을 받을 때       | [Parse at Boundaries](principles/parse_at_boundaries.md)           | 경계에서 자기 도메인의 형식과 계약을 확보한다.                                        |
+| 허용하는 상태와 데이터를 정의할 때           | [Model Valid States](principles/model_valid_states.md)             | 상태마다 필요한 값을 보장하고 허용하지 않는 조합과 전이를 막는다.                     |
+| 실패에 대응하는 위치를 정할 때               | [Error Boundary Placement](principles/error_boundary_placement.md) | 대응할 책임과 능력이 있는 경계에서 처리한다.                                          |
+| 실패를 생성하거나 변환할 때                  | [Meaningful Errors](principles/meaningful_errors.md)               | 실패 종류·원인·맥락을 계약으로 보존하여 대응을 선택할 수 있게 한다.                   |
 
 ### 변경 후에도 일관성을 보장한다
 
