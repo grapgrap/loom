@@ -56,7 +56,7 @@
 | ------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
 | 모델과 동작의 이름을 정할 때                      | [Domain Vocabulary](principles/domain_vocabulary.md)                     | 도메인의 개념과 역할이 코드의 어휘에서 읽히게 한다.                                  |
 | 분기·유사한 흐름을 구성하거나 구현 단위를 나눌 때 | [Single Level of Abstraction](principles/single_level_of_abstraction.md) | 동등한 책임·동작을 일관되게 표현하고 표현의 차이가 실제 의미의 차이를 드러내게 한다. |
-| 제공하거나 요구할 계약을 정할 때                  | [Public Interface](principles/public_interface.md)                       | 동작·값·실패·호출 조건을 명시하고 내부 구현은 공개하지 않는다.                       |
+| 제공하거나 요구할 계약과 공개 이름을 정할 때      | [Public Interface](principles/public_interface.md)                       | 소유자의 역할로 이름을 정하고 동작·값·실패·호출 조건을 명시하며 내부 구현을 감춘다.  |
 | 계약의 이름과 동작을 정하거나 바꿀 때             | [Least Astonishment](principles/least_astonishment.md)                   | 호출자가 예상하는 의미와 동작을 일치시키고 기존 전제를 변경 비용에 포함한다.         |
 | 외부 값이나 다른 도메인의 값을 받을 때            | [Parse at Boundaries](principles/parse_at_boundaries.md)                 | 경계에서 자기 도메인의 형식과 계약을 확보한다.                                       |
 | 허용하는 상태와 데이터를 정의할 때                | [Model Valid States](principles/model_valid_states.md)                   | 상태마다 필요한 값을 보장하고 허용하지 않는 조합과 전이를 막는다.                    |
