@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const cli = fileURLToPath(new URL("cli.ts", import.meta.url));
+const cli = fileURLToPath(new URL("../../scripts/context/cli.ts", import.meta.url));
 
 export function fixture(t: TestContext) {
   const root = mkdtempSync(join(tmpdir(), "loom-context-"));

@@ -1,5 +1,6 @@
-import type { WorkJournal, RecordSource, NoteContent } from "./model.ts";
-import type { ProjectLocation } from "./store.ts";
+import type { WorkJournal, NoteContent } from "./model.ts";
+import type { RecordSource } from "../model.ts";
+import type { ProjectLocation } from "../storage/store.ts";
 import { isDeepStrictEqual } from "node:util";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
@@ -12,7 +13,7 @@ import {
   validateRecordSource,
   validateText,
 } from "./records.ts";
-import { updateStoredRecord } from "./store.ts";
+import { updateStoredRecord } from "../storage/store.ts";
 
 export function parseWorkJournal(value: unknown): WorkJournal {
   const journal = value as WorkJournal;

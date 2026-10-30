@@ -1,8 +1,6 @@
+import type { Scope, RecordSource, RecordHistory } from "../model.ts";
+import type { WorkProgress } from "../work/model.ts";
 import type {
-  Scope,
-  RecordSource,
-  RecordHistory,
-  WorkProgress,
   MemoryContent,
   MemoryRecord,
   CheckpointContent,

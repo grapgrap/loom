@@ -1,4 +1,4 @@
-import type { Scope } from "./model.ts";
+import type { Scope } from "../context/model.ts";
 import type { Fixture } from "./testing.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

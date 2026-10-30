@@ -11,7 +11,8 @@
     "lint:fix": "oxlint --fix .",
     "test": "vitest run",
     "test:watch": "vitest --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "validate": "yarn typecheck && yarn lint && yarn format:check && yarn check && yarn test"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

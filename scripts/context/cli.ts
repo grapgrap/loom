@@ -1,23 +1,31 @@
-import type { ErasureRequest, RecordSource } from "./model.ts";
+import type { ErasureRequest } from "../../src/context/operations/forget.ts";
+import type { RecordSource } from "../../src/context/model.ts";
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { parseRecordId, parseRevisionNumber } from "./records.ts";
-import { remember, checkpoint } from "./legacy.ts";
-import { appendWorkNote } from "./journal.ts";
-import { eraseContext } from "./forget.ts";
-import { recallContext } from "./recall.ts";
+import { parseRecordId, parseRevisionNumber } from "../../src/context/records/records.ts";
+import { remember, checkpoint } from "../../src/context/operations/legacy.ts";
+import { appendWorkNote } from "../../src/context/records/journal.ts";
+import { eraseContext } from "../../src/context/operations/forget.ts";
+import { recallContext } from "../../src/context/operations/recall.ts";
 import {
   parseSourceReference,
   readSource,
   readSourceArchive,
   matchesContextScope,
-} from "./sources.ts";
-import { rankSourcesByQuery } from "./search.ts";
-import { applyTidyChanges, prepareTidyBatch, readConsolidationHistory } from "./tidy.ts";
-import { getLatestConsolidation, calculateTidyStatus } from "./consolidation.ts";
-import { resolveProjectLocation } from "./store.ts";
-import { queryGraph } from "./graph-query.ts";
-import { runWorkCommand } from "./work-store.ts";
+} from "../../src/context/sources/sources.ts";
+import { rankSourcesByQuery } from "../../src/context/sources/search.ts";
+import {
+  applyTidyChanges,
+  prepareTidyBatch,
+  readConsolidationHistory,
+} from "../../src/context/tidy/tidy.ts";
+import {
+  getLatestConsolidation,
+  calculateTidyStatus,
+} from "../../src/context/tidy/consolidation.ts";
+import { resolveProjectLocation } from "../../src/context/storage/store.ts";
+import { queryGraph } from "../../src/context/graph/query.ts";
+import { runWorkCommand } from "../../src/context/work/store.ts";
 
 const usage = `Usage: node <plugin>/scripts/context/cli.ts <command> [options]
 

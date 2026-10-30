@@ -1,8 +1,11 @@
-import type { Statement, Entity, Consolidation, SourceArchive, QueryOptions } from "./model.ts";
+import type { Statement, Entity } from "./model.ts";
+import type { Consolidation } from "../tidy/model.ts";
+import type { SourceArchive } from "../sources/model.ts";
+import type { QueryOptions } from "../model.ts";
 type GraphPath = { entities: string[]; statements: string[] };
 import { emptyGraph, eraseFromGraph } from "./graph.ts";
-import { extractSearchText, rankSourcesByQuery } from "./search.ts";
-import { matchesContextScope } from "./sources.ts";
+import { extractSearchText, rankSourcesByQuery } from "../sources/search.ts";
+import { matchesContextScope } from "../sources/sources.ts";
 
 function statementEntities(statement: Statement) {
   return [statement.subject, statement.object.entity].filter((id) => id !== undefined);

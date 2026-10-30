@@ -7,3 +7,5 @@ pre-commit:
       run: yarn lint
     format:
       run: yarn format:check
+    plugin:
+      run: yarn check

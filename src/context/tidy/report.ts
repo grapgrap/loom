@@ -3,11 +3,10 @@ import type {
   TidyChange,
   TidyReport,
   Memory,
-  Statement,
   ConsolidatedWork,
-  Graph,
   Consolidation,
 } from "./model.ts";
+import type { Statement, Graph } from "../graph/model.ts";
 import { isDeepStrictEqual } from "node:util";
 
 function collectionChanges<K extends keyof TidyEntries>(

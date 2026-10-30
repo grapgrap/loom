@@ -1,21 +1,14 @@
+import type { SourceArchive, OriginalSource } from "../sources/model.ts";
 import type {
-  SourceArchive,
   ConsolidationHistory,
   Consolidation,
-  QueryOptions,
   Memory,
   ConsolidatedWork,
-  MemoryContent,
-  Scope,
-  RecordSource,
-  WorkProgress,
-  Revision,
-  Note,
-  WorkJournal,
-  OriginalSource,
-  WorkStatus,
-} from "./model.ts";
-import type { ProjectLocation } from "./store.ts";
+} from "../tidy/model.ts";
+import type { QueryOptions, Scope, RecordSource, Revision } from "../model.ts";
+import type { MemoryContent, Note, WorkJournal } from "../records/model.ts";
+import type { WorkProgress, WorkStatus } from "../work/model.ts";
+import type { ProjectLocation } from "../storage/store.ts";
 type Presentation = {
   current: Consolidation;
   history: ConsolidationHistory | null;
@@ -49,17 +42,17 @@ type WorkSummary = {
   firstNote?: ReturnType<typeof previewNote>;
   latestNote?: ReturnType<typeof previewNote>;
 };
-import { presentLatestRevision } from "./records.ts";
+import { presentLatestRevision } from "../records/records.ts";
 import {
   getCursorRevision,
   findUnprocessedSources,
   readSourceArchive,
   matchesContextScope,
-} from "./sources.ts";
-import { readConsolidationHistory } from "./tidy.ts";
-import { getLatestConsolidation, calculateTidyStatus } from "./consolidation.ts";
-import { queryGraph } from "./graph-query.ts";
-import { presentWork } from "./work.ts";
+} from "../sources/sources.ts";
+import { readConsolidationHistory } from "../tidy/tidy.ts";
+import { getLatestConsolidation, calculateTidyStatus } from "../tidy/consolidation.ts";
+import { queryGraph } from "../graph/query.ts";
+import { presentWork } from "../work/work.ts";
 
 const noteExcerptLength = 300;
 

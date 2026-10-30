@@ -1,20 +1,27 @@
-import type { ProjectLocation } from "./store.ts";
-import type { ErasureRequest, ConsolidationHistory, StoredMemory } from "./model.ts";
-import { eraseWorkNote } from "./journal.ts";
+import type { SourceReference } from "../sources/model.ts";
+
+import type { ProjectLocation } from "../storage/store.ts";
+import type { ConsolidationHistory } from "../tidy/model.ts";
+import type { StoredMemory } from "../records/model.ts";
+import { eraseWorkNote } from "../records/journal.ts";
 import {
   forgetMemoryRecord,
   parseMemoryRecord,
   presentLatestRevision,
   createRecordParser,
-} from "./records.ts";
-import { memoryRecordPath } from "./sources.ts";
-import { updateStoredRecord } from "./store.ts";
-import { consolidationHistoryPath } from "./tidy.ts";
+} from "../records/records.ts";
+import { memoryRecordPath } from "../sources/sources.ts";
+import { updateStoredRecord } from "../storage/store.ts";
+import { consolidationHistoryPath } from "../tidy/tidy.ts";
 import {
   getLatestConsolidation,
   eraseFromConsolidationHistory,
   parseConsolidationHistory,
-} from "./consolidation.ts";
+} from "../tidy/consolidation.ts";
+
+export type ErasureRequest =
+  | { note: SourceReference; memoryId?: never; expectedRevision?: never }
+  | { note?: never; memoryId: string; expectedRevision: number };
 
 export async function eraseContext(location: ProjectLocation, request: ErasureRequest) {
   let erased;

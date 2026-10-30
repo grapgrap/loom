@@ -7,9 +7,12 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 
-const cliPath = fileURLToPath(new URL("cli.ts", import.meta.url));
+const cliPath = fileURLToPath(new URL("../../scripts/context/cli.ts", import.meta.url));
 const launcherPath = fileURLToPath(
-  new URL(process.platform === "win32" ? "cli.cmd" : "cli.sh", import.meta.url),
+  new URL(
+    `../../scripts/context/${process.platform === "win32" ? "cli.cmd" : "cli.sh"}`,
+    import.meta.url,
+  ),
 );
 
 function fixture(t: TestContext) {

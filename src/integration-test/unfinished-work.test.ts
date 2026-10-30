@@ -1,4 +1,4 @@
-import type { WorkProgress } from "./model.ts";
+import type { WorkProgress } from "../context/work/model.ts";
 import type { Fixture } from "./testing.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

@@ -1,16 +1,14 @@
+import type { Cursor, SourceArchive, OriginalSource } from "../sources/model.ts";
 import type {
-  Cursor,
   Memory,
   ConsolidatedWork,
-  Retirement,
   TidySnapshot,
   ConsolidationHistory,
   Consolidation,
-  SourceArchive,
   TidyChanges,
-  StoredMemory,
-  OriginalSource,
 } from "./model.ts";
+import type { Retirement } from "../model.ts";
+import type { StoredMemory } from "../records/model.ts";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import {
@@ -23,7 +21,7 @@ import {
   validateObject,
   validateArray,
   validateChoice,
-} from "./records.ts";
+} from "../records/records.ts";
 import {
   advanceRevisionCursor,
   getCursorRevision,
@@ -33,15 +31,15 @@ import {
   collectKnownWorkIds,
   validateSourceReferences,
   validateRequiredSourceReferences,
-} from "./sources.ts";
+} from "../sources/sources.ts";
 import {
   emptyGraph,
   parseGraphChanges,
   validateGraph,
   applyGraphChanges,
   eraseFromGraph,
-} from "./graph.ts";
-import { createTidyReport, eraseFromTidyReport } from "./tidy-report.ts";
+} from "../graph/graph.ts";
+import { createTidyReport, eraseFromTidyReport } from "./report.ts";
 
 function assertCondition(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

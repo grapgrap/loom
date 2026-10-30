@@ -1,13 +1,5 @@
-import type {
-  Check,
-  Criterion,
-  Work,
-  WorkRevision,
-  WorkLedger,
-  VisibleWork,
-  QueryOptions,
-  RecordSource,
-} from "./model.ts";
+import type { Check, Criterion, Work, WorkRevision, WorkLedger, VisibleWork } from "./model.ts";
+import type { QueryOptions, RecordSource } from "../model.ts";
 
 type WorkInput = {
   expectedRevision: number;
@@ -44,7 +36,7 @@ import {
   validateObject,
   validateRecordSource,
   validateText,
-} from "./records.ts";
+} from "../records/records.ts";
 
 const actions: Record<string, string[]> = {
   create: [

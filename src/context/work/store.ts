@@ -1,10 +1,10 @@
-import type { ProjectLocation } from "./store.ts";
-import type { QueryOptions } from "./model.ts";
+import type { ProjectLocation } from "../storage/store.ts";
+import type { QueryOptions } from "../model.ts";
 import { join } from "node:path";
-import { readStoredRecord, updateStoredRecord } from "./store.ts";
-import { createRecordParser, parseCheckpointRecord } from "./records.ts";
+import { readStoredRecord, updateStoredRecord } from "../storage/store.ts";
+import { createRecordParser, parseCheckpointRecord } from "../records/records.ts";
 import { changeWork, currentWorks, parseWorkLedger, presentWork, showWork } from "./work.ts";
-import { parseWorkJournal, workJournalPath } from "./journal.ts";
+import { parseWorkJournal, workJournalPath } from "../records/journal.ts";
 
 export function workLedgerPath(location: ProjectLocation) {
   return join(location.projectDirectory, "work-state.json");

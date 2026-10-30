@@ -4,15 +4,16 @@ import type {
   SourceArchive,
   Cursor,
   OriginalSource,
-  Scope,
+} from "./model.ts";
+import type { Scope } from "../model.ts";
+import type {
   StoredMemory,
   MemoryRecord,
   CheckpointRecord,
   WorkJournal,
-  WorkLedger,
-  WorkRevision,
-} from "./model.ts";
-import type { ProjectLocation } from "./store.ts";
+} from "../records/model.ts";
+import type { WorkLedger, WorkRevision } from "../work/model.ts";
+import type { ProjectLocation } from "../storage/store.ts";
 import { join } from "node:path";
 import {
   parseCheckpointRecord,
@@ -21,11 +22,11 @@ import {
   createRecordParser,
   parseRevisionNumber,
   validateArray,
-} from "./records.ts";
-import { workJournalPath, parseWorkJournal } from "./journal.ts";
-import { readDirectoryEntries, readStoredRecord } from "./store.ts";
-import { readWorkLedger } from "./work-store.ts";
-import { presentWork } from "./work.ts";
+} from "../records/records.ts";
+import { workJournalPath, parseWorkJournal } from "../records/journal.ts";
+import { readDirectoryEntries, readStoredRecord } from "../storage/store.ts";
+import { readWorkLedger } from "../work/store.ts";
+import { presentWork } from "../work/work.ts";
 
 export function memoryRecordPath(location: ProjectLocation, memoryId: string) {
   return join(location.projectDirectory, "context", `${memoryId}.json`);

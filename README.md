@@ -77,6 +77,32 @@ Start recall through the [macOS/Linux launcher](scripts/context/cli.sh) or [Wind
 
 Users can ask Loom to recall, revise, or forget a memory. The `location` command reports storage paths. An absolute `LOOM_DATA_DIR` or `--data-dir` overrides the data root. [Work context](skills/work/references/context.md) defines invocation, scopes, revisions, and failure behavior.
 
+## Repository layout
+
+```text
+src/context/             Runtime modules and unit tests by concern, with shared base types
+scripts/context/         CLI and shell/CMD entry points
+src/integration-test/               Integration tests and shared test helpers
+scripts/check-plugin.ts  Plugin metadata and documentation reference checks
+skills/                  Agent task instructions
+references/              Shared design principles and code rules
+templates/               Planning and verification document templates
+```
+
+Inside `src/context`, modules are grouped by concern. Each area's types live in its `model.ts`; only shared base types such as scopes, sources, and revisions remain in the top-level `model.ts`. The erasure request type is defined by `operations/forget.ts`.
+
+| Directory    | Responsibility                                                      |
+| ------------ | ------------------------------------------------------------------- |
+| `records`    | Validation and revisions for memories, checkpoints, and daily notes |
+| `work`       | Work definitions, state transitions, and ledger storage             |
+| `sources`    | Original record collection, ref lookup, cursors, and search ranking |
+| `graph`      | Entities, statements, relationships, and graph queries              |
+| `tidy`       | Consolidation snapshots, memory updates, and result reports         |
+| `storage`    | Storage paths, file reads, atomic updates, and locking              |
+| `operations` | Context recall, erasure, and legacy writes across areas             |
+
+The CLI entry point calls `src/context`; runtime modules do not import tests or development tools. Add runtime modules under `src/context` and place their unit tests beside them as `*.test.ts`. Keep integration tests spanning modules, the CLI, or the real filesystem, along with shared helpers, under `src/integration-test`. Skills and user instructions use the entry points in `scripts/context`. Standalone copies must include both `scripts/context` and `src/context`.
+
 ## Improve and check the skills
 
 Use observed failures and omissions from real work to change the instructions or execution tools. Recheck the same conditions afterward. A structural check does not prove that a skill improves the agent's decisions or execution.
@@ -88,9 +114,9 @@ yarn install --immutable
 yarn hooks:install
 ```
 
-TypeScript checks types, Oxlint lints the code, and Oxfmt formats source files, configuration, and Markdown. Historical records in `.loom/` are excluded. Lefthook runs repository-wide type, lint, and format checks before each commit without modifying or staging files. Run `yarn lint:fix` and `yarn format` to apply fixes, then stage the changes you intend to commit.
+TypeScript checks types, Oxlint lints the code, and Oxfmt formats source files, configuration, and Markdown. Historical records in `.loom/` are excluded. Lefthook runs repository-wide type, lint, format, plugin structure, and documentation reference checks before each commit without modifying or staging files. Run `yarn lint:fix` and `yarn format` to apply fixes, then stage the changes you intend to commit.
 
-Run the checks and tests explicitly:
+Run `yarn validate` for all checks and tests. It runs type, lint, format, and plugin checks in order, then the full test suite, stopping on failure. You can also run individual checks:
 
 ```bash
 yarn lint
@@ -100,9 +126,9 @@ yarn typecheck
 yarn test
 ```
 
-`yarn typecheck` checks scripts, tests, and the Vitest configuration with strict TypeScript and emits no files. Node execution strips types without checking them, so the pre-commit hook runs type checking alongside lint and formatting.
+`yarn typecheck` checks `src` (including unit and integration tests), `scripts`, and the Vitest configuration with strict TypeScript and emits no files. Node execution strips types without checking them, so the pre-commit hook runs type checking alongside lint and formatting.
 
-`yarn check` validates metadata, manifest consistency, and local file and heading references. `yarn test` runs the Vitest suite once, separately from the commit hook. Use `yarn test:watch` for watch mode or `yarn test scripts/context/records.test.ts` for a single file. Changes to context CLI sources and launchers rerun the suite in watch mode, including tests that invoke separate Node processes.
+`yarn check` validates metadata, manifest consistency, and local file and heading references. `yarn test` runs the Vitest suite once, separately from the commit hook. Use `yarn test:watch` for watch mode or `yarn test src/context/records/records.test.ts` for a single file. Use `yarn test src/context` for unit tests or `yarn test src/integration-test` for integration tests. Changes to runtime modules under `src/context` and entry points under `scripts/context` rerun the suite in watch mode, including tests that invoke separate Node processes. Editing a test file reruns that file and tests that depend on it.
 
 On real tasks, inspect the process and artifacts for preserved goals and scope, required checks, and evidence of the outcome. A description of having followed a skill is not proof of success.
 

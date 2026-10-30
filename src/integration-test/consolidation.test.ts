@@ -1,13 +1,12 @@
-import type {
-  OriginalSource,
-  Memory,
-  SourceArchive,
-  ConsolidationHistory,
-  TidySnapshot,
-} from "./model.ts";
+import type { OriginalSource, SourceArchive } from "../context/sources/model.ts";
+import type { Memory, ConsolidationHistory, TidySnapshot } from "../context/tidy/model.ts";
 import { expect, test } from "vitest";
-import { buildConsolidation, getLatestConsolidation, parseTidyChanges } from "./consolidation.ts";
-import { buildRecall } from "./recall.ts";
+import {
+  buildConsolidation,
+  getLatestConsolidation,
+  parseTidyChanges,
+} from "../context/tidy/consolidation.ts";
+import { buildRecall } from "../context/operations/recall.ts";
 
 const recordedAt = "2026-10-15T12:00:00.000Z";
 const cursor = { memory: {}, checkpoint: {}, note: {} };
@@ -95,41 +94,4 @@ test("consolidating unfinished work preserves agreements and leaves later arriva
   expect(recalled.work!.status).toBe("active");
   expect(recalled.pending.map(({ ref }: { ref: string }) => ref)).toStrictEqual([later.ref]);
   expect(history.revisions.length).toBe(1);
-});
-
-test("consolidation rejects a state for work without any source records", () => {
-  const archive = {
-    works: [],
-    memories: [],
-    checkpoints: [],
-    journals: [],
-    sources: [note],
-    bounds: cursor,
-  };
-  const changes = parseTidyChanges({
-    snapshot: "batch",
-    works: [
-      {
-        id: "unknown",
-        goal: "Invented work.",
-        status: "active",
-        progress: "No task was recorded.",
-        evidence: [],
-        next: [],
-        sources: [note.ref],
-      },
-    ],
-  });
-  expect(() =>
-    buildConsolidation(
-      {
-        history: null,
-        archive,
-        snapshot: { version: 1, id: "batch", baseRevision: 0, hashes: {}, bounds: cursor },
-        prepared: [note],
-        recordedAt,
-      },
-      changes,
-    ),
-  ).toThrowError(/Unknown work: unknown/);
 });

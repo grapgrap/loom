@@ -1,5 +1,5 @@
-import type { StoredMemory, CheckpointRecord } from "./model.ts";
-import type { ProjectLocation } from "./store.ts";
+import type { StoredMemory, CheckpointRecord } from "../records/model.ts";
+import type { ProjectLocation } from "../storage/store.ts";
 import {
   parseMemoryInput,
   parseCheckpointInput,
@@ -9,10 +9,10 @@ import {
   reviseCheckpointRecord,
   createRecordParser,
   presentLatestRevision,
-} from "./records.ts";
-import { memoryRecordPath, checkpointRecordPath } from "./sources.ts";
-import { updateStoredRecord } from "./store.ts";
-import { assertLegacyWorkWritable } from "./work-store.ts";
+} from "../records/records.ts";
+import { memoryRecordPath, checkpointRecordPath } from "../sources/sources.ts";
+import { updateStoredRecord } from "../storage/store.ts";
+import { assertLegacyWorkWritable } from "../work/store.ts";
 
 export async function remember(location: ProjectLocation, id: string, input: unknown) {
   const memory = parseMemoryInput(input);

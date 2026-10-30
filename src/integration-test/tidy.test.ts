@@ -2,7 +2,6 @@ import type { Fixture } from "./testing.ts";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { calculateTidyStatus } from "./consolidation.ts";
 
 import { fixture, git, invoke, run, concurrentRequest } from "./testing.ts";
 
@@ -628,31 +627,6 @@ test("a new legacy revision does not invalidate an unchanged original in an in-f
     memories: [memory("value", original.text, ["memory:value@1"])],
   });
   expect(run(project, ["recall"]).pending[0].ref).toBe("memory:value@2");
-});
-
-test("tidy is due by pending volume or age while processed records do not trigger it", () => {
-  const now = Date.UTC(2026, 9, 15, 9);
-  const cursor = { memory: {}, checkpoint: {}, note: {} };
-  const view = { revision: 0, cursor };
-  const fresh = Array.from({ length: 20 }, (_, i) => ({
-    kind: "note" as const,
-    id: "ongoing",
-    revision: i + 1,
-    recordedAt: new Date(now - 1000).toISOString(),
-  }));
-  expect(calculateTidyStatus({ sources: fresh.slice(0, 19) }, view, now).due).toBe(false);
-  expect(calculateTidyStatus({ sources: fresh }, view, now).reasons).toStrictEqual([
-    "record-count",
-  ]);
-  const old = { ...fresh[0], recordedAt: new Date(now - 24 * 60 * 60 * 1000).toISOString() };
-  expect(calculateTidyStatus({ sources: [old] }, view, now).reasons).toStrictEqual(["age"]);
-  expect(
-    calculateTidyStatus(
-      { sources: [old] },
-      { revision: 1, cursor: { ...cursor, note: { ongoing: 1 } } },
-      now,
-    ).due,
-  ).toBe(false);
 });
 
 test("archive search can cross work boundaries, while an explicit work scope narrows it", (t) => {

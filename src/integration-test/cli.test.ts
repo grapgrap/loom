@@ -7,7 +7,7 @@ import { expect, test } from "vitest";
 
 import { fixture, git, invoke as invokeCli, run as runCli, concurrentRequest } from "./testing.ts";
 
-const cliPath = fileURLToPath(new URL("cli.ts", import.meta.url));
+const cliPath = fileURLToPath(new URL("../../scripts/context/cli.ts", import.meta.url));
 
 function invoke(
   project: Fixture,
@@ -42,7 +42,7 @@ function checkpoint(overrides = {}) {
     goal: "Add context recall to Loom.",
     status: "active",
     progress: "Storage behavior has been verified; skill integration remains.",
-    evidence: ["yarn test scripts/context/cli.test.ts: storage checks passed"],
+    evidence: ["yarn test src/integration-test/cli.test.ts: storage checks passed"],
     next: ["Connect recall and checkpoint commands to work."],
     source: { type: "agent", reference: "Chat: observed CLI results." },
     ...overrides,

@@ -1,7 +1,7 @@
 import type { Entity, Statement, Graph, GraphChanges } from "./model.ts";
 import { isDeepStrictEqual } from "node:util";
-import { parseRecordId, validateMemoryScope, validateText } from "./records.ts";
-import { validateRequiredSourceReferences } from "./sources.ts";
+import { parseRecordId, validateMemoryScope, validateText } from "../records/records.ts";
+import { validateRequiredSourceReferences } from "../sources/sources.ts";
 
 export function emptyGraph(): Graph {
   return { entities: [], statements: [] };

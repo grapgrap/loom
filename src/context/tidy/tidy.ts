@@ -1,12 +1,13 @@
-import type { ProjectLocation } from "./store.ts";
-import type { SourceArchive, Consolidation, TidyChanges } from "./model.ts";
+import type { ProjectLocation } from "../storage/store.ts";
+import type { SourceArchive } from "../sources/model.ts";
+import type { Consolidation, TidyChanges } from "./model.ts";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
-import { createRecordParser } from "./records.ts";
-import { findUnprocessedSources, readSourceArchive } from "./sources.ts";
-import { updateStoredRecord, readStoredRecord } from "./store.ts";
-import { emptyGraph } from "./graph.ts";
-import { presentWork } from "./work.ts";
+import { createRecordParser } from "../records/records.ts";
+import { findUnprocessedSources, readSourceArchive } from "../sources/sources.ts";
+import { updateStoredRecord, readStoredRecord } from "../storage/store.ts";
+import { emptyGraph } from "../graph/graph.ts";
+import { presentWork } from "../work/work.ts";
 import {
   parseConsolidationHistory,
   getLatestConsolidation,

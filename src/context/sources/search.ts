@@ -1,4 +1,5 @@
-import type { Scope, Criterion, Check, Submission, RecordSource } from "./model.ts";
+import type { Scope, RecordSource } from "../model.ts";
+import type { Criterion, Check, Submission } from "../work/model.ts";
 export type SearchContent = {
   kind?: string;
   text?: string;

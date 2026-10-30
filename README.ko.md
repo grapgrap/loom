@@ -77,6 +77,32 @@ tidy는 미처리 묶음을 읽고 BM25 검색으로 관련 원본을 찾은 뒤
 
 사용자는 Loom에 기억의 조회·수정·삭제를 요청할 수 있습니다. 저장 위치는 `location`으로 확인하고 `LOOM_DATA_DIR` 또는 `--data-dir`의 절대 경로로 바꿀 수 있습니다. 호출 방법과 기록 범위·리비전·실패 처리 계약은 [작업 맥락](skills/work/references/context.md)에 있습니다.
 
+## 저장소 구조
+
+```text
+src/context/             관심사별 런타임 모듈·단위 테스트와 공통 기본 타입
+scripts/context/         CLI 및 셸·CMD 진입점
+src/integration-test/               통합 테스트와 공유 테스트 도우미
+scripts/check-plugin.ts  플러그인 메타데이터와 문서 참조 검사
+skills/                  에이전트가 수행할 작업 지침
+references/              공통 설계 원칙과 코드 규칙
+templates/               계획·검증 문서 양식
+```
+
+`src/context` 내부는 다음 관심사로 나눕니다. 각 영역의 타입은 해당 폴더의 `model.ts`에 두고, 여러 영역이 공유하는 범위·출처·리비전 등의 기본 타입만 최상위 `model.ts`에 둡니다. 삭제 요청 타입은 `operations/forget.ts`에서 정의합니다.
+
+| 폴더         | 책임                                               |
+| ------------ | -------------------------------------------------- |
+| `records`    | 기억·체크포인트·일일 기록의 검증과 리비전          |
+| `work`       | 업무 정의·상태 전이와 업무 저장소                  |
+| `sources`    | 원본 수집·ref 조회·커서·검색 순위                  |
+| `graph`      | 대상·진술·관계와 그래프 조회                       |
+| `tidy`       | 정리 snapshot·기억 통합·결과 리포트                |
+| `storage`    | 저장 경로, 파일 읽기와 원자적 갱신·잠금            |
+| `operations` | 여러 영역을 연결하는 맥락 조회·삭제·이전 기록 쓰기 |
+
+CLI 진입점은 `src/context`를 호출하며, 런타임 코드는 테스트나 개발 도구를 참조하지 않습니다. 새 실행 모듈은 `src/context`에 추가하고 단위 테스트는 해당 모듈 옆의 `*.test.ts`에 둡니다. 여러 모듈·CLI·실제 파일 시스템을 연결하는 통합 테스트와 공유 도우미는 `src/integration-test`에 둡니다. 스킬과 사용자 안내에서는 `scripts/context`의 진입점을 사용합니다. 독립 실행용으로 복사할 때는 `scripts/context`와 `src/context`를 함께 포함합니다.
+
 ## 스킬을 개선하고 확인하기
 
 실제 작업에서 관찰한 실패와 누락을 근거로 지침이나 실행 수단을 고칩니다. 변경 후 같은 조건에서 결과가 나아졌는지 확인합니다. 형식 검사는 스킬의 판단이나 실행 효과를 증명하지 않습니다.
@@ -88,9 +114,9 @@ yarn install --immutable
 yarn hooks:install
 ```
 
-TypeScript로 타입을 검사하고 Oxlint로 린트, Oxfmt로 소스·설정·Markdown의 형식을 통일합니다. 과거 기록인 `.loom/`은 제외합니다. Lefthook은 커밋 전에 저장소 전체의 타입·린트·포맷을 검사하며 파일을 수정하거나 스테이징하지 않습니다. `yarn lint:fix`와 `yarn format`으로 수정한 뒤 커밋할 변경을 직접 스테이징합니다.
+TypeScript로 타입을 검사하고 Oxlint로 린트, Oxfmt로 소스·설정·Markdown의 형식을 통일합니다. 과거 기록인 `.loom/`은 제외합니다. Lefthook은 커밋 전에 저장소 전체의 타입·린트·포맷과 플러그인 구조·문서 참조를 검사하며 파일을 수정하거나 스테이징하지 않습니다. `yarn lint:fix`와 `yarn format`으로 수정한 뒤 커밋할 변경을 직접 스테이징합니다.
 
-검사와 테스트는 다음 명령으로 실행합니다.
+전체 검사와 테스트는 `yarn validate`로 실행합니다. 타입·린트·포맷·플러그인 검사를 차례로 통과한 뒤 전체 테스트를 실행하며, 실패하면 멈춥니다. 필요한 검사만 실행할 수도 있습니다.
 
 ```bash
 yarn lint
@@ -100,9 +126,9 @@ yarn typecheck
 yarn test
 ```
 
-`yarn typecheck`는 스크립트, 테스트와 Vitest 설정을 엄격한 TypeScript 설정으로 검사하며 파일을 생성하지 않습니다. Node 직접 실행은 타입을 제거할 뿐 검사하지 않으므로 커밋 훅에서도 린트, 포맷과 함께 타입 검사를 실행합니다.
+`yarn typecheck`는 단위·통합 테스트를 포함한 `src`, `scripts`와 Vitest 설정을 엄격한 TypeScript 설정으로 검사하며 파일을 생성하지 않습니다. Node 직접 실행은 타입을 제거할 뿐 검사하지 않으므로 커밋 훅에서도 린트, 포맷과 함께 타입 검사를 실행합니다.
 
-`yarn check`는 메타데이터, 설정의 일치, 로컬 파일·제목 참조를 확인합니다. `yarn test`는 커밋 훅과 별도로 Vitest 테스트를 한 번 실행합니다. 감시 모드는 `yarn test:watch`, 단일 파일 실행은 `yarn test scripts/context/records.test.ts`를 사용합니다. 감시 모드에서는 맥락 CLI 소스나 실행 진입점이 바뀌면 별도 Node 프로세스를 호출하는 테스트를 포함해 전체 테스트를 다시 실행합니다.
+`yarn check`는 메타데이터, 설정의 일치, 로컬 파일·제목 참조를 확인합니다. `yarn test`는 커밋 훅과 별도로 Vitest 테스트를 한 번 실행합니다. 감시 모드는 `yarn test:watch`, 단일 파일 실행은 `yarn test src/context/records/records.test.ts`를 사용합니다. 단위 테스트만 실행하려면 `yarn test src/context`, 통합 테스트만 실행하려면 `yarn test src/integration-test`를 사용합니다. 감시 모드에서는 `src/context`의 런타임 모듈이나 `scripts/context`의 실행 진입점이 바뀌면 별도 Node 프로세스를 호출하는 테스트를 포함해 전체 테스트를 다시 실행합니다. 테스트 파일 자체를 수정하면 해당 파일과 그에 의존하는 검사만 다시 실행합니다.
 
 실제 작업에서는 목표와 범위를 지켰는지, 필요한 확인을 수행했는지, 결과에 증거가 있는지를 과정과 산출물에서 확인합니다. 스킬 적용 과정의 설명만으로 성공을 판정하지 않습니다.
 
