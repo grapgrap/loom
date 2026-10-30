@@ -33,14 +33,12 @@ Commands:
   tidy prepare  Freeze an unprocessed batch; --revisit also selects existing memories.
   tidy apply    Apply grounded changes from JSON stdin using the prepared snapshot.
   tidy status   Show pending count and whether consolidation is due.
-  remember    Create or revise a memory: --id <id>, JSON input.
-  checkpoint  Save work status, progress and next actions: --work <id>, JSON input.
   forget      Erase a memory: --id <id> --revision <n>; or a daily original: --ref note:work@n.
 
 Options:
   --cwd <path>       Git checkout or worktree (default: current directory).
   --data-dir <path>  Absolute storage override (otherwise LOOM_DATA_DIR or OS default).
-  --work <id>        Include this work's scoped memories and full checkpoint in recall.
+  --work <id>        Select work-scoped memories and current work state in recall.
   --query <text>     Filter recalled memories by words in current text and reason.
   --history         Include prior revisions in recall; current revisions are the default.
   --full            Include all work summaries and graph context in recall.
@@ -59,8 +57,8 @@ Options:
 
 Requires Node.js 20+ and Git. Use cli.sh (macOS/Linux) or cli.cmd (Windows) to diagnose missing Node.
 Exit code 2 requests dependency setup by the agent; other failures use exit code 1.
-remember/checkpoint inputs require expectedRevision; record does not.
-See skills/work/references/context.md for schemas and recording policy.`;
+See skills/work/references/context.md for schemas and recording policy.
+Legacy remember/checkpoint writers remain supported; see skills/work/references/context-legacy.md.`;
 
 function parseCommandLine() {
   const {
