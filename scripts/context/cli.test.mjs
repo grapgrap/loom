@@ -47,7 +47,8 @@ test("location and empty recall do not create a store", (t) => {
   expect(location.project.kind).toBe("git");
   expect(location.project.id).toMatch(/^[a-f0-9]{64}$/);
   expect(run(project, "recall").memories).toStrictEqual([]);
-  expect(run(project, "recall").works).toStrictEqual([]);
+  expect(run(project, "recall")).not.toHaveProperty("works");
+  expect(run(project, "recall", { args: ["--full"] }).works).toStrictEqual([]);
   expect(existsSync(project.directory)).toBe(false);
 });
 
@@ -122,7 +123,7 @@ test("checkpoint recall requires a work ID and stale updates leave progress inta
   const args = ["--work", "context-cli"];
   const first = run(project, "checkpoint", { args, input: checkpoint() });
   expect(run(project, "checkpoint", { args, input: checkpoint() })).toStrictEqual(first);
-  const recalled = run(project, "recall");
+  const recalled = run(project, "recall", { args: ["--full"] });
   expect(recalled.work).toBe(null);
   expect(recalled.works[0].id).toBe("context-cli");
   expect(recalled.works[0].revision).toBe(1);

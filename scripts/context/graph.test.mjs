@@ -37,14 +37,14 @@ test("graph reads are empty and read-only until tidy publishes grounded statemen
   assert.deepEqual(run(project, ["graph"]).statements, []);
   assert.equal(existsSync(project.directory), false);
   const first = note(project, "The storage choice assumes one writer.");
-  assert.deepEqual(run(project, ["recall", "--work", "storage"]).graph.statements, []);
+  assert.deepEqual(run(project, ["recall", "--full", "--work", "storage"]).graph.statements, []);
   const { result, input } = publish(project, {
     entities: [entity("storage-choice", first.ref), entity("one-writer", first.ref)],
     statements: [statement("single-writer-choice", "storage-choice", "one-writer", first.ref)],
   });
   assert.equal(result.graph.statements[0].id, "single-writer-choice");
   assert.deepEqual(run(project, ["tidy", "apply"], input), result);
-  const recalled = run(project, ["recall", "--query", "storage-choice"]);
+  const recalled = run(project, ["recall", "--full", "--query", "storage-choice"]);
   assert.equal(recalled.graph.statements[0].id, "single-writer-choice");
   assert.equal(recalled.graph.sources[0].ref, first.ref);
   assert.equal(run(project, ["read", "--ref", first.ref]).text, first.text);
@@ -519,7 +519,7 @@ test("a work-scoped legacy memory establishes the work for graph statements and 
     ],
   });
   assert.equal(result.graph.statements[0].scope.id, scope.id);
-  const recalled = run(project, ["recall", "--work", scope.id]);
+  const recalled = run(project, ["recall", "--full", "--work", scope.id]);
   assert.equal(recalled.memories[0].text, "An existing work agreement.");
   assert.equal(recalled.work.id, scope.id);
   assert.deepEqual(

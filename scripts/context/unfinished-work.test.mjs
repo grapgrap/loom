@@ -182,7 +182,7 @@ test("paused and blocked work retain their next steps while cancelled work stays
     "blocked",
     "paused",
   ]);
-  expect(recalled.works.find(({ id }) => id === "cancelled").status).toBe("cancelled");
+  expect(run(project, ["recall", "--work", "cancelled"]).work.status).toBe("cancelled");
   expect(recalled.unreviewedWorks).toStrictEqual([]);
 });
 
@@ -226,7 +226,7 @@ test("unfinished work has its own pagination and is not hidden by recent complet
   });
   const first = run(project, ["recall", "--work", "recent-completed", "--limit", "1"]);
   const second = run(project, ["recall", "--limit", "1", "--offset", "1"]);
-  expect(first.works[0].id).toBe("recent-completed");
+  expect(first.work.id).toBe("recent-completed");
   expect(first.unfinishedWorks).toHaveLength(1);
   expect(first.unfinishedWorksRemaining).toBe(1);
   expect(

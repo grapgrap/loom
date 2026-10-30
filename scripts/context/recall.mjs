@@ -192,8 +192,6 @@ export function buildRecall(archive, history, options) {
   return {
     memories: memories.slice(offset, end),
     memoriesRemaining: Math.max(0, memories.length - end),
-    works: summaries.slice(offset, end),
-    worksRemaining: Math.max(0, summaries.length - end),
     unfinishedWorks: unfinishedWorks.slice(offset, end),
     unfinishedWorksRemaining: Math.max(0, unfinishedWorks.length - end),
     unreviewedWorks: unreviewedWorks.slice(offset, end),
@@ -203,7 +201,13 @@ export function buildRecall(archive, history, options) {
     work: works.get(options.work) ?? null,
     pending: pending.slice(offset, end),
     pendingRemaining: Math.max(0, pending.length - end),
-    graph: queryGraph(current, archive, options),
+    ...(options.full
+      ? {
+          works: summaries.slice(offset, end),
+          worksRemaining: Math.max(0, summaries.length - end),
+          graph: queryGraph(current, archive, options),
+        }
+      : {}),
     tidy: calculateTidyStatus(archive, current),
   };
 }

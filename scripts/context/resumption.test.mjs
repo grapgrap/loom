@@ -17,12 +17,12 @@ test("an exact source read is independent of unrelated corrupt work", (t) => {
   expect(invoke(project, ["read", "--ref", "note:healthy@2"]).status).toBe(1);
 });
 
-test("first recall identifies work from notes before consolidation", (t) => {
+test("full recall identifies work from notes before consolidation", (t) => {
   const project = fixture(t);
   const first = record(project, "login", "Fix login session renewal. Reproduction remains.");
   const last = record(project, "login", "Reproduced the race; the correction is next.");
   record(project, "login-ui", "Improve keyboard navigation on the login screen.");
-  const recalled = run(project, ["recall"]);
+  const recalled = run(project, ["recall", "--full"]);
   const login = recalled.works.find(({ id }) => id === "login");
   expect(login.firstNote).toStrictEqual({ ref: first.ref, excerpt: first.text });
   expect(login.latestNote).toStrictEqual({ ref: last.ref, excerpt: last.text });
@@ -30,7 +30,7 @@ test("first recall identifies work from notes before consolidation", (t) => {
   expect(recalled.tidy.due).toBe(false);
 });
 
-test("recall pages memories, work summaries, and pending notes without dropping entries", (t) => {
+test("full recall pages memories, work summaries, and pending notes without dropping entries", (t) => {
   const project = fixture(t);
   const note = record(project, "first", "Shared constraints.");
   record(project, "second", "Another task.");
@@ -47,8 +47,17 @@ test("recall pages memories, work summaries, and pending notes without dropping 
   });
   record(project, "first", "First pending change.");
   record(project, "first", "Second pending change.");
-  const first = run(project, ["recall", "--work", "first", "--limit", "1"]);
-  const second = run(project, ["recall", "--work", "first", "--limit", "1", "--offset", "1"]);
+  const first = run(project, ["recall", "--full", "--work", "first", "--limit", "1"]);
+  const second = run(project, [
+    "recall",
+    "--full",
+    "--work",
+    "first",
+    "--limit",
+    "1",
+    "--offset",
+    "1",
+  ]);
   expect(first.memories.length).toBe(1);
   expect(first.memoriesRemaining).toBe(2);
   expect(first.works.length).toBe(1);

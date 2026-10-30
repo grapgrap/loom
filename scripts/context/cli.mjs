@@ -25,7 +25,7 @@ Commands:
               Change structured work through JSON stdin: --work <id>.
   work show   Read structured work, readiness and review gaps: --work <id> [--tree].
   location    Show the resolved project and storage paths without creating files.
-  recall      Read memories, work summaries, unfinished work and state-review candidates.
+  recall      Read memories, selected work, pending originals and unfinished/review candidates.
   record      Append daily plain text from stdin: --work <id> --source <reference>.
   search      Rank original records with BM25: --query <text>.
   read        Read an exact original record: --ref <kind:id@revision>.
@@ -43,6 +43,7 @@ Options:
   --work <id>        Include this work's scoped memories and full checkpoint in recall.
   --query <text>     Filter recalled memories by words in current text and reason.
   --history         Include prior revisions in recall; current revisions are the default.
+  --full            Include all work summaries and graph context in recall.
   --tree            Include descendants in work show.
   --entity <id>      Start graph traversal at this entity.
   --depth <n>        Graph traversal depth, 1-5 (default: 2).
@@ -77,6 +78,7 @@ function parseCommandLine() {
       query: { type: "string" },
       input: { type: "string" },
       history: { type: "boolean" },
+      full: { type: "boolean" },
       help: { type: "boolean" },
       source: { type: "string" },
       by: { type: "string" },
@@ -97,7 +99,7 @@ function parseCommandLine() {
   if (words.length !== (grouped ? 2 : 1)) throw new Error(usage);
   const optionsByCommand = {
     location: [],
-    recall: ["work", "query", "history", "limit", "offset", "entity", "depth"],
+    recall: ["work", "query", "history", "full", "limit", "offset", "entity", "depth"],
     remember: ["id", "input"],
     checkpoint: ["work", "input"],
     forget: ["id", "revision", "ref"],
@@ -128,6 +130,12 @@ function parseCommandLine() {
   const allowedOptions = ["cwd", "data-dir", ...optionsByCommand[command]];
   if (names.some((name) => !allowedOptions.includes(name)))
     throw new Error(`Unsupported option for ${command}`);
+  if (
+    command === "recall" &&
+    !options.full &&
+    names.some((name) => ["entity", "depth"].includes(name))
+  )
+    throw new Error("recall --entity and --depth require --full; use graph for focused lookup");
   if (command === "remember" || (command === "forget" && options.ref === undefined))
     parseRecordId(options.id);
   if (
