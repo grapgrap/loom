@@ -170,22 +170,6 @@ export function validateGraph(graph) {
   assertGraphReferences(graph);
 }
 
-function flagOutdatedInferences(statements) {
-  let hasChanges = true;
-  while (hasChanges) {
-    hasChanges = false;
-    for (const [id, statement] of statements) {
-      if (statement.status !== "active" || statement.origin.kind !== "inferred") continue;
-      const outdatedPremiseIds = statement.origin.premises.filter(
-        (id) => statements.get(id).status !== "active",
-      );
-      if (!outdatedPremiseIds.length) continue;
-      statements.set(id, { ...statement, status: "unresolved", reviewNeeded: outdatedPremiseIds });
-      hasChanges = true;
-    }
-  }
-}
-
 function applyStatementTransitions(statements, addedStatements, retirements) {
   const replacements = addedStatements.filter(({ supersedes }) => supersedes.length > 0);
   const retiringStatementIds = new Set(retirements.map(({ id }) => id));
@@ -216,12 +200,19 @@ function applyStatementTransitions(statements, addedStatements, retirements) {
     assertCondition(statement, `Unknown statement: ${id}`);
     statements.set(id, { ...statement, status: "retired", retirement: { reason, sources } });
   }
-  flagOutdatedInferences(statements);
-  for (const { id } of replacements) {
-    assertCondition(
-      statements.get(id).status !== "unresolved",
-      `An unresolved statement cannot supersede another statement: ${id}`,
+}
+
+function markInferencesForReview(statements) {
+  for (const [id, statement] of statements) {
+    if (
+      !["active", "unresolved"].includes(statement.status) ||
+      statement.origin.kind !== "inferred"
+    )
+      continue;
+    const reviewNeeded = statement.origin.premises.filter(
+      (premise) => statements.get(premise).status !== "active",
     );
+    if (reviewNeeded.length) statements.set(id, { ...statement, reviewNeeded });
   }
 }
 
@@ -236,17 +227,19 @@ export function applyGraphChanges(previous, changes, knownWorkIds) {
   }
   for (const statement of changes.statements) {
     const existing = statements.get(statement.id);
+    const { reviewNeeded: _reviewNeeded, ...existingDeclaration } = existing ?? {};
     assertCondition(
-      !existing || isDeepStrictEqual(existing, statement),
+      !existing || isDeepStrictEqual(existingDeclaration, statement),
       `Statement ${statement.id} is immutable; create a new statement`,
     );
     if (statement.scope.type === "work")
       assertCondition(knownWorkIds.has(statement.scope.id), `Unknown work: ${statement.scope.id}`);
-    statements.set(statement.id, statement);
+    statements.set(statement.id, existing ?? statement);
     if (!existing) addedStatements.push(statement);
   }
   assertGraphReferences({ entities: [...entities.values()], statements: [...statements.values()] });
   applyStatementTransitions(statements, addedStatements, changes.retire);
+  markInferencesForReview(statements);
   return {
     entities: [...entities.values()].sort((a, b) => a.id.localeCompare(b.id)),
     statements: [...statements.values()].sort((a, b) => a.id.localeCompare(b.id)),

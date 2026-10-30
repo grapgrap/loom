@@ -296,7 +296,7 @@ test("premise cycles and attempts to change a statement in place are rejected", 
   );
 });
 
-test("a replaced premise marks dependent inferences for review and includes them in the result report", (t) => {
+test("premise replacement marks direct dependents for review without changing inference states", (t) => {
   const project = fixture(t);
   const source = note(
     project,
@@ -325,13 +325,57 @@ test("a replaced premise marks dependent inferences for review and includes them
   });
   for (const id of ["conclusion", "followup"]) {
     const statement = result.graph.statements.find((statement) => statement.id === id);
-    assert.equal(statement.status, "unresolved");
-    assert.equal(statement.reviewNeeded.length, 1);
-    assert.equal(
-      result.report.changes.find((change) => change.id === id).after.status,
-      "unresolved",
-    );
+    assert.equal(statement.status, "active");
   }
+  const conclusion = result.graph.statements.find(({ id }) => id === "conclusion");
+  assert.deepEqual(conclusion.reviewNeeded, ["premise"]);
+  assert.equal(result.graph.statements.find(({ id }) => id === "followup").reviewNeeded, undefined);
+  assert.deepEqual(result.report.changes.find(({ id }) => id === "conclusion").after.reviewNeeded, [
+    "premise",
+  ]);
+  assert.equal(
+    result.report.changes.some(({ id }) => id === "followup"),
+    false,
+  );
+
+  const confirmed = note(project, "The conclusion still holds under the new premise.");
+  publish(project, {
+    statements: [
+      statement("confirmed-conclusion", "storage", "one-writer", confirmed.ref, {
+        origin: { kind: "inferred", premises: ["new-premise"] },
+        supersedes: ["conclusion"],
+      }),
+    ],
+  });
+  const reviewed = run(project, ["graph"]);
+  const replacement = reviewed.statements.find(({ id }) => id === "confirmed-conclusion");
+  assert.equal(replacement.status, "active");
+  assert.equal(replacement.reviewNeeded, undefined);
+  const followup = reviewed.statements.find(({ id }) => id === "followup");
+  assert.equal(followup.status, "active");
+  assert.deepEqual(followup.reviewNeeded, ["conclusion"]);
+});
+
+test("an unresolved inference keeps its status and identifies its retired premise for review", (t) => {
+  const project = fixture(t);
+  const source = note(project, "The interpretation already needs confirmation.");
+  publish(project, {
+    entities: [entity("a", source.ref), entity("b", source.ref)],
+    statements: [
+      statement("premise", "a", "b", source.ref),
+      statement("interpretation", "a", "b", source.ref, {
+        status: "unresolved",
+        origin: { kind: "inferred", premises: ["premise"] },
+      }),
+    ],
+  });
+  const changed = note(project, "The earlier premise no longer applies.");
+  const { result } = publish(project, {
+    retire: [{ id: "premise", reason: changed.text, sources: [changed.ref] }],
+  });
+  const interpretation = result.graph.statements.find(({ id }) => id === "interpretation");
+  assert.equal(interpretation.status, "unresolved");
+  assert.deepEqual(interpretation.reviewNeeded, ["premise"]);
 });
 
 test("forgetting an old statement's source cleans report links without removing its grounded replacement", (t) => {
@@ -396,7 +440,7 @@ test("a version-one consolidation is readable and upgrades without losing existi
   assert.equal(JSON.parse(readFileSync(path, "utf8")).version, 2);
 });
 
-test("an unresolved replacement cannot remove an accepted decision, including changes to its premises in the same batch", (t) => {
+test("replacement eligibility follows its explicit status while premise changes keep their evidence role", (t) => {
   const scenarios = [
     { name: "unresolved premise", status: "unresolved", change: () => ({}) },
     {
@@ -430,6 +474,7 @@ test("an unresolved replacement cannot remove an accepted decision, including ch
     const premiseChanges = scenario.change(next.ref);
     const replacement = statement("replacement", "a", "b", next.ref, {
       origin: { kind: "inferred", premises: ["premise"] },
+      status: "unresolved",
       supersedes: ["accepted"],
     });
     const graph = {
@@ -438,19 +483,23 @@ test("an unresolved replacement cannot remove an accepted decision, including ch
     };
     const rejected = invoke(project, ["tidy", "apply"], { snapshot: batch.snapshot, graph });
     assert.equal(rejected.status, 1, scenario.name);
-    assert.match(rejected.stderr, /unresolved statement cannot supersede/i, scenario.name);
+    assert.match(rejected.stderr, /active statement can supersede/i, scenario.name);
     assert.deepEqual(run(project, ["graph"]), before, scenario.name);
     assert.deepEqual(
       run(project, ["recall", "--work", "storage"]).pending.map(({ ref }) => ref),
       [next.ref],
     );
 
-    graph.statements[0] = { ...replacement, supersedes: [] };
+    graph.statements[0] = { ...replacement, status: "active" };
     const accepted = run(project, ["tidy", "apply"], { snapshot: batch.snapshot, graph });
-    assert.equal(accepted.graph.statements.find(({ id }) => id === "accepted").status, "active");
     assert.equal(
-      accepted.graph.statements.find(({ id }) => id === "replacement").status,
-      "unresolved",
+      accepted.graph.statements.find(({ id }) => id === "accepted").status,
+      "superseded",
+    );
+    assert.equal(accepted.graph.statements.find(({ id }) => id === "replacement").status, "active");
+    assert.deepEqual(
+      accepted.graph.statements.find(({ id }) => id === "replacement").reviewNeeded,
+      ["premise"],
     );
   }
 });
@@ -529,7 +578,7 @@ test("a work-scoped legacy memory establishes the work for graph statements and 
   assert.deepEqual(recalled.pending, []);
 });
 
-test("resubmitting an unchanged replacement does not prevent later review of its retired premise", (t) => {
+test("review markers preserve inference status and survive resubmission of the unchanged declaration", (t) => {
   const project = fixture(t);
   const first = note(project, "An initial decision and an independent premise.");
   publish(project, {
@@ -551,12 +600,19 @@ test("resubmitting an unchanged replacement does not prevent later review of its
     retire: [{ id: "premise", reason: retired.text, sources: [retired.ref] }],
   });
   assert.equal(result.graph.statements.find(({ id }) => id === "initial").status, "superseded");
-  assert.equal(
-    result.graph.statements.find(({ id }) => id === replacement.id).status,
-    "unresolved",
-  );
+  assert.equal(result.graph.statements.find(({ id }) => id === replacement.id).status, "active");
+  assert.deepEqual(result.graph.statements.find(({ id }) => id === replacement.id).reviewNeeded, [
+    "premise",
+  ]);
   assert.deepEqual(
     result.report.changes.map(({ id }) => id),
     ["accepted-replacement", "premise"],
   );
+
+  note(project, "The recorded conclusion is unchanged while review remains pending.");
+  const { result: repeated } = publish(project, { statements: [replacement] });
+  const retained = repeated.graph.statements.find(({ id }) => id === replacement.id);
+  assert.equal(retained.status, "active");
+  assert.deepEqual(retained.reviewNeeded, ["premise"]);
+  assert.deepEqual(repeated.report.changes, []);
 });
