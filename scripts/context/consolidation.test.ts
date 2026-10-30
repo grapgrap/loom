@@ -1,10 +1,19 @@
+import type {
+  OriginalSource,
+  Memory,
+  SourceArchive,
+  ConsolidationHistory,
+  TidySnapshot,
+} from "./model.ts";
 import { expect, test } from "vitest";
-import { buildConsolidation, getLatestConsolidation, parseTidyChanges } from "./consolidation.mjs";
-import { buildRecall } from "./recall.mjs";
+import { buildConsolidation, getLatestConsolidation, parseTidyChanges } from "./consolidation.ts";
+import { buildRecall } from "./recall.ts";
 
 const recordedAt = "2026-10-15T12:00:00.000Z";
 const cursor = { memory: {}, checkpoint: {}, note: {} };
-const note = {
+const note: Extract<OriginalSource, { kind: "note" }> = {
+  requestKey: "test",
+  source: { type: "agent", reference: "Test observation" },
   kind: "note",
   id: "task",
   ref: "note:task@1",
@@ -13,7 +22,7 @@ const note = {
   scope: { type: "work", id: "task" },
   text: "Keep the existing constraint; this task is unfinished.",
 };
-const memory = {
+const memory: Memory = {
   id: "constraint",
   scope: { type: "project" },
   text: "Keep the constraint.",
@@ -23,21 +32,22 @@ const memory = {
   supersedes: [],
 };
 
-function freeze(object) {
+function freeze<T extends object>(object: T): T {
   for (const value of Object.values(object)) if (value && typeof value === "object") freeze(value);
   return Object.freeze(object);
 }
 
 test("consolidating unfinished work preserves agreements and leaves later arrivals pending", () => {
   const later = { ...note, ref: "note:task@2", revision: 2, text: "A later observation." };
-  const archive = freeze({
+  const archive = freeze<SourceArchive>({
+    works: [],
     memories: [],
     checkpoints: [],
-    journals: [{ id: "task", revisions: [note, later] }],
+    journals: [{ version: 1, id: "task", revisions: [note, later] }],
     sources: [note, later],
     bounds: { ...cursor, note: { task: 2 } },
   });
-  const history = freeze({
+  const history = freeze<ConsolidationHistory>({
     version: 1,
     forgotten: [],
     revisions: [
@@ -52,7 +62,9 @@ test("consolidating unfinished work preserves agreements and leaves later arriva
       },
     ],
   });
-  const snapshot = freeze({
+  const snapshot = freeze<TidySnapshot>({
+    version: 1,
+    hashes: {},
     id: "batch",
     baseRevision: 1,
     bounds: { ...cursor, note: { task: 1 } },
@@ -80,13 +92,20 @@ test("consolidating unfinished work preserves agreements and leaves later arriva
   expect(getLatestConsolidation(updated).memories).toStrictEqual([memory]);
   expect(getLatestConsolidation(updated).cursor.note).toStrictEqual({ task: 1 });
   const recalled = buildRecall(archive, updated, { work: "task", limit: 50 });
-  expect(recalled.work.status).toBe("active");
-  expect(recalled.pending.map(({ ref }) => ref)).toStrictEqual([later.ref]);
+  expect(recalled.work!.status).toBe("active");
+  expect(recalled.pending.map(({ ref }: { ref: string }) => ref)).toStrictEqual([later.ref]);
   expect(history.revisions.length).toBe(1);
 });
 
 test("consolidation rejects a state for work without any source records", () => {
-  const archive = { memories: [], checkpoints: [], journals: [], sources: [note], bounds: cursor };
+  const archive = {
+    works: [],
+    memories: [],
+    checkpoints: [],
+    journals: [],
+    sources: [note],
+    bounds: cursor,
+  };
   const changes = parseTidyChanges({
     snapshot: "batch",
     works: [
@@ -106,7 +125,7 @@ test("consolidation rejects a state for work without any source records", () => 
       {
         history: null,
         archive,
-        snapshot: { id: "batch", bounds: cursor },
+        snapshot: { version: 1, id: "batch", baseRevision: 0, hashes: {}, bounds: cursor },
         prepared: [note],
         recordedAt,
       },

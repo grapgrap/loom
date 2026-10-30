@@ -1,3 +1,16 @@
+import type {
+  Cursor,
+  Memory,
+  ConsolidatedWork,
+  Retirement,
+  TidySnapshot,
+  ConsolidationHistory,
+  Consolidation,
+  SourceArchive,
+  TidyChanges,
+  StoredMemory,
+  OriginalSource,
+} from "./model.ts";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import {
@@ -10,7 +23,7 @@ import {
   validateObject,
   validateArray,
   validateChoice,
-} from "./records.mjs";
+} from "./records.ts";
 import {
   advanceRevisionCursor,
   getCursorRevision,
@@ -20,23 +33,23 @@ import {
   collectKnownWorkIds,
   validateSourceReferences,
   validateRequiredSourceReferences,
-} from "./sources.mjs";
+} from "./sources.ts";
 import {
   emptyGraph,
   parseGraphChanges,
   validateGraph,
   applyGraphChanges,
   eraseFromGraph,
-} from "./graph.mjs";
-import { createTidyReport, eraseFromTidyReport } from "./tidy-report.mjs";
+} from "./graph.ts";
+import { createTidyReport, eraseFromTidyReport } from "./tidy-report.ts";
 
-function assertCondition(condition, message) {
+function assertCondition(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function validateRevisionCursor(cursor) {
+function validateRevisionCursor(cursor: Cursor) {
   validateObject(cursor, "cursor");
-  for (const kind of ["memory", "checkpoint", "note"]) {
+  for (const kind of ["memory", "checkpoint", "note"] as const) {
     validateObject(cursor[kind], `cursor.${kind}`);
     for (const [id, revision] of Object.entries(cursor[kind])) {
       parseRecordId(id);
@@ -52,7 +65,7 @@ function validateRevisionCursor(cursor) {
   }
 }
 
-function validateConsolidatedMemoryFields(memory) {
+function validateConsolidatedMemoryFields(memory: Memory) {
   validateObject(memory, "memory");
   parseRecordId(memory.id);
   validateMemoryScope(memory.scope);
@@ -62,7 +75,7 @@ function validateConsolidatedMemoryFields(memory) {
   if (memory.supersedes !== undefined) validateSourceReferences(memory.supersedes, "supersedes");
 }
 
-function validateConsolidatedMemory(memory) {
+function validateConsolidatedMemory(memory: Memory) {
   validateConsolidatedMemoryFields(memory);
   validateChoice(memory.status, ["active", "unresolved", "retired"], "status");
   if (memory.retirement !== undefined) {
@@ -70,7 +83,7 @@ function validateConsolidatedMemory(memory) {
   }
 }
 
-function validateConsolidatedWorkState(work) {
+function validateConsolidatedWorkState(work: ConsolidatedWork) {
   validateObject(work, "work");
   parseRecordId(work.id);
   validateWorkProgress(work, validateSourceReferences);
@@ -79,19 +92,20 @@ function validateConsolidatedWorkState(work) {
     parseRevisionNumber(work.checkpointRevision, "checkpointRevision");
 }
 
-function validateRetirementEvidence(retirement) {
+function validateRetirementEvidence(retirement: Retirement) {
   validateObject(retirement, "retirement");
   validateText(retirement.reason, "reason");
   validateRequiredSourceReferences(retirement.sources, "sources");
 }
 
-function validateMemoryRetirement(retirement) {
+function validateMemoryRetirement(retirement: Retirement & { id: string }) {
   validateObject(retirement, "retirement");
   parseRecordId(retirement.id);
   validateRetirementEvidence(retirement);
 }
 
-export function parseTidySnapshot(snapshot) {
+export function parseTidySnapshot(input: unknown): TidySnapshot {
+  const snapshot = input as TidySnapshot;
   validateObject(snapshot, "snapshot");
   assertCondition(snapshot.version === 1, "Unsupported tidy snapshot version");
   parseRecordId(snapshot.id);
@@ -100,7 +114,8 @@ export function parseTidySnapshot(snapshot) {
   return snapshot;
 }
 
-export function parseConsolidationHistory(history) {
+export function parseConsolidationHistory(input: unknown): ConsolidationHistory {
+  const history = input as ConsolidationHistory;
   validateObject(history, "history");
   validateArray(history.forgotten, "forgotten");
   assertCondition([1, 2].includes(history.version), "Unsupported tidy store version");
@@ -117,7 +132,7 @@ export function parseConsolidationHistory(history) {
   return history;
 }
 
-export function getLatestConsolidation(history) {
+export function getLatestConsolidation(history: ConsolidationHistory | null): Consolidation {
   return (
     history?.revisions.at(-1) ?? {
       revision: 0,
@@ -128,7 +143,11 @@ export function getLatestConsolidation(history) {
   );
 }
 
-export function calculateTidyStatus(archive, consolidation, nowMs = Date.now()) {
+export function calculateTidyStatus(
+  archive: { sources: Pick<OriginalSource, "kind" | "id" | "revision" | "recordedAt">[] },
+  consolidation: Pick<Consolidation, "cursor" | "revision" | "recordedAt">,
+  nowMs = Date.now(),
+) {
   const unprocessedRecords = findUnprocessedSources(archive, consolidation.cursor);
   const oldestPendingAt = unprocessedRecords.reduce(
     (earliest, { recordedAt }) => Math.min(earliest, Date.parse(recordedAt)),
@@ -147,7 +166,11 @@ export function calculateTidyStatus(archive, consolidation, nowMs = Date.now()) 
   };
 }
 
-export function collectMemoryBaseline(archive, consolidation, snapshotBounds = archive.bounds) {
+export function collectMemoryBaseline(
+  archive: SourceArchive,
+  consolidation: Consolidation,
+  snapshotBounds = archive.bounds,
+) {
   const memoriesById = new Map(consolidation.memories.map((memory) => [memory.id, memory]));
   for (const record of archive.memories) {
     if (record.forgotten || memoriesById.has(record.id)) continue;
@@ -174,17 +197,19 @@ export function collectMemoryBaseline(archive, consolidation, snapshotBounds = a
   return [...memoriesById.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
 
-export function parseTidyChanges(input) {
+export function parseTidyChanges(value: unknown): TidyChanges {
+  const input = value as TidyChanges;
   validateObject(input, "changes");
   parseRecordId(input.snapshot, "snapshot");
-  const changes = {
+  const changes: TidyChanges = {
     snapshot: input.snapshot,
     memories: input.memories === undefined ? [] : input.memories,
     works: input.works === undefined ? [] : input.works,
     retire: input.retire === undefined ? [] : input.retire,
   };
   if (input.graph !== undefined) changes.graph = parseGraphChanges(input.graph);
-  for (const field of ["memories", "works", "retire"]) validateArray(changes[field], field);
+  for (const field of ["memories", "works", "retire"] as const)
+    validateArray(changes[field], field);
   changes.memories = changes.memories.map((input) => {
     validateObject(input, "memory");
     const { id, scope, text, reason, sources, status = "active", supersedes = [] } = input;
@@ -217,7 +242,7 @@ export function parseTidyChanges(input) {
   return changes;
 }
 
-function sortObjectKeys(value) {
+function sortObjectKeys(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sortObjectKeys);
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(
@@ -229,14 +254,18 @@ function sortObjectKeys(value) {
   return value;
 }
 
-export function hashOriginalSource(source) {
+export function hashOriginalSource(source: { latest?: boolean }) {
   const { latest, ...content } = source;
   return createHash("sha256")
     .update(JSON.stringify(sortObjectKeys(content)))
     .digest("hex");
 }
 
-function assertSourceReferencesAvailable(archive, snapshot, entries) {
+function assertSourceReferencesAvailable(
+  archive: SourceArchive,
+  snapshot: TidySnapshot,
+  entries: { sources: string[]; supersedes?: string[]; evidence?: string[] }[],
+) {
   for (const entry of entries) {
     for (const ref of [...entry.sources, ...(entry.supersedes ?? []), ...(entry.evidence ?? [])]) {
       const source = requireSourceByReference(archive, ref);
@@ -248,7 +277,14 @@ function assertSourceReferencesAvailable(archive, snapshot, entries) {
   }
 }
 
-function applyMemoryChanges({ existingMemories, forgottenMemoryIds, memoryRecords }, changes) {
+function applyMemoryChanges(
+  {
+    existingMemories,
+    forgottenMemoryIds,
+    memoryRecords,
+  }: { existingMemories: Memory[]; forgottenMemoryIds: string[]; memoryRecords: StoredMemory[] },
+  changes: TidyChanges,
+) {
   const memoriesById = new Map(existingMemories.map((memory) => [memory.id, memory]));
   for (const memory of changes.memories) {
     assertCondition(
@@ -259,7 +295,7 @@ function applyMemoryChanges({ existingMemories, forgottenMemoryIds, memoryRecord
     assertCondition(!originalRecord?.forgotten, `Memory ${memory.id} was forgotten; use a new ID`);
     const existingMemory = memoriesById.get(memory.id) ?? originalRecord;
     assertCondition(
-      !existingMemory || isDeepStrictEqual(existingMemory.scope, memory.scope),
+      !existingMemory || isDeepStrictEqual((existingMemory as Memory).scope, memory.scope),
       "A memory's scope cannot change",
     );
     memoriesById.set(memory.id, memory);
@@ -272,7 +308,10 @@ function applyMemoryChanges({ existingMemories, forgottenMemoryIds, memoryRecord
   return [...memoriesById.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function pruneMemoryAfterErasure(memory, erasure) {
+function pruneMemoryAfterErasure(
+  memory: Memory,
+  erasure: { memoryId?: string; matchesReference: (ref: string) => boolean },
+) {
   if (
     memory.id === erasure.memoryId ||
     [...memory.sources, ...(memory.retirement?.sources ?? [])].some(erasure.matchesReference)
@@ -285,8 +324,12 @@ function pruneMemoryAfterErasure(memory, erasure) {
 }
 
 export function eraseFromConsolidationHistory(
-  history,
-  { memoryId, sourceRef: erasedSourceRef, expectedRevision },
+  history: ConsolidationHistory | null,
+  {
+    memoryId,
+    sourceRef: erasedSourceRef,
+    expectedRevision,
+  }: { memoryId?: string; sourceRef?: string; expectedRevision?: number },
 ) {
   if (!history) {
     assertCondition(expectedRevision === undefined, `Memory does not exist: ${memoryId}`);
@@ -295,25 +338,25 @@ export function eraseFromConsolidationHistory(
   const consolidation = getLatestConsolidation(history);
   if (expectedRevision !== undefined) {
     assertCondition(
-      consolidation.revision === expectedRevision || history.forgotten.includes(memoryId),
+      consolidation.revision === expectedRevision || history.forgotten.includes(memoryId!),
       `Tidy revision conflict: current revision is ${consolidation.revision}`,
     );
     assertCondition(
       consolidation.memories.some((memory) => memory.id === memoryId) ||
-        history.forgotten.includes(memoryId),
+        history.forgotten.includes(memoryId!),
       `Memory does not exist: ${memoryId}`,
     );
   }
   const matchesReference =
     memoryId === undefined
-      ? (ref) => ref === erasedSourceRef
-      : (ref) => ref.startsWith(`memory:${memoryId}@`);
+      ? (ref: string) => ref === erasedSourceRef
+      : (ref: string) => ref.startsWith(`memory:${memoryId}@`);
   const sanitizedRevisions = history.revisions.map((revision) => {
     const sanitized = {
       ...revision,
       memories: revision.memories
         .map((memory) => pruneMemoryAfterErasure(memory, { memoryId, matchesReference }))
-        .filter(Boolean),
+        .filter((memory) => memory !== null),
       works: revision.works.filter(
         (work) => ![...work.sources, ...work.evidence].some(matchesReference),
       ),
@@ -335,7 +378,7 @@ export function eraseFromConsolidationHistory(
     isDeepStrictEqual(history.forgotten, forgottenMemoryIds)
   )
     return history;
-  const latestSanitized = sanitizedRevisions.at(-1);
+  const latestSanitized = sanitizedRevisions.at(-1)!;
   return {
     version: history.version,
     forgotten: forgottenMemoryIds,
@@ -352,13 +395,17 @@ export function eraseFromConsolidationHistory(
   };
 }
 
-export function hashChanges(changes) {
+export function hashChanges(changes: TidyChanges) {
   return createHash("sha256")
     .update(JSON.stringify(sortObjectKeys(changes)))
     .digest("hex");
 }
 
-export function validatePreparedSources(archive, snapshot, changes) {
+export function validatePreparedSources(
+  archive: SourceArchive,
+  snapshot: TidySnapshot,
+  changes: TidyChanges,
+) {
   validateObject(snapshot.hashes, "snapshot.hashes");
   const prepared = Object.entries(snapshot.hashes).map(([ref, hash]) => {
     const source = requireSourceByReference(archive, ref);
@@ -381,14 +428,29 @@ export function validatePreparedSources(archive, snapshot, changes) {
   return prepared;
 }
 
-export function assertTidyRevision(current, snapshot) {
+export function assertTidyRevision(current: Consolidation, snapshot: TidySnapshot) {
   assertCondition(
     current.revision === snapshot.baseRevision,
     `Tidy revision conflict: current revision is ${current.revision}; prepare a new snapshot and reconsider the changes`,
   );
 }
 
-export function buildConsolidation({ history, archive, snapshot, prepared, recordedAt }, changes) {
+export function buildConsolidation(
+  {
+    history,
+    archive,
+    snapshot,
+    prepared,
+    recordedAt,
+  }: {
+    history: ConsolidationHistory | null;
+    archive: SourceArchive;
+    snapshot: TidySnapshot;
+    prepared: OriginalSource[];
+    recordedAt: string;
+  },
+  changes: TidyChanges,
+): ConsolidationHistory {
   const current = getLatestConsolidation(history);
   const knownWorkIds = collectKnownWorkIds(archive);
   for (const work of changes.works) {
@@ -408,9 +470,9 @@ export function buildConsolidation({ history, archive, snapshot, prepared, recor
     changes,
   );
   const works = new Map(current.works.map((work) => [work.id, work]));
-  const checkpoints = new Map();
+  const checkpoints = new Map<string, Extract<OriginalSource, { kind: "checkpoint" }>>();
   for (const source of prepared) {
-    if (source.kind !== "checkpoint") continue;
+    if (source.kind !== "checkpoint" || source.forgotten) continue;
     const acceptedRevision = Math.max(
       getCursorRevision(current.cursor, "checkpoint", source.id),
       works.get(source.id)?.checkpointRevision ?? 0,
@@ -441,7 +503,7 @@ export function buildConsolidation({ history, archive, snapshot, prepared, recor
     changes.graph ?? parseGraphChanges(),
     knownWorkIds,
   );
-  const revision = {
+  const revision: Consolidation = {
     revision: current.revision + 1,
     recordedAt,
     snapshot: snapshot.id,

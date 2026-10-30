@@ -69,7 +69,7 @@ Tidy reads an unprocessed batch, searches related originals with BM25, and updat
 
 `recall` reports when consolidation is due: 20 pending originals or an oldest pending original at least 24 hours old. `work` checks at startup and stable work boundaries, including during a long-running conversation. Explicit `$loom:tidy` requests can run sooner. This is an invocation-time check; it does not install a background scheduler.
 
-The [context script](scripts/context/cli.mjs) requires Node.js 20+ and Git, with no npm dependencies. Its default data root is `~/Library/Application Support/loom` on macOS, `%LOCALAPPDATA%\loom` on Windows, and `$XDG_DATA_HOME/loom` or `~/.local/share/loom` on Linux. Records live outside plugin installations and Git checkouts. Worktrees of the same local repository share them; separate clones and machines do not synchronize.
+The [context script](scripts/context/cli.ts) runs directly on Node.js 22.x from 22.18, 24.x, or 26+, with Git and no npm runtime dependencies or build step. Node is the only supported JavaScript runtime. Its default data root is `~/Library/Application Support/loom` on macOS, `%LOCALAPPDATA%\loom` on Windows, and `$XDG_DATA_HOME/loom` or `~/.local/share/loom` on Linux. Records live outside plugin installations and Git checkouts. Worktrees of the same local repository share them; separate clones and machines do not synchronize.
 
 If the sandbox blocks writes to the storage path, the agent explains the actual path and storage purpose when requesting permission through the host's existing approval flow. Once approved, it retries the write at the same path and reads the result back to verify it.
 
@@ -81,14 +81,14 @@ Users can ask Loom to recall, revise, or forget a memory. The `location` command
 
 Use observed failures and omissions from real work to change the instructions or execution tools. Recheck the same conditions afterward. A structural check does not prove that a skill improves the agent's decisions or execution.
 
-Repository scripts default to `.mjs`. Development tooling supports Node.js 22.x from 22.12, 24.x, or 26+. Development dependencies use the Yarn version pinned in `package.json`, with the `pnpm` node linker. Install them and set up the Git hooks once per clone:
+Repository scripts and tests use TypeScript (`.ts`) with explicit `.ts` imports and erasable type syntax. Development tooling supports the same Node.js versions as the context CLI. Development dependencies use the Yarn version pinned in `package.json`, with the `pnpm` node linker. Install them and set up the Git hooks once per clone:
 
 ```bash
 yarn install --immutable
 yarn hooks:install
 ```
 
-Oxlint checks JavaScript, and Oxfmt formats source files, configuration, and Markdown. Historical records in `.loom/` are excluded. Lefthook runs repository-wide lint and format checks before each commit without modifying or staging files. Run `yarn lint:fix` and `yarn format` to apply fixes, then stage the changes you intend to commit.
+TypeScript checks types, Oxlint lints the code, and Oxfmt formats source files, configuration, and Markdown. Historical records in `.loom/` are excluded. Lefthook runs repository-wide type, lint, and format checks before each commit without modifying or staging files. Run `yarn lint:fix` and `yarn format` to apply fixes, then stage the changes you intend to commit.
 
 Run the checks and tests explicitly:
 
@@ -96,10 +96,13 @@ Run the checks and tests explicitly:
 yarn lint
 yarn format:check
 yarn check
+yarn typecheck
 yarn test
 ```
 
-`yarn check` validates metadata, manifest consistency, and local file and heading references. `yarn test` runs the Vitest suite once, separately from the commit hook. Use `yarn test:watch` for watch mode or `yarn test scripts/context/records.test.mjs` for a single file. Changes to context CLI sources and launchers rerun the suite in watch mode, including tests that invoke separate Node processes.
+`yarn typecheck` checks scripts, tests, and the Vitest configuration with strict TypeScript and emits no files. Node execution strips types without checking them, so the pre-commit hook runs type checking alongside lint and formatting.
+
+`yarn check` validates metadata, manifest consistency, and local file and heading references. `yarn test` runs the Vitest suite once, separately from the commit hook. Use `yarn test:watch` for watch mode or `yarn test scripts/context/records.test.ts` for a single file. Changes to context CLI sources and launchers rerun the suite in watch mode, including tests that invoke separate Node processes.
 
 On real tasks, inspect the process and artifacts for preserved goals and scope, required checks, and evidence of the outcome. A description of having followed a skill is not proof of success.
 

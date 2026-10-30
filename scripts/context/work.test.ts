@@ -1,6 +1,7 @@
+import type { Fixture } from "./testing.ts";
 import { existsSync } from "node:fs";
 import { expect, test } from "vitest";
-import { fixture, invoke, run, concurrentRequest } from "./testing.mjs";
+import { fixture, invoke, run, concurrentRequest } from "./testing.ts";
 
 const source = { type: "agent", reference: "User request and observed test artifacts" };
 const criterion = {
@@ -9,7 +10,7 @@ const criterion = {
   verification: "Observe the public use path",
 };
 
-function create(project, id, definition = {}) {
+function create(project: Fixture, id: string, definition = {}) {
   return run(project, ["work", "create", "--work", id], {
     expectedRevision: 0,
     actor: "main",
@@ -21,19 +22,19 @@ function create(project, id, definition = {}) {
   });
 }
 
-function show(project, id, ...options) {
+function show(project: Fixture, id: string, ...options: string[]) {
   return run(project, ["work", "show", "--work", id, ...options]);
 }
 
-function inputFor(project, id, input = {}) {
+function inputFor(project: Fixture, id: string, input = {}) {
   return { expectedRevision: show(project, id).work.revision, actor: "main", source, ...input };
 }
 
-function change(project, action, id, input = {}) {
+function change(project: Fixture, action: string, id: string, input = {}) {
   return run(project, ["work", action, "--work", id], inputFor(project, id, input));
 }
 
-function report(project, id, input = {}) {
+function report(project: Fixture, id: string, input = {}) {
   return change(project, "report", id, {
     progress: "Observed the requested behavior",
     next: [],
@@ -75,13 +76,13 @@ test("a standalone work completes only after every agreed criterion has current 
     id: "solo",
   });
   expect(
-    run(project, ["search", "--query", "solo"]).results.some(({ ref }) =>
+    run(project, ["search", "--query", "solo"]).results.some(({ ref }: { ref: string }) =>
       ref.startsWith("work:solo@"),
     ),
   ).toBe(true);
   expect(
     run(project, ["search", "--work", "solo", "--query", "public path"]).results.some(
-      ({ ref }) => ref === observed.ref,
+      ({ ref }: { ref: string }) => ref === observed.ref,
     ),
   ).toBe(true);
 });
@@ -107,13 +108,15 @@ test("delegation separates worker submission, coordinator acceptance and whole-w
   const submitted = change(project, "submit", "child", {
     actor: "worker-1",
     summary: "Implementation and verification are ready",
-    artifacts: ["src/child.mjs"],
+    artifacts: ["src/child.ts"],
   });
   expect(submitted.status).toBe("submitted");
   const tree = show(project, "whole", "--tree");
   expect(tree.awaitingReview).toStrictEqual(["child"]);
   expect(
-    run(project, ["recall", "--work", "whole"]).awaitingReviewWorks.map(({ id }) => id),
+    run(project, ["recall", "--work", "whole"]).awaitingReviewWorks.map(
+      ({ id }: { id: string }) => id,
+    ),
   ).toStrictEqual(["child"]);
   expect(
     invoke(
@@ -203,7 +206,9 @@ test("changed definitions invalidate submissions, accepted ancestors and depende
     criteria: ["c1"],
   });
   expect(
-    show(project, "child").missingCriteria.map(({ criterionId }) => criterionId),
+    show(project, "child").missingCriteria.map(
+      ({ criterionId }: { criterionId: string }) => criterionId,
+    ),
   ).toStrictEqual(["c1"]);
   report(project, "child", { actor: "worker-1" });
   const replacement = change(project, "submit", "child", {
@@ -249,7 +254,11 @@ test("tree queries isolate related work and dependencies determine readiness wit
   create(project, "second", { parent: "whole", contributesTo: ["c1"], dependsOn: ["first"] });
   create(project, "unrelated");
   const before = show(project, "whole", "--tree");
-  expect(before.works.map(({ id }) => id).sort()).toStrictEqual(["first", "second", "whole"]);
+  expect(before.works.map(({ id }: { id: string }) => id).sort()).toStrictEqual([
+    "first",
+    "second",
+    "whole",
+  ]);
   expect(before.ready).not.toContain("second");
   const cycle = invoke(
     project,
@@ -300,7 +309,7 @@ test("tidy can ground memories in work history but cannot overwrite managed work
   const project = fixture(t);
   const created = create(project, "managed");
   const batch = run(project, ["tidy", "prepare"]);
-  expect(batch.records.some(({ ref }) => ref === created.ref)).toBe(true);
+  expect(batch.records.some(({ ref }: { ref: string }) => ref === created.ref)).toBe(true);
   const forged = invoke(project, ["tidy", "apply"], {
     snapshot: batch.snapshot,
     works: [
@@ -476,7 +485,9 @@ test("legacy note-only work requires explicit adoption and a paused parent suppr
     checks: [],
   });
   expect(show(project, "whole", "--tree").ready).not.toContain("child");
-  expect(show(project, "whole", "--tree").blocked.some(({ id }) => id === "child")).toBe(true);
+  expect(
+    show(project, "whole", "--tree").blocked.some(({ id }: { id: string }) => id === "child"),
+  ).toBe(true);
 });
 
 test("changing a child contribution rechecks both the previous and new parent criteria", (t) => {
@@ -508,7 +519,7 @@ test("changing a child contribution rechecks both the previous and new parent cr
   });
   expect(
     show(project, "whole")
-      .missingCriteria.map(({ criterionId }) => criterionId)
+      .missingCriteria.map(({ criterionId }: { criterionId: string }) => criterionId)
       .sort(),
   ).toStrictEqual(["c1", "c2"]);
 });

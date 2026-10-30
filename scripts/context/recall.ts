@@ -1,29 +1,88 @@
-import { presentLatestRevision } from "./records.mjs";
+import type {
+  SourceArchive,
+  ConsolidationHistory,
+  Consolidation,
+  QueryOptions,
+  Memory,
+  ConsolidatedWork,
+  MemoryContent,
+  Scope,
+  RecordSource,
+  WorkProgress,
+  Revision,
+  Note,
+  WorkJournal,
+  OriginalSource,
+  WorkStatus,
+} from "./model.ts";
+import type { ProjectLocation } from "./store.ts";
+type Presentation = {
+  current: Consolidation;
+  history: ConsolidationHistory | null;
+  includeHistory?: boolean;
+  availableRefs: Set<string>;
+};
+type Presented = {
+  revision: number;
+  recordedAt: string;
+  source: RecordSource;
+  history?: unknown[];
+};
+type RecalledMemory = { id: string; scope: Scope; unconsolidated?: boolean } & MemoryContent &
+  Presented;
+type RecalledWork = Omit<WorkProgress, "status"> &
+  Revision & {
+    id: string;
+    status: WorkStatus;
+    checkpointRevision?: number;
+    sources?: string[];
+    source?: RecordSource;
+  };
+type WorkSummary = {
+  id: string;
+  goal: string | null;
+  status: WorkStatus | null;
+  revision: number;
+  recordedAt: string;
+  checkpointRevision?: number;
+  latestRecordAt?: string;
+  firstNote?: ReturnType<typeof previewNote>;
+  latestNote?: ReturnType<typeof previewNote>;
+};
+import { presentLatestRevision } from "./records.ts";
 import {
   getCursorRevision,
   findUnprocessedSources,
   readSourceArchive,
   matchesContextScope,
-} from "./sources.mjs";
-import { readConsolidationHistory } from "./tidy.mjs";
-import { getLatestConsolidation, calculateTidyStatus } from "./consolidation.mjs";
-import { queryGraph } from "./graph-query.mjs";
-import { presentWork } from "./work.mjs";
+} from "./sources.ts";
+import { readConsolidationHistory } from "./tidy.ts";
+import { getLatestConsolidation, calculateTidyStatus } from "./consolidation.ts";
+import { queryGraph } from "./graph-query.ts";
+import { presentWork } from "./work.ts";
 
 const noteExcerptLength = 300;
 
-function presentEntry(entry, { current, history, includeHistory, collection }) {
-  const result = {
+function presentEntry<T extends Memory | ConsolidatedWork>(
+  entry: T,
+  {
+    current,
+    history,
+    includeHistory,
+    collection,
+  }: Presentation & { collection: "memories" | "works" },
+): T & Presented {
+  const result: T & Presented = {
     ...entry,
     revision: current.revision,
-    recordedAt: current.recordedAt,
+    recordedAt: current.recordedAt!,
     source: {
       type: "agent",
       reference: `tidy revision ${current.revision}; sources: ${entry.sources.join(", ")}`,
     },
   };
   if (includeHistory)
-    result.history = history.revisions.slice(0, -1).flatMap((previous) =>
+    result.history = history!.revisions.slice(0, -1).flatMap((previous) =>
       previous[collection]
         .filter(({ id }) => id === entry.id)
         .map((version) => ({
@@ -35,13 +94,17 @@ function presentEntry(entry, { current, history, includeHistory, collection }) {
   return result;
 }
 
-function restoreMemories(archive, history, presentation) {
+function restoreMemories(
+  archive: SourceArchive,
+  history: ConsolidationHistory | null,
+  presentation: Presentation,
+): RecalledMemory[] {
   if (!history)
     return archive.memories
-      .filter(({ forgotten }) => !forgotten)
-      .map((memory) => presentLatestRevision(memory, presentation.includeHistory));
+      .filter((memory) => !memory.forgotten)
+      .map((memory) => presentLatestRevision(memory, presentation.includeHistory)!);
   const { current, availableRefs } = presentation;
-  const memories = current.memories
+  const memories: RecalledMemory[] = current.memories
     .filter(
       (memory) =>
         memory.status !== "retired" && memory.sources.every((ref) => availableRefs.has(ref)),
@@ -52,10 +115,10 @@ function restoreMemories(archive, history, presentation) {
     if (
       !memory.forgotten &&
       !consolidatedIds.has(memory.id) &&
-      memory.revisions.at(-1).revision > getCursorRevision(current.cursor, "memory", memory.id)
+      memory.revisions.at(-1)!.revision > getCursorRevision(current.cursor, "memory", memory.id)
     ) {
       memories.push({
-        ...presentLatestRevision(memory, presentation.includeHistory),
+        ...presentLatestRevision(memory, presentation.includeHistory)!,
         unconsolidated: true,
       });
     }
@@ -63,13 +126,13 @@ function restoreMemories(archive, history, presentation) {
   return memories;
 }
 
-function restoreWorks(archive, presentation) {
-  const works = new Map(
+function restoreWorks(archive: SourceArchive, presentation: Presentation) {
+  const works = new Map<string, RecalledWork>(
     archive.checkpoints.map((checkpoint) => [
       checkpoint.id,
       {
-        ...presentLatestRevision(checkpoint, presentation.includeHistory),
-        checkpointRevision: checkpoint.revisions.at(-1).revision,
+        ...presentLatestRevision(checkpoint, presentation.includeHistory)!,
+        checkpointRevision: checkpoint.revisions.at(-1)!.revision,
       },
     ]),
   );
@@ -90,21 +153,21 @@ function restoreWorks(archive, presentation) {
     works.set(
       record.id,
       presentWork(
-        record.revisions.at(-1),
+        record.revisions.at(-1)!,
         presentation.includeHistory ? record.revisions : undefined,
       ),
     );
   return works;
 }
 
-function previewNote(work, note) {
+function previewNote(work: string, note: Extract<Note, { text: string }> | undefined) {
   return note
     ? { ref: `note:${work}@${note.revision}`, excerpt: note.text.slice(0, noteExcerptLength) }
     : null;
 }
 
-function summarizeWorks(works, journals) {
-  const summaries = new Map(
+function summarizeWorks(works: Map<string, RecalledWork>, journals: WorkJournal[]) {
+  const summaries = new Map<string, WorkSummary>(
     [...works.values()].map(({ id, goal, status, revision, checkpointRevision, recordedAt }) => [
       id,
       { id, goal, status, revision, checkpointRevision, recordedAt },
@@ -121,10 +184,10 @@ function summarizeWorks(works, journals) {
         goal: null,
         status: null,
         checkpointRevision: 0,
-        revision: latest.revision,
-        recordedAt: latest.recordedAt,
+        revision: latest!.revision,
+        recordedAt: latest!.recordedAt,
       }),
-      latestRecordAt: latest?.recordedAt ?? existing.recordedAt,
+      latestRecordAt: latest?.recordedAt ?? existing!.recordedAt,
       firstNote: previewNote(journal.id, notes[0]),
       latestNote: previewNote(journal.id, latest),
     });
@@ -137,7 +200,11 @@ function summarizeWorks(works, journals) {
   );
 }
 
-function findUnreviewedWorks(summaries, works, pendingSources) {
+function findUnreviewedWorks(
+  summaries: WorkSummary[],
+  works: Map<string, RecalledWork>,
+  pendingSources: OriginalSource[],
+) {
   return summaries.filter((summary) => {
     const state = works.get(summary.id);
     if (!state) return true;
@@ -153,7 +220,11 @@ function findUnreviewedWorks(summaries, works, pendingSources) {
   });
 }
 
-export function buildRecall(archive, history, options) {
+export function buildRecall(
+  archive: SourceArchive,
+  history: ConsolidationHistory | null,
+  options: QueryOptions,
+) {
   const current = getLatestConsolidation(history);
   const presentation = {
     current,
@@ -181,7 +252,7 @@ export function buildRecall(archive, history, options) {
       (source.kind === "note" || (history && source.latest)),
   );
   const unfinishedWorks = summaries
-    .filter(({ status }) => ["active", "blocked", "paused", "submitted"].includes(status))
+    .filter(({ status }) => ["active", "blocked", "paused", "submitted"].includes(status ?? ""))
     .map((summary) => ({ ...works.get(summary.id), ...summary }));
   const unreviewedWorks = findUnreviewedWorks(summaries, works, pendingSources);
   const awaitingReviewWorks = summaries
@@ -200,7 +271,7 @@ export function buildRecall(archive, history, options) {
     unreviewedWorksRemaining: Math.max(0, unreviewedWorks.length - end),
     awaitingReviewWorks: awaitingReviewWorks.slice(offset, end),
     awaitingReviewWorksRemaining: Math.max(0, awaitingReviewWorks.length - end),
-    work: works.get(options.work) ?? null,
+    work: options.work === undefined ? null : (works.get(options.work) ?? null),
     pending: pending.slice(offset, end),
     pendingRemaining: Math.max(0, pending.length - end),
     graph: queryGraph(current, archive, options),
@@ -208,7 +279,7 @@ export function buildRecall(archive, history, options) {
   };
 }
 
-export async function recallContext(location, options) {
+export async function recallContext(location: ProjectLocation, options: QueryOptions) {
   const [archive, history] = await Promise.all([
     readSourceArchive(location),
     readConsolidationHistory(location),

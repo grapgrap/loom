@@ -1,23 +1,29 @@
-import { emptyGraph, eraseFromGraph } from "./graph.mjs";
-import { extractSearchText, rankSourcesByQuery } from "./search.mjs";
-import { matchesContextScope } from "./sources.mjs";
+import type { Statement, Entity, Consolidation, SourceArchive, QueryOptions } from "./model.ts";
+type GraphPath = { entities: string[]; statements: string[] };
+import { emptyGraph, eraseFromGraph } from "./graph.ts";
+import { extractSearchText, rankSourcesByQuery } from "./search.ts";
+import { matchesContextScope } from "./sources.ts";
 
-function statementEntities(statement) {
+function statementEntities(statement: Statement) {
   return [statement.subject, statement.object.entity].filter((id) => id !== undefined);
 }
 
-function collectPaths(statements, { entity, query, depth }, entitiesById) {
-  const paths = new Map();
-  const queue = [];
+function collectPaths(
+  statements: Statement[],
+  { entity, query, depth }: { entity?: string; query?: string; depth: number },
+  entitiesById: Map<string, Entity>,
+) {
+  const paths = new Map<string, GraphPath>();
+  const queue: GraphPath[] = [];
   const seenEntities = new Set();
-  const byEntity = new Map();
+  const byEntity = new Map<string, Statement[]>();
   for (const statement of statements) {
     for (const id of statementEntities(statement)) {
       if (!byEntity.has(id)) byEntity.set(id, []);
-      byEntity.get(id).push(statement);
+      byEntity.get(id)!.push(statement);
     }
   }
-  function seed(id) {
+  function seed(id: string) {
     if (!byEntity.has(id) || seenEntities.has(id)) return;
     seenEntities.add(id);
     queue.push({ entities: [id], statements: [] });
@@ -32,7 +38,7 @@ function collectPaths(statements, { entity, query, depth }, entitiesById) {
           statement.predicate,
           statement.text,
           ...statementEntities(statement).flatMap((id) => {
-            const entity = entitiesById.get(id);
+            const entity = entitiesById.get(id)!;
             return [entity.id, entity.name, ...entity.aliases];
           }),
         ].join(" "),
@@ -42,7 +48,7 @@ function collectPaths(statements, { entity, query, depth }, entitiesById) {
     );
     const byId = new Map(statements.map((statement) => [statement.id, statement]));
     for (const { ref } of ranked) {
-      const statement = byId.get(ref);
+      const statement = byId.get(ref)!;
       const ids = statementEntities(statement);
       paths.set(ref, { entities: ids, statements: [ref] });
       ids.forEach(seed);
@@ -57,8 +63,8 @@ function collectPaths(statements, { entity, query, depth }, entitiesById) {
   for (let cursor = 0; cursor < queue.length; cursor++) {
     const path = queue[cursor];
     if (path.statements.length >= depth) continue;
-    const from = path.entities.at(-1);
-    for (const statement of byEntity.get(from)) {
+    const from = path.entities.at(-1)!;
+    for (const statement of byEntity.get(from)!) {
       if (paths.has(statement.id)) continue;
       const other = statementEntities(statement).find((id) => id !== from);
       const next = {
@@ -75,16 +81,16 @@ function collectPaths(statements, { entity, query, depth }, entitiesById) {
   return [...paths.entries()];
 }
 
-function collectPremises(selected, statementsById) {
+function collectPremises(selected: Statement[], statementsById: Map<string, Statement>) {
   const selectedIds = new Set(selected.map(({ id }) => id));
   const visited = new Set(selectedIds);
-  const premises = [];
-  function visit(statement) {
+  const premises: Statement[] = [];
+  function visit(statement: Statement) {
     if (statement.origin.kind !== "inferred") return;
     for (const id of statement.origin.premises) {
       if (visited.has(id)) continue;
       visited.add(id);
-      const premise = statementsById.get(id);
+      const premise = statementsById.get(id)!;
       premises.push(premise);
       visit(premise);
     }
@@ -94,9 +100,9 @@ function collectPremises(selected, statementsById) {
 }
 
 export function queryGraph(
-  consolidation,
-  sourceArchive,
-  { work, query, entity, history, depth = 2, limit = 50 } = {},
+  consolidation: Consolidation,
+  sourceArchive: SourceArchive,
+  { work, query, entity, history, depth = 2, limit = 50 }: QueryOptions = {},
 ) {
   const availableSources = new Map(
     sourceArchive.sources
@@ -118,10 +124,10 @@ export function queryGraph(
   const statementsById = new Map(
     supportedGraph.statements.map((statement) => [statement.id, statement]),
   );
-  const selected = selectedPaths.map(([id]) => statementsById.get(id));
+  const selected = selectedPaths.map(([id]) => statementsById.get(id)!);
   const premises = collectPremises(selected, statementsById);
   const entityIds = new Set([...selected, ...premises].flatMap(statementEntities));
-  const selectedEntities = [...entityIds].map((id) => entitiesById.get(id));
+  const selectedEntities = [...entityIds].map((id) => entitiesById.get(id)!);
   const sourceRefs = new Set(
     [...selected, ...premises, ...selectedEntities].flatMap(({ sources }) => sources),
   );
@@ -133,7 +139,7 @@ export function queryGraph(
     paths: selectedPaths.map(([, path]) => path),
     remaining: candidates.length - selected.length,
     sources: [...sourceRefs].map((ref) => {
-      const source = availableSources.get(ref);
+      const source = availableSources.get(ref)!;
       return {
         ref,
         scope: source.scope,

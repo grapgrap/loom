@@ -1,10 +1,12 @@
+import type { ProjectLocation } from "./store.ts";
+import type { SourceArchive, Consolidation, TidyChanges } from "./model.ts";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
-import { createRecordParser } from "./records.mjs";
-import { findUnprocessedSources, readSourceArchive } from "./sources.mjs";
-import { updateStoredRecord, readStoredRecord } from "./store.mjs";
-import { emptyGraph } from "./graph.mjs";
-import { presentWork } from "./work.mjs";
+import { createRecordParser } from "./records.ts";
+import { findUnprocessedSources, readSourceArchive } from "./sources.ts";
+import { updateStoredRecord, readStoredRecord } from "./store.ts";
+import { emptyGraph } from "./graph.ts";
+import { presentWork } from "./work.ts";
 import {
   parseConsolidationHistory,
   getLatestConsolidation,
@@ -16,21 +18,26 @@ import {
   assertTidyRevision,
   validatePreparedSources,
   buildConsolidation,
-} from "./consolidation.mjs";
+} from "./consolidation.ts";
 
-export function consolidationHistoryPath(location) {
+export function consolidationHistoryPath(location: ProjectLocation) {
   return join(location.projectDirectory, "tidy.json");
 }
 
-export async function readConsolidationHistory(location) {
+export async function readConsolidationHistory(location: ProjectLocation) {
   return readStoredRecord(consolidationHistoryPath(location), parseConsolidationHistory);
 }
 
-function snapshotPath(location, id) {
+function snapshotPath(location: ProjectLocation, id: string) {
   return join(location.projectDirectory, "tidy-snapshots", `${id}.json`);
 }
 
-function currentPage(archive, consolidation, limit, offset) {
+function currentPage(
+  archive: SourceArchive,
+  consolidation: Consolidation,
+  limit: number,
+  offset: number,
+) {
   const legacyWorks = consolidation.works.filter(
     (work) => !(archive.works ?? []).some(({ id }) => id === work.id),
   );
@@ -48,7 +55,7 @@ function currentPage(archive, consolidation, limit, offset) {
     worksRemaining: Math.max(0, legacyWorks.length - end),
     managedWorks: (archive.works ?? [])
       .slice(offset, end)
-      .map((record) => presentWork(record.revisions.at(-1))),
+      .map((record) => presentWork(record.revisions.at(-1)!)),
     managedWorksRemaining: Math.max(0, (archive.works ?? []).length - end),
     retired: retired.slice(offset, end),
     retiredRemaining: Math.max(0, retired.length - end),
@@ -56,7 +63,7 @@ function currentPage(archive, consolidation, limit, offset) {
   };
 }
 
-export async function prepareTidyBatch(location, limit, offset = 0) {
+export async function prepareTidyBatch(location: ProjectLocation, limit: number, offset = 0) {
   const [archive, history] = await Promise.all([
     readSourceArchive(location),
     readConsolidationHistory(location),
@@ -87,7 +94,7 @@ export async function prepareTidyBatch(location, limit, offset = 0) {
   };
 }
 
-function appliedChanges(current, changes) {
+function appliedChanges(current: Consolidation, changes: TidyChanges) {
   const memoryIds = new Set([...changes.memories, ...changes.retire].map(({ id }) => id));
   const workIds = new Set(changes.works.map(({ id }) => id));
   return {
@@ -97,7 +104,7 @@ function appliedChanges(current, changes) {
   };
 }
 
-export async function applyTidyChanges(location, input) {
+export async function applyTidyChanges(location: ProjectLocation, input: unknown) {
   const changes = parseTidyChanges(input);
   const snapshot = await readStoredRecord(
     snapshotPath(location, changes.snapshot),
@@ -110,7 +117,7 @@ export async function applyTidyChanges(location, input) {
     parse: parseConsolidationHistory,
     async update(previous) {
       const current = getLatestConsolidation(previous);
-      if (current.snapshot === snapshot.id && current.requestHash === requestHash) return previous;
+      if (current.snapshot === snapshot.id && current.requestHash === requestHash) return previous!;
       assertTidyRevision(current, snapshot);
       const archive = await readSourceArchive(location);
       const prepared = validatePreparedSources(archive, snapshot, changes);

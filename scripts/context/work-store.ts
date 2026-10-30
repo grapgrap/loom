@@ -1,18 +1,26 @@
+import type { ProjectLocation } from "./store.ts";
+import type { QueryOptions } from "./model.ts";
 import { join } from "node:path";
-import { readStoredRecord, updateStoredRecord } from "./store.mjs";
-import { createRecordParser, parseCheckpointRecord } from "./records.mjs";
-import { changeWork, currentWorks, parseWorkLedger, presentWork, showWork } from "./work.mjs";
-import { parseWorkJournal, workJournalPath } from "./journal.mjs";
+import { readStoredRecord, updateStoredRecord } from "./store.ts";
+import { createRecordParser, parseCheckpointRecord } from "./records.ts";
+import { changeWork, currentWorks, parseWorkLedger, presentWork, showWork } from "./work.ts";
+import { parseWorkJournal, workJournalPath } from "./journal.ts";
 
-export function workLedgerPath(location) {
+export function workLedgerPath(location: ProjectLocation) {
   return join(location.projectDirectory, "work-state.json");
 }
 
-export async function readWorkLedger(location) {
+export async function readWorkLedger(location: ProjectLocation) {
   return readStoredRecord(workLedgerPath(location), parseWorkLedger);
 }
 
-export async function runWorkCommand(location, action, id, input, options = {}) {
+export async function runWorkCommand(
+  location: ProjectLocation,
+  action: string,
+  id: string,
+  input: unknown,
+  options: QueryOptions = {},
+) {
   if (action === "show") return showWork(await readWorkLedger(location), id, options);
   const legacy =
     action === "create"
@@ -30,7 +38,7 @@ export async function runWorkCommand(location, action, id, input, options = {}) 
       : null;
   const note = journal?.revisions.findLast((entry) => !entry.forgotten);
   const legacyRef = legacy
-    ? `checkpoint:${id}@${legacy.revisions.at(-1).revision}`
+    ? `checkpoint:${id}@${legacy.revisions.at(-1)!.revision}`
     : note
       ? `note:${id}@${note.revision}`
       : null;
@@ -39,10 +47,10 @@ export async function runWorkCommand(location, action, id, input, options = {}) 
     parse: parseWorkLedger,
     update: (previous) => changeWork(previous, id, action, input, { legacyRef }),
   });
-  return presentWork(currentWorks(ledger).get(id));
+  return presentWork(currentWorks(ledger).get(id)!);
 }
 
-export async function assertLegacyWorkWritable(location, id) {
+export async function assertLegacyWorkWritable(location: ProjectLocation, id: string) {
   if (currentWorks(await readWorkLedger(location)).has(id))
     throw new Error(
       `Managed work ${id} must use work report/revise/submit/accept/complete; checkpoint cannot overwrite it`,

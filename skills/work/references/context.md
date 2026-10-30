@@ -20,10 +20,10 @@ Windows PowerShell의 첫 조회:
 & "<plugin-root>\scripts\context\cli.cmd" recall --cwd "<checkout>"
 ```
 
-[셸](../../../scripts/context/cli.sh)·[CMD](../../../scripts/context/cli.cmd) 진입점은 Node의 존재와 버전을 확인한 뒤 [CLI](../../../scripts/context/cli.mjs)에 인수와 stdin을 전달한다. 실행 환경을 확인한 뒤에는 `.mjs`를 직접 호출할 수 있다.
+[셸](../../../scripts/context/cli.sh)·[CMD](../../../scripts/context/cli.cmd) 진입점은 Node의 존재와 버전을 확인한 뒤 [CLI](../../../scripts/context/cli.ts)에 인수와 stdin을 전달한다. 실행 환경을 확인한 뒤에는 `.ts`를 직접 호출할 수 있다.
 
 ```sh
-node "<plugin-root>/scripts/context/cli.mjs" recall --cwd "<checkout>" --work context-cli
+node "<plugin-root>/scripts/context/cli.ts" recall --cwd "<checkout>" --work context-cli
 ```
 
 기본 조회는 프로젝트 기억과 업무별 ID·목표·상태를 반환한다. 기록이 있는 업무에는 `firstNote`·`latestNote`로 첫 기록과 최근 기록의 ref·발췌도 제공한다. 정리 전에는 목표·상태가 `null`일 수 있으므로 발췌로 관련 업무를 찾고, 필요한 본문은 `read --ref`로 확인한다. 현재 요청에 해당하는 업무를 선택한 뒤 `--work`로 그 업무의 기억과 상태를 읽는다. 최근 기록이라는 이유만으로 다른 업무를 재개하지 않는다. 한 세션에서 업무를 계속하거나 여러 세션에서 서로 다른 업무를 다룰 수 있으므로, 세션과 업무를 일대일로 대응시키지 않는다. 새 업무의 목표와 맡긴 범위는 첫 기록에 남긴다.
@@ -47,7 +47,7 @@ node "<plugin-root>/scripts/context/cli.mjs" recall --cwd "<checkout>" --work co
 새 업무는 [공통 업무 CLI 계약](context-work.md)에 따라 work create로 목표·범위·확인 가능한 criteria를 정의한다. work show의 현재 work.revision을 다음 변경의 expectedRevision으로 사용한다. 이 업무는 managed: true로 표시되며 checkpoint나 tidy에서 현재 상태를 덮어쓸 수 없다.
 
 ```sh
-node "<plugin-root>/scripts/context/cli.mjs" work create --cwd "<checkout>" --work feature <<'LOOM_WORK'
+node "<plugin-root>/scripts/context/cli.ts" work create --cwd "<checkout>" --work feature <<'LOOM_WORK'
 {
   "expectedRevision": 0,
   "actor": "main",
@@ -84,10 +84,10 @@ LOOM_WORK
 업무 ID나 원본 ref가 없는 새 요청은 목적과 제약을 검색어로 나누어 관련 원본의 후보를 찾는다. 도메인·행동·산출물·버전처럼 판단에 필요한 단어를 포함하고, 이미 알고 있는 업무나 현재 대화에서 확인한 유효한 ref가 있으면 그 근거를 먼저 재사용한다. 모든 업무에 전체 검색을 반복하지 않는다.
 
 ```sh
-node "<plugin-root>/scripts/context/cli.mjs" search --cwd "<checkout>" --query "<목적과 제약>"
-node "<plugin-root>/scripts/context/cli.mjs" recall --cwd "<checkout>" --work "<candidate-work>"
-node "<plugin-root>/scripts/context/cli.mjs" graph --cwd "<checkout>" --work "<candidate-work>" --query "<판단이나 대상>"
-node "<plugin-root>/scripts/context/cli.mjs" read --cwd "<checkout>" --ref "<selected-ref>"
+node "<plugin-root>/scripts/context/cli.ts" search --cwd "<checkout>" --query "<목적과 제약>"
+node "<plugin-root>/scripts/context/cli.ts" recall --cwd "<checkout>" --work "<candidate-work>"
+node "<plugin-root>/scripts/context/cli.ts" graph --cwd "<checkout>" --work "<candidate-work>" --query "<판단이나 대상>"
+node "<plugin-root>/scripts/context/cli.ts" read --cwd "<checkout>" --ref "<selected-ref>"
 ```
 
 `search` 결과의 `scope`에서 work ID 후보를 모은다. work scope 후보는 `--work`를 붙여 현재 상태를 읽고, project scope 후보는 `--work` 없이 프로젝트 공통 상태를 읽는다. 검색 결과 자체를 현재 판단으로 채택하지 말고, 후보마다 현재 `recall`과 관련 `graph`를 읽어 목표·상태·진행, `pending`, 활성·미확정 진술, 대체·제외된 진술과 `conditions`·`sources`를 확인한다. 대체 관계를 비교할 때만 `graph --history`를 사용한다. 후보를 좁힌 뒤 필요한 원본의 정확한 ref만 `read`로 읽고, 현재 요청·checkout의 코드·브랜치/커밋·실행 조건·업무 범위와 대조해 채택 여부를 정한다. 채택한 중요한 근거 ref와 적용 조건은 현재 업무의 짧은 `record`에 남긴다.
@@ -115,7 +115,7 @@ node "<plugin-root>/scripts/context/cli.mjs" read --cwd "<checkout>" --ref "<sel
 macOS·Linux·WSL:
 
 ```sh
-node "<plugin-root>/scripts/context/cli.mjs" record --cwd "<checkout>" \
+node "<plugin-root>/scripts/context/cli.ts" record --cwd "<checkout>" \
   --work context-cli --source "워크트리별 recall 실행 결과" <<'LOOM_NOTE'
 두 워크트리에서 같은 프로젝트 기억을 조회했다. 워크트리를 삭제한 뒤에도 원래 체크아웃에서 기록을 읽었다.
 LOOM_NOTE
@@ -141,8 +141,8 @@ $note | & "<plugin-root>\scripts\context\cli.cmd" record --cwd "<checkout>" `
 ## 필요한 원본을 검색한다
 
 ```sh
-node "<plugin-root>/scripts/context/cli.mjs" search --cwd "<checkout>" --query "저장 워크트리"
-node "<plugin-root>/scripts/context/cli.mjs" read --cwd "<checkout>" --ref "note:context-cli@1"
+node "<plugin-root>/scripts/context/cli.ts" search --cwd "<checkout>" --query "저장 워크트리"
+node "<plugin-root>/scripts/context/cli.ts" read --cwd "<checkout>" --ref "note:context-cli@1"
 ```
 
 `search`는 이 프로젝트의 record·remember·checkpoint·work 원본에서 BM25로 관련도를 계산한다. 업무의 범위·조건·보고·검토 이유도 검색한다. 결과에는 ref·범위·기록 시각·발췌가 포함된다. 기본 10개이며 --limit으로 조절한다. --work를 붙이면 프로젝트 공통 원본과 해당 업무의 원본만 검색한다. 별도 검색 인덱스나 외부 서비스는 필요하지 않다.
@@ -157,14 +157,14 @@ node "<plugin-root>/scripts/context/cli.mjs" read --cwd "<checkout>" --ref "note
 
 ## 실행 환경을 준비한다
 
-Node.js 20 이상과 Git이 필요하다. npm 의존성을 설치하지 않아도 CLI를 실행할 수 있다. 실행 환경 오류는 종료 코드 `2`와 다음 식별자로 구분한다.
+Node.js 22.18 이상인 22.x, 24.x 또는 26 이상과 Git이 필요하다. JavaScript 런타임은 Node만 지원한다. `.ts` 파일을 빌드하거나 npm 의존성을 설치하지 않아도 CLI를 직접 실행할 수 있다. 실행 환경 오류는 종료 코드 `2`와 다음 식별자로 구분한다.
 
-| 오류                    | 필요한 조치                                          |
-| ----------------------- | ---------------------------------------------------- |
-| `LOOM_NODE_MISSING`     | 설치된 Node 경로를 연결하거나 Node를 설치한다.       |
-| `LOOM_NODE_UNSUPPORTED` | Node.js 20 이상인 지원 중 LTS를 선택하거나 설치한다. |
-| `LOOM_GIT_MISSING`      | 설치된 Git 경로를 연결하거나 Git을 설치한다.         |
-| `LOOM_GIT_UNUSABLE`     | Git의 경로·권한·런타임을 확인하고 복구한다.          |
+| 오류                    | 필요한 조치                                                         |
+| ----------------------- | ------------------------------------------------------------------- |
+| `LOOM_NODE_MISSING`     | 설치된 Node 경로를 연결하거나 Node를 설치한다.                      |
+| `LOOM_NODE_UNSUPPORTED` | Node.js 22.18 이상인 22.x, 24.x 또는 26 이상을 선택하거나 설치한다. |
+| `LOOM_GIT_MISSING`      | 설치된 Git 경로를 연결하거나 Git을 설치한다.                        |
+| `LOOM_GIT_UNUSABLE`     | Git의 경로·권한·런타임을 확인하고 복구한다.                         |
 
 같은 실행 환경에서 `node --version`, `git --version`을 확인한다. 호스트가 제공하는 런타임과 기존 버전 관리 도구를 먼저 확인한다. 사용할 실행 파일이 없으면 기존 패키지 관리자 또는 [Node](https://nodejs.org/en/download)·[Git](https://git-scm.com/install/) 공식 배포본으로 준비한다. 프로젝트의 Node 버전 설정은 유지한다.
 

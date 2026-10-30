@@ -3,21 +3,21 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } 
 import { fileURLToPath } from "node:url";
 import { parseDocument } from "yaml";
 
-function check(condition, message) {
+function check(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function isRecord(value) {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function readJson(path) {
-  const value = JSON.parse(readFileSync(path, "utf8"));
+function readJson(path: string) {
+  const value: unknown = JSON.parse(readFileSync(path, "utf8"));
   check(isRecord(value), `${path}: expected a JSON object`);
   return value;
 }
 
-function localPath(root, base, target) {
+function localPath(root: string, base: string, target: string) {
   const path = resolve(base, target);
   const location = relative(root, path);
   check(
@@ -28,14 +28,14 @@ function localPath(root, base, target) {
   return path;
 }
 
-function checkSkill(path) {
+function checkSkill(path: string) {
   const text = readFileSync(path, "utf8");
   const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
   check(frontmatter, `${path}: missing YAML frontmatter`);
   const document = parseDocument(frontmatter[1]);
   const issue = document.errors[0] ?? document.warnings[0];
   check(!issue, `${path}: ${issue?.message}`);
-  const metadata = document.toJS({ maxAliasCount: 0 });
+  const metadata: unknown = document.toJS({ maxAliasCount: 0 });
   check(isRecord(metadata), `${path}: expected a YAML mapping`);
 
   const allowed = new Set(["name", "description", "license", "allowed-tools", "metadata"]);
@@ -58,7 +58,7 @@ function checkSkill(path) {
   );
 }
 
-function headingAnchors(text) {
+function headingAnchors(text: string) {
   return [...text.matchAll(/^#{1,6}\s+(.+)$/gm)].map(([, heading]) =>
     heading
       .toLowerCase()
@@ -67,7 +67,7 @@ function headingAnchors(text) {
   );
 }
 
-function checkLinks(root, path) {
+function checkLinks(root: string, path: string) {
   const text = readFileSync(path, "utf8");
   for (const [, link] of text.matchAll(/\[[^\]]*\]\(([^)\s]+)\)/g)) {
     if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(link)) continue;
@@ -85,7 +85,7 @@ function checkLinks(root, path) {
   }
 }
 
-function markdownFiles(directory) {
+function markdownFiles(directory: string): string[] {
   if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -94,7 +94,7 @@ function markdownFiles(directory) {
   });
 }
 
-function checkPlugin(root) {
+function checkPlugin(root: string) {
   const codex = readJson(join(root, ".codex-plugin/plugin.json"));
   const claude = readJson(join(root, ".claude-plugin/plugin.json"));
   const marketplace = readJson(join(root, ".agents/plugins/marketplace.json"));
@@ -145,10 +145,11 @@ function checkPlugin(root) {
 
 try {
   const args = process.argv.slice(2);
-  check(args.length <= 1, "Usage: node scripts/check-plugin.mjs [plugin-directory]");
+  check(args.length <= 1, "Usage: node scripts/check-plugin.ts [plugin-directory]");
   const defaultRoot = fileURLToPath(new URL("../", import.meta.url));
   checkPlugin(resolve(args[0] ?? defaultRoot));
-} catch (error) {
+} catch (caught) {
+  const error = caught as Error;
   console.error(error.message);
   process.exitCode = 1;
 }

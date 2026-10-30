@@ -1,9 +1,24 @@
+import type { Scope, Criterion, Check, Submission, RecordSource } from "./model.ts";
+export type SearchContent = {
+  kind?: string;
+  text?: string;
+  reason?: string;
+  goal?: string;
+  progress?: string;
+  workScope?: string;
+  criteria?: Criterion[];
+  checks?: Check[];
+  submission?: Submission | null;
+  evidence?: string[];
+  next?: string[];
+  source?: RecordSource;
+};
 // Use Lucene's positive IDF so terms shared by most records remain searchable.
 // https://lucene.apache.org/core/9_12_1/core/org/apache/lucene/search/similarities/BM25Similarity.html
 const termFrequencySaturation = 1.2;
 const documentLengthNormalization = 0.75;
 
-function tokenizeSearchText(text) {
+function tokenizeSearchText(text: string) {
   const words =
     text
       .normalize("NFKC")
@@ -15,7 +30,7 @@ function tokenizeSearchText(text) {
   });
 }
 
-export function extractSearchText(source) {
+export function extractSearchText(source: SearchContent) {
   return [
     source.text,
     source.reason,
@@ -37,7 +52,16 @@ export function extractSearchText(source) {
     .join("\n");
 }
 
-export function rankSourcesByQuery(originalSources, query, resultLimit) {
+export function rankSourcesByQuery<
+  T extends SearchContent & {
+    ref: string;
+    kind?: string;
+    scope?: Scope;
+    recordedAt?: string;
+    latest?: boolean;
+    forgotten?: boolean;
+  },
+>(originalSources: T[], query: string, resultLimit: number) {
   const queryTerms = [...new Set(tokenizeSearchText(query))];
   if (!queryTerms.length) return [];
   const documents = originalSources
@@ -45,7 +69,7 @@ export function rankSourcesByQuery(originalSources, query, resultLimit) {
     .map((source) => {
       const searchText = extractSearchText(source);
       const documentTokens = tokenizeSearchText(searchText);
-      const termFrequencies = new Map();
+      const termFrequencies = new Map<string, number>();
       for (const token of documentTokens)
         termFrequencies.set(token, (termFrequencies.get(token) ?? 0) + 1);
       return { source, searchText, tokenCount: documentTokens.length, termFrequencies };
@@ -65,7 +89,7 @@ export function rankSourcesByQuery(originalSources, query, resultLimit) {
       for (const term of queryTerms) {
         const termFrequency = termFrequencies.get(term) ?? 0;
         if (!termFrequency) continue;
-        const matchingDocumentCount = documentFrequencies.get(term);
+        const matchingDocumentCount = documentFrequencies.get(term)!;
         const inverseDocumentFrequency = Math.log(
           1 + (documents.length - matchingDocumentCount + 0.5) / (matchingDocumentCount + 0.5),
         );

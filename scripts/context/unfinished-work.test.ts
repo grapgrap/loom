@@ -1,9 +1,11 @@
+import type { WorkProgress } from "./model.ts";
+import type { Fixture } from "./testing.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { fixture, invoke, run } from "./testing.mjs";
+import { fixture, invoke, run } from "./testing.ts";
 
-function checkpoint(project, work, overrides = {}) {
+function checkpoint(project: Fixture, work: string, overrides = {}) {
   return run(project, ["checkpoint", "--work", work], {
     expectedRevision: 0,
     goal: `Deliver ${work}.`,
@@ -16,7 +18,7 @@ function checkpoint(project, work, overrides = {}) {
   });
 }
 
-function consolidate(project, state) {
+function consolidate(project: Fixture, state: WorkProgress & { id: string; revision: number }) {
   const ref = `checkpoint:${state.id}@${state.revision}`;
   const batch = run(project, ["tidy", "prepare"]);
   run(project, ["tidy", "apply"], {
@@ -55,7 +57,7 @@ test("a completed README interruption leaves the original outcome and next actio
   });
 
   const recalled = run(project, ["recall", "--work", "readme-typo", "--limit", "1"]);
-  expect(recalled.unfinishedWorks.map(({ id }) => id)).toStrictEqual([original.id]);
+  expect(recalled.unfinishedWorks.map(({ id }: { id: string }) => id)).toStrictEqual([original.id]);
   expect(recalled.unfinishedWorks[0]).toMatchObject({
     goal: original.goal,
     progress: original.progress,
@@ -178,11 +180,12 @@ test("paused and blocked work retain their next steps while cancelled work stays
     consolidate(project, state);
   }
   const recalled = run(project, ["recall"]);
-  expect(recalled.unfinishedWorks.map(({ status }) => status).sort()).toStrictEqual([
-    "blocked",
-    "paused",
-  ]);
-  expect(recalled.works.find(({ id }) => id === "cancelled").status).toBe("cancelled");
+  expect(
+    recalled.unfinishedWorks.map(({ status }: { status: string }) => status).sort(),
+  ).toStrictEqual(["blocked", "paused"]);
+  expect(recalled.works.find(({ id }: { id: string }) => id === "cancelled").status).toBe(
+    "cancelled",
+  );
   expect(recalled.unreviewedWorks).toStrictEqual([]);
 });
 
@@ -207,11 +210,13 @@ test("uncategorized work and later notes on closed work require review instead o
   );
   const recalled = run(project, ["recall"]);
   expect(recalled.unfinishedWorks).toStrictEqual([]);
-  expect(recalled.unreviewedWorks.map(({ id }) => id).sort()).toStrictEqual([
+  expect(recalled.unreviewedWorks.map(({ id }: { id: string }) => id).sort()).toStrictEqual([
     "closed",
     "unclassified",
   ]);
-  expect(recalled.unreviewedWorks.find(({ id }) => id === "closed").latestNote.ref).toBe(note.ref);
+  expect(
+    recalled.unreviewedWorks.find(({ id }: { id: string }) => id === "closed").latestNote.ref,
+  ).toBe(note.ref);
 });
 
 test("unfinished work has its own pagination and is not hidden by recent completed work", (t) => {
@@ -230,7 +235,9 @@ test("unfinished work has its own pagination and is not hidden by recent complet
   expect(first.unfinishedWorks).toHaveLength(1);
   expect(first.unfinishedWorksRemaining).toBe(1);
   expect(
-    new Set([...first.unfinishedWorks, ...second.unfinishedWorks].map(({ id }) => id)),
+    new Set(
+      [...first.unfinishedWorks, ...second.unfinishedWorks].map(({ id }: { id: string }) => id),
+    ),
   ).toEqual(new Set(["older-first", "older-second"]));
 });
 

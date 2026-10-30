@@ -1,21 +1,23 @@
+import type { Entity, Statement, Graph, GraphChanges } from "./model.ts";
 import { isDeepStrictEqual } from "node:util";
-import { parseRecordId, validateMemoryScope, validateText } from "./records.mjs";
-import { validateRequiredSourceReferences } from "./sources.mjs";
+import { parseRecordId, validateMemoryScope, validateText } from "./records.ts";
+import { validateRequiredSourceReferences } from "./sources.ts";
 
-export function emptyGraph() {
+export function emptyGraph(): Graph {
   return { entities: [], statements: [] };
 }
 
-function assertCondition(condition, message) {
+function assertCondition(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function validateIds(ids, label) {
-  ids.forEach(parseRecordId);
+function validateIds(ids: string[], label: string) {
+  ids.forEach((id) => parseRecordId(id));
   assertCondition(new Set(ids).size === ids.length, `Duplicate ${label}`);
 }
 
-function parseEntity({ id, kind, name, aliases = [], sources }) {
+function parseEntity(input: unknown): Entity {
+  const { id, kind, name, aliases = [], sources } = input as Entity;
   parseRecordId(id);
   parseRecordId(kind);
   validateText(name, "entity.name");
@@ -24,23 +26,24 @@ function parseEntity({ id, kind, name, aliases = [], sources }) {
   return { id, kind, name, aliases, sources };
 }
 
-function parseStatement({
-  id,
-  subject,
-  predicate,
-  object,
-  text,
-  scope,
-  sources,
-  origin,
-  status = "active",
-  supersedes = [],
-  contradicts = [],
-  conditions = [],
-  validFrom,
-  validUntil,
-}) {
-  [id, subject, predicate].forEach(parseRecordId);
+function parseStatement(input: unknown): Statement {
+  const {
+    id,
+    subject,
+    predicate,
+    object,
+    text,
+    scope,
+    sources,
+    origin,
+    status = "active",
+    supersedes = [],
+    contradicts = [],
+    conditions = [],
+    validFrom,
+    validUntil,
+  } = input as Statement;
+  [id, subject, predicate].forEach((id) => parseRecordId(id));
   if (object.entity !== undefined) parseRecordId(object.entity);
   validateText(text, "statement.text");
   validateMemoryScope(scope);
@@ -86,7 +89,8 @@ function parseStatement({
   };
 }
 
-export function parseGraphChanges(input = {}) {
+export function parseGraphChanges(value: unknown = {}): GraphChanges {
+  const input = value as Partial<GraphChanges>;
   const changes = {
     entities: (input.entities ?? []).map(parseEntity),
     statements: (input.statements ?? []).map(parseStatement),
@@ -108,21 +112,25 @@ export function parseGraphChanges(input = {}) {
   return changes;
 }
 
-function assertNoCycles(statements, references, label) {
+function assertNoCycles(
+  statements: Map<string, Statement>,
+  references: (statement: Statement) => string[],
+  label: string,
+) {
   const visited = new Set();
   const visiting = new Set();
-  function visit(id) {
+  function visit(id: string) {
     if (visited.has(id)) return;
     assertCondition(!visiting.has(id), `${label} cycle at ${id}`);
     visiting.add(id);
-    for (const reference of references(statements.get(id))) visit(reference);
+    for (const reference of references(statements.get(id)!)) visit(reference);
     visiting.delete(id);
     visited.add(id);
   }
   for (const id of statements.keys()) visit(id);
 }
 
-function assertGraphReferences(graph) {
+function assertGraphReferences(graph: Graph) {
   const entityIds = new Set(graph.entities.map(({ id }) => id));
   const statements = new Map(graph.statements.map((statement) => [statement.id, statement]));
   for (const statement of statements.values()) {
@@ -147,7 +155,7 @@ function assertGraphReferences(graph) {
   assertNoCycles(statements, (statement) => statement.supersedes, "Replacement");
 }
 
-export function validateGraph(graph) {
+export function validateGraph(graph: Graph) {
   graph.entities.forEach(parseEntity);
   graph.statements.forEach((statement) => {
     parseStatement(statement);
@@ -170,14 +178,14 @@ export function validateGraph(graph) {
   assertGraphReferences(graph);
 }
 
-function flagOutdatedInferences(statements) {
+function flagOutdatedInferences(statements: Map<string, Statement>) {
   let hasChanges = true;
   while (hasChanges) {
     hasChanges = false;
     for (const [id, statement] of statements) {
       if (statement.status !== "active" || statement.origin.kind !== "inferred") continue;
       const outdatedPremiseIds = statement.origin.premises.filter(
-        (id) => statements.get(id).status !== "active",
+        (id) => statements.get(id)!.status !== "active",
       );
       if (!outdatedPremiseIds.length) continue;
       statements.set(id, { ...statement, status: "unresolved", reviewNeeded: outdatedPremiseIds });
@@ -186,7 +194,11 @@ function flagOutdatedInferences(statements) {
   }
 }
 
-function applyStatementTransitions(statements, addedStatements, retirements) {
+function applyStatementTransitions(
+  statements: Map<string, Statement>,
+  addedStatements: Statement[],
+  retirements: GraphChanges["retire"],
+) {
   const replacements = addedStatements.filter(({ supersedes }) => supersedes.length > 0);
   const retiringStatementIds = new Set(retirements.map(({ id }) => id));
   for (const replacement of replacements) {
@@ -195,7 +207,7 @@ function applyStatementTransitions(statements, addedStatements, retirements) {
       "Only an active statement can supersede another statement",
     );
     for (const replacedId of replacement.supersedes) {
-      const replaced = statements.get(replacedId);
+      const replaced = statements.get(replacedId)!;
       assertCondition(
         isDeepStrictEqual(replaced.scope, replacement.scope),
         "A replacement must keep the statement's scope",
@@ -212,20 +224,24 @@ function applyStatementTransitions(statements, addedStatements, retirements) {
     }
   }
   for (const { id, reason, sources } of retirements) {
-    const statement = statements.get(id);
+    const statement = statements.get(id)!;
     assertCondition(statement, `Unknown statement: ${id}`);
     statements.set(id, { ...statement, status: "retired", retirement: { reason, sources } });
   }
   flagOutdatedInferences(statements);
   for (const { id } of replacements) {
     assertCondition(
-      statements.get(id).status !== "unresolved",
+      statements.get(id)!.status !== "unresolved",
       `An unresolved statement cannot supersede another statement: ${id}`,
     );
   }
 }
 
-export function applyGraphChanges(previous, changes, knownWorkIds) {
+export function applyGraphChanges(
+  previous: Graph,
+  changes: GraphChanges,
+  knownWorkIds: Set<string>,
+): Graph {
   const entities = new Map(previous.entities.map((entity) => [entity.id, entity]));
   const statements = new Map(previous.statements.map((statement) => [statement.id, statement]));
   const addedStatements = [];
@@ -235,7 +251,7 @@ export function applyGraphChanges(previous, changes, knownWorkIds) {
     entities.set(entity.id, entity);
   }
   for (const statement of changes.statements) {
-    const existing = statements.get(statement.id);
+    const existing = statements.get(statement.id)!;
     assertCondition(
       !existing || isDeepStrictEqual(existing, statement),
       `Statement ${statement.id} is immutable; create a new statement`,
@@ -253,7 +269,7 @@ export function applyGraphChanges(previous, changes, knownWorkIds) {
   };
 }
 
-export function eraseFromGraph(graph, matchesReference) {
+export function eraseFromGraph(graph: Graph, matchesReference: (ref: string) => boolean): Graph {
   const entities = graph.entities.filter(({ sources }) => !sources.some(matchesReference));
   const entityIds = new Set(entities.map(({ id }) => id));
   let statements = graph.statements.filter(

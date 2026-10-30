@@ -7,7 +7,7 @@ tidy apply에는 원본을 검토해 결정한 기억·그래프와 기존 업�
 로드한 `tidy/SKILL.md`가 있는 폴더를 기준으로 `../../scripts/context/`의 절대 경로를 구한다. `<plugin-root>`는 그 플러그인의 루트이고, `<checkout>`은 현재 저장소의 체크아웃 또는 워크트리 경로다. 예시의 경로를 실제 값으로 바꾸고 인용한다. 첫 실행과 저장 권한은 [작업 맥락](../../work/references/context.md)의 절차를 따른다.
 
 ```sh
-node "<plugin-root>/scripts/context/cli.mjs" tidy prepare --cwd "<checkout>" --limit 20
+node "<plugin-root>/scripts/context/cli.ts" tidy prepare --cwd "<checkout>" --limit 20
 ```
 
 - `snapshot`: 반영할 때 전달할 준비 결과의 ID다. 미처리 기록이 없으면 `null`이다.
@@ -56,7 +56,7 @@ ref는 조회 결과의 note:업무-id@번호, memory:기억-id@리비전, check
 다음은 두 원본을 읽고 두 번째 원본의 정렬 기준이 첫 번째 원본의 결정을 대체했음을 확인한 경우의 예다. 실제 반영에는 `prepare`에서 받은 `snapshot`과 읽은 원본의 ref를 사용한다.
 
 ```sh
-node "<plugin-root>/scripts/context/cli.mjs" tidy apply --cwd "<checkout>" <<'LOOM_TIDY_JSON'
+node "<plugin-root>/scripts/context/cli.ts" tidy apply --cwd "<checkout>" <<'LOOM_TIDY_JSON'
 {
   "snapshot": "<snapshot-id>",
   "memories": [

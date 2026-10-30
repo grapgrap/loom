@@ -84,8 +84,8 @@ record와 업무 CLI는 각각 원본을 추가한다. 대상·진술·대체 �
 ## 관계를 따라 근거를 조회한다
 
 ```sh
-node "<plugin-root>/scripts/context/cli.mjs" graph --cwd "<checkout>" --work storage --entity one-writer --depth 2
-node "<plugin-root>/scripts/context/cli.mjs" graph --cwd "<checkout>" --work storage --query "작성자 전제" --limit 20
+node "<plugin-root>/scripts/context/cli.ts" graph --cwd "<checkout>" --work storage --entity one-writer --depth 2
+node "<plugin-root>/scripts/context/cli.ts" graph --cwd "<checkout>" --work storage --query "작성자 전제" --limit 20
 ```
 
 `graph`는 프로젝트 공통과 지정한 업무의 현재 진술을 조회한다. `--history`를 붙이면 대체·제외된 진술도 포함한다. `--entity`는 지정한 대상에서, `--query`는 BM25로 찾은 진술과 그 대상에서 탐색을 시작한다. 기본 깊이는 2, 최대 5다. `--limit`은 반환할 주 진술의 수이며 기본 50, 최대 200이다. `remaining`은 같은 탐색 범위에서 응답에 담지 못한 주 진술 수다.

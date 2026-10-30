@@ -1,24 +1,25 @@
+import type { ErasureRequest, RecordSource } from "./model.ts";
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { parseRecordId, parseRevisionNumber } from "./records.mjs";
-import { remember, checkpoint } from "./legacy.mjs";
-import { appendWorkNote } from "./journal.mjs";
-import { eraseContext } from "./forget.mjs";
-import { recallContext } from "./recall.mjs";
+import { parseRecordId, parseRevisionNumber } from "./records.ts";
+import { remember, checkpoint } from "./legacy.ts";
+import { appendWorkNote } from "./journal.ts";
+import { eraseContext } from "./forget.ts";
+import { recallContext } from "./recall.ts";
 import {
   parseSourceReference,
   readSource,
   readSourceArchive,
   matchesContextScope,
-} from "./sources.mjs";
-import { rankSourcesByQuery } from "./search.mjs";
-import { applyTidyChanges, prepareTidyBatch, readConsolidationHistory } from "./tidy.mjs";
-import { getLatestConsolidation, calculateTidyStatus } from "./consolidation.mjs";
-import { resolveProjectLocation } from "./store.mjs";
-import { queryGraph } from "./graph-query.mjs";
-import { runWorkCommand } from "./work-store.mjs";
+} from "./sources.ts";
+import { rankSourcesByQuery } from "./search.ts";
+import { applyTidyChanges, prepareTidyBatch, readConsolidationHistory } from "./tidy.ts";
+import { getLatestConsolidation, calculateTidyStatus } from "./consolidation.ts";
+import { resolveProjectLocation } from "./store.ts";
+import { queryGraph } from "./graph-query.ts";
+import { runWorkCommand } from "./work-store.ts";
 
-const usage = `Usage: node <plugin>/scripts/context/cli.mjs <command> [options]
+const usage = `Usage: node <plugin>/scripts/context/cli.ts <command> [options]
 
 Commands:
   work create/revise/assign/report/submit/accept/request-changes/complete/cancel/reopen
@@ -55,7 +56,7 @@ Options:
   --input <path>    Read write-command JSON from a file instead of stdin.
   --help            Show usage.
 
-Requires Node.js 20+ and Git. Use cli.sh (macOS/Linux) or cli.cmd (Windows) to diagnose missing Node.
+Requires Node.js 22.18+ in 22.x, 24.x, or 26+, and Git. Use cli.sh (macOS/Linux) or cli.cmd (Windows) to diagnose missing Node.
 Exit code 2 requests dependency setup by the agent; other failures use exit code 1.
 remember/checkpoint inputs require expectedRevision; record does not.
 See skills/work/references/context.md for schemas and recording policy.`;
@@ -89,13 +90,13 @@ function parseCommandLine() {
       tree: { type: "boolean" },
     },
   });
-  const names = tokens.filter(({ kind }) => kind === "option").map(({ name }) => name);
+  const names = tokens.filter((token) => token.kind === "option").map(({ name }) => name);
   if (new Set(names).size !== names.length) throw new Error("Options cannot be repeated");
-  if (options.help) return { help: true };
+  if (options.help) return { help: true as const };
   const grouped = ["tidy", "work"].includes(words[0]);
   const command = grouped ? `${words[0]}:${words[1]}` : words[0];
   if (words.length !== (grouped ? 2 : 1)) throw new Error(usage);
-  const optionsByCommand = {
+  const optionsByCommand: Record<string, string[]> = {
     location: [],
     recall: ["work", "query", "history", "limit", "offset", "entity", "depth"],
     remember: ["id", "input"],
@@ -142,7 +143,7 @@ function parseCommandLine() {
   ) {
     throw new Error("--limit must be an integer from 1 to 200");
   }
-  options.limit =
+  const limit =
     options.limit === undefined ? (command === "search" ? 10 : 50) : Number(options.limit);
   if (
     options.offset !== undefined &&
@@ -150,47 +151,54 @@ function parseCommandLine() {
   ) {
     throw new Error("--offset must be a non-negative integer");
   }
-  options.offset = Number(options.offset ?? 0);
+  const offset = Number(options.offset ?? 0);
   if (options.entity !== undefined) parseRecordId(options.entity);
   if (options.entity !== undefined && options.query !== undefined)
     throw new Error("Choose --entity or --query for graph lookup");
   if (options.depth !== undefined && !/^[1-5]$/.test(options.depth))
     throw new Error("--depth must be an integer from 1 to 5");
-  options.depth = Number(options.depth ?? 2);
+  const depth = Number(options.depth ?? 2);
   if (command === "search" && !options.query?.trim())
     throw new Error("search requires --query <text>");
   if (command === "read" && !options.ref) throw new Error("read requires --ref <kind:id@revision>");
+  let erasureRequest: ErasureRequest | undefined;
   if (command === "forget") {
     if (options.ref !== undefined) {
       const note = parseSourceReference(options.ref);
       if (options.id !== undefined || options.revision !== undefined || note.kind !== "note") {
         throw new Error("forget --ref requires only a note reference");
       }
-      options.erasureRequest = { note };
+      erasureRequest = { note };
     } else {
       if (!/^\d+$/.test(options.revision ?? "")) throw new Error("forget requires --revision <n>");
-      options.revision = parseRevisionNumber(Number(options.revision));
-      options.erasureRequest = { memoryId: options.id, expectedRevision: options.revision };
+      const revision = parseRevisionNumber(Number(options.revision));
+      erasureRequest = { memoryId: options.id!, expectedRevision: revision };
     }
   }
-  return { command, options };
+  return {
+    help: false as const,
+    command,
+    options: { ...options, limit, offset, depth, erasureRequest },
+  };
 }
 
-function readJsonInput(inputPath) {
+function readJsonInput(inputPath: string | undefined): unknown {
   if (inputPath === undefined && process.stdin.isTTY)
     throw new Error("Provide JSON via --input or stdin");
   try {
     return JSON.parse(readFileSync(inputPath ?? 0, "utf8"));
-  } catch (error) {
+  } catch (caught) {
+    const error = caught as NodeJS.ErrnoException;
     throw new Error(`Cannot read JSON input: ${error.message}`);
   }
 }
 
 async function runCli() {
-  if (Number(process.versions.node.split(".")[0]) < 20) {
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  if (!((major === 22 && minor >= 18) || major === 24 || major >= 26)) {
     throw Object.assign(
       new Error(
-        `Node.js ${process.versions.node} is unsupported. The agent should configure a supported Node.js LTS (20+), verify node --version, and retry this command.`,
+        `Node.js ${process.versions.node} is unsupported. The agent should configure a supported Node.js (22.18+ in 22.x, 24.x, or 26+), verify node --version, and retry this command.`,
       ),
       { code: "LOOM_NODE_UNSUPPORTED" },
     );
@@ -215,7 +223,7 @@ async function runCli() {
     const result = await runWorkCommand(
       location,
       command.slice(5),
-      options.work,
+      options.work!,
       writeInput,
       options,
     );
@@ -240,10 +248,13 @@ async function runCli() {
     }
     case "record":
       result = await appendWorkNote(location, {
-        work: options.work,
+        work: options.work!,
         text: readFileSync(0, "utf8"),
         key: options.key,
-        source: { type: options.by ?? "agent", reference: options.source },
+        source: {
+          type: (options.by ?? "agent") as RecordSource["type"],
+          reference: options.source!,
+        },
       });
       break;
     case "search": {
@@ -252,11 +263,11 @@ async function runCli() {
         options.work === undefined
           ? sourceArchive.sources
           : sourceArchive.sources.filter((source) => matchesContextScope(source, options.work));
-      result = { results: rankSourcesByQuery(matchingSources, options.query, options.limit) };
+      result = { results: rankSourcesByQuery(matchingSources, options.query!, options.limit) };
       break;
     }
     case "read":
-      result = await readSource(location, options.ref);
+      result = await readSource(location, options.ref!);
       break;
     case "tidy:prepare":
       result = await prepareTidyBatch(location, options.limit, options.offset);
@@ -273,13 +284,13 @@ async function runCli() {
       break;
     }
     case "remember":
-      result = await remember(location, options.id, writeInput);
+      result = await remember(location, options.id!, writeInput);
       break;
     case "checkpoint":
-      result = await checkpoint(location, options.work, writeInput);
+      result = await checkpoint(location, options.work!, writeInput);
       break;
     case "forget":
-      result = await eraseContext(location, options.erasureRequest);
+      result = await eraseContext(location, options.erasureRequest!);
       break;
   }
   console.log(JSON.stringify(result, null, 2));
@@ -287,10 +298,11 @@ async function runCli() {
 
 try {
   await runCli();
-} catch (error) {
+} catch (caught) {
+  const error = caught as NodeJS.ErrnoException;
   console.error(`Loom context: ${error.code ? `[${error.code}] ` : ""}${error.message}`);
   process.exitCode = ["LOOM_NODE_UNSUPPORTED", "LOOM_GIT_MISSING", "LOOM_GIT_UNUSABLE"].includes(
-    error.code,
+    error.code ?? "",
   )
     ? 2
     : 1;

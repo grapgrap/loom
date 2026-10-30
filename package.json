@@ -1,26 +1,30 @@
 {
   "name": "loom-plugin-tools",
   "private": true,
+  "type": "module",
   "scripts": {
-    "check": "node scripts/check-plugin.mjs",
+    "check": "node scripts/check-plugin.ts",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "hooks:install": "lefthook install",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
     "test": "vitest run",
-    "test:watch": "vitest --watch"
+    "test:watch": "vitest --watch",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/node": "24.19.2",
     "lefthook": "2.2.2",
     "oxfmt": "0.73.0",
     "oxlint": "1.88.0",
+    "typescript": "7.0.2",
     "vite": "8.3.4",
     "vitest": "5.0.4",
     "yaml": "2.9.1"
   },
   "engines": {
-    "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
+    "node": "^22.18.0 || ^24.0.0 || >=26.0.0"
   },
   "packageManager": "yarn@4.18.1"
 }

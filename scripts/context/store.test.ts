@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { updateStoredRecord, readStoredRecord, resolveDataDirectory } from "./store.mjs";
+import { updateStoredRecord, readStoredRecord, resolveDataDirectory } from "./store.ts";
 
 test("macOS stores Loom data in the user's Application Support directory", () => {
   expect(resolveDataDirectory({ platform: "darwin", home: "/Users/example", env: {} })).toBe(
@@ -67,16 +67,17 @@ test("a record mutation keeps its lock through asynchronous work before another 
   const directory = await mkdtemp(join(tmpdir(), "loom-async-record-"));
   t.onTestFinished(() => rm(directory, { recursive: true, force: true }));
   const path = join(directory, "record.json");
-  const parse = (record) => {
+  const parse = (value: unknown) => {
+    const record = value as { count: number };
     expect(typeof record.count).toBe("number");
     return record;
   };
-  let notifyLocked;
-  let releaseFirst;
-  const locked = new Promise((resolve) => {
+  let notifyLocked!: () => void;
+  let releaseFirst!: () => void;
+  const locked = new Promise<void>((resolve) => {
     notifyLocked = resolve;
   });
-  const released = new Promise((resolve) => {
+  const released = new Promise<void>((resolve) => {
     releaseFirst = resolve;
   });
   const first = updateStoredRecord({
@@ -92,7 +93,7 @@ test("a record mutation keeps its lock through asynchronous work before another 
   const second = updateStoredRecord({
     path,
     parse,
-    update: (record) => ({ count: record.count + 1 }),
+    update: (record) => ({ count: record!.count + 1 }),
   });
   const writes = Promise.all([first, second]);
   releaseFirst();

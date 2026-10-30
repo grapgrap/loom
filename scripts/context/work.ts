@@ -1,3 +1,39 @@
+import type {
+  Check,
+  Criterion,
+  Work,
+  WorkRevision,
+  WorkLedger,
+  VisibleWork,
+  QueryOptions,
+  RecordSource,
+} from "./model.ts";
+
+type WorkInput = {
+  expectedRevision: number;
+  actor: string;
+  source: RecordSource;
+  goal: string;
+  scope: string;
+  criteria: Criterion[] | string[];
+  parent?: string;
+  contributesTo?: string[];
+  dependsOn?: string[];
+  required?: boolean;
+  next: string[];
+  adopt?: boolean;
+  reason: string;
+  worker: string;
+  reviewer: string;
+  executionId?: string;
+  progress: string;
+  checks?: Check[];
+  status?: "active" | "blocked" | "paused";
+  summary: string;
+  artifacts?: string[];
+  submission: string;
+  evidence: string[];
+};
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import {
@@ -8,9 +44,9 @@ import {
   validateObject,
   validateRecordSource,
   validateText,
-} from "./records.mjs";
+} from "./records.ts";
 
-const actions = {
+const actions: Record<string, string[]> = {
   create: [
     "goal",
     "scope",
@@ -33,29 +69,31 @@ const actions = {
   reopen: ["reason"],
 };
 
-function requireCondition(condition, message) {
+function requireCondition(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function fields(value, allowed, label) {
+function fields(value: unknown, allowed: string[], label: string) {
   validateObject(value, label);
   for (const key of Object.keys(value))
     requireCondition(allowed.includes(key), `Unknown ${label} field: ${key}`);
 }
 
-function texts(value, label) {
+function texts(value: unknown, label: string): string[] {
   validateArray(value, label);
   value.forEach((entry, index) => validateText(entry, `${label}[${index}]`));
-  return value;
+  return value as string[];
 }
 
-function ids(value, label) {
-  texts(value, label).forEach((id) => parseRecordId(id, label));
+function ids(input: unknown, label: string): string[] {
+  const value = texts(input, label);
+  value.forEach((id) => parseRecordId(id, label));
   requireCondition(new Set(value).size === value.length, `Duplicate ${label}`);
-  return value;
+  return value as string[];
 }
 
-function criteria(value) {
+function criteria(input: unknown): Criterion[] {
+  const value = input as Criterion[];
   validateArray(value, "criteria");
   requireCondition(value.length > 0, "At least one acceptance criterion is required");
   value.forEach((entry) => {
@@ -71,11 +109,12 @@ function criteria(value) {
   return value;
 }
 
-export function currentWorks(ledger) {
-  return new Map((ledger?.works ?? []).map((record) => [record.id, record.revisions.at(-1)]));
+export function currentWorks(ledger: WorkLedger | null) {
+  return new Map((ledger?.works ?? []).map((record) => [record.id, record.revisions.at(-1)!]));
 }
 
-export function parseWorkLedger(ledger) {
+export function parseWorkLedger(input: unknown): WorkLedger {
+  const ledger = input as WorkLedger;
   validateObject(ledger, "work ledger");
   requireCondition(ledger.version === 1, "Unsupported work ledger version");
   validateArray(ledger.works, "works");
@@ -148,12 +187,16 @@ export function parseWorkLedger(ledger) {
   return ledger;
 }
 
-function validateChecks(checks, work) {
+function validateChecks(value: unknown, work: Work): asserts value is Check[] {
+  const checks = value as Check[];
   validateArray(checks, "checks");
   const known = new Set(work.criteria.map(({ id }) => id));
   for (const check of checks) {
     fields(check, ["criterionId", "verdict", "observation", "evidence"], "check");
-    requireCondition(known.has(check.criterionId), `Unknown criterion: ${check.criterionId}`);
+    requireCondition(
+      known.has(check.criterionId as string),
+      `Unknown criterion: ${check.criterionId}`,
+    );
     validateChoice(check.verdict, ["met", "unmet", "unknown"], "check.verdict");
     validateText(check.observation, "check.observation");
     texts(check.evidence, "check.evidence");
@@ -168,7 +211,7 @@ function validateChecks(checks, work) {
   );
 }
 
-function validateRelations(works) {
+function validateRelations(works: Map<string, Work>) {
   for (const work of works.values()) {
     for (const dependency of work.dependsOn)
       requireCondition(works.has(dependency), `Unknown dependency: ${dependency}`);
@@ -193,11 +236,11 @@ function validateRelations(works) {
   }
   const visited = new Set();
   const visiting = new Set();
-  function visit(id) {
+  function visit(id: string) {
     if (visited.has(id)) return;
     requireCondition(!visiting.has(id), `Work dependency cycle at ${id}`);
     visiting.add(id);
-    const work = works.get(id);
+    const work = works.get(id)!;
     const children = [...works.values()].filter((child) => child.parent === id);
     for (const next of [...work.dependsOn, ...children.map((child) => child.id)]) visit(next);
     visiting.delete(id);
@@ -206,33 +249,33 @@ function validateRelations(works) {
   for (const id of works.keys()) visit(id);
 }
 
-function worker(work) {
+function worker(work: Work) {
   return work.assignment?.worker ?? work.owner;
 }
 
-function assertOwner(work, actor) {
+function assertOwner(work: Work, actor: string) {
   requireCondition(work.owner === actor, `Only work owner ${work.owner} can change its plan`);
 }
 
-function assertExecuting(work) {
+function assertExecuting(work: Work) {
   requireCondition(
     ["active", "blocked", "paused"].includes(work.status),
     `Work is ${work.status}; revise or reopen it before reporting`,
   );
 }
 
-function unfinishedRequirements(work, works) {
+function unfinishedRequirements(work: Work, works: Map<string, Work>) {
   const missing = work.criteria.filter(
     ({ id }) => !work.checks.some((check) => check.criterionId === id && check.verdict === "met"),
   );
-  const dependencies = work.dependsOn.filter((id) => works.get(id).status !== "complete");
+  const dependencies = work.dependsOn.filter((id) => works.get(id)!.status !== "complete");
   const children = [...works.values()].filter(
     (child) => child.parent === work.id && child.required && child.status !== "complete",
   );
   return { missing, dependencies, children };
 }
 
-function assertFinished(work, works) {
+function assertFinished(work: Work, works: Map<string, Work>) {
   const remaining = unfinishedRequirements(work, works);
   requireCondition(
     remaining.missing.length === 0,
@@ -249,7 +292,7 @@ function assertFinished(work, works) {
   requireCondition(work.next.length === 0, "Remaining next actions prevent completion");
 }
 
-function invalidate(work, reason, affected = null) {
+function invalidate(work: Work, reason: string, affected: Set<string> | null = null) {
   work.definitionRevision += 1;
   work.checks =
     affected === null ? [] : work.checks.filter(({ criterionId }) => !affected.has(criterionId));
@@ -261,13 +304,27 @@ function invalidate(work, reason, affected = null) {
     work.next = ["Recheck the affected criteria and report current evidence"];
 }
 
-function applyAction(work, works, action, input, nextRevision) {
+function applyAction(
+  work: Work,
+  works: Map<string, Work>,
+  action: string,
+  input: WorkInput,
+  nextRevision: number,
+) {
   switch (action) {
     case "revise": {
       assertOwner(work, input.actor);
       validateText(input.reason, "reason");
-      for (const field of ["goal", "scope", "criteria", "contributesTo", "dependsOn", "required"])
-        if (input[field] !== undefined) work[field] = structuredClone(input[field]);
+      for (const field of [
+        "goal",
+        "scope",
+        "criteria",
+        "contributesTo",
+        "dependsOn",
+        "required",
+      ] as const)
+        if (input[field] !== undefined)
+          Object.assign(work, { [field]: structuredClone(input[field]) });
       criteria(work.criteria);
       validateText(work.goal, "goal");
       validateText(work.scope, "scope");
@@ -307,7 +364,7 @@ function applyAction(work, works, action, input, nextRevision) {
       validateChecks(checks, work);
       if (checks.some(({ verdict }) => verdict === "met"))
         requireCondition(
-          work.dependsOn.every((id) => works.get(id).status === "complete"),
+          work.dependsOn.every((id) => works.get(id)!.status === "complete"),
           "Incomplete dependencies prevent verified results",
         );
       validateChoice(input.status ?? work.status, ["active", "blocked", "paused"], "report.status");
@@ -415,7 +472,14 @@ function applyAction(work, works, action, input, nextRevision) {
   }
 }
 
-function appendRevision(ledger, work, action, input, recordedAt, requestHash = null) {
+function appendRevision(
+  ledger: WorkLedger,
+  work: Work,
+  action: string,
+  input: WorkInput,
+  recordedAt: string,
+  requestHash: string | null = null,
+) {
   let record = ledger.works.find(({ id }) => id === work.id);
   if (!record) {
     record = { id: work.id, revisions: [] };
@@ -434,14 +498,20 @@ function appendRevision(ledger, work, action, input, recordedAt, requestHash = n
   return revision;
 }
 
-function invalidateConsumers(ledger, changed, previousWork, input, recordedAt) {
+function invalidateConsumers(
+  ledger: WorkLedger,
+  changed: WorkRevision,
+  previousWork: WorkRevision | undefined,
+  input: WorkInput,
+  recordedAt: string,
+) {
   const works = currentWorks(ledger);
-  const affected = new Map();
+  const affected = new Map<string, Set<string> | null>();
   const visited = new Set([changed.id]);
   const queue = [changed.id];
   while (queue.length) {
-    const id = queue.shift();
-    const work = works.get(id);
+    const id = queue.shift()!;
+    const work = works.get(id)!;
     for (const consumer of works.values()) {
       if (consumer.id !== work.parent && !consumer.dependsOn.includes(id)) continue;
       const previous = affected.get(consumer.id);
@@ -461,13 +531,20 @@ function invalidateConsumers(ledger, changed, previousWork, input, recordedAt) {
     }
   }
   for (const [id, criterionIds] of affected) {
-    const work = structuredClone(works.get(id));
+    const work = structuredClone(works.get(id)!);
     invalidate(work, `Related work ${changed.id} changed; recheck affected evidence`, criterionIds);
     appendRevision(ledger, work, "invalidated", input, recordedAt);
   }
 }
 
-export function changeWork(ledger, id, action, input, { legacyRef = null } = {}) {
+export function changeWork(
+  ledger: WorkLedger | null,
+  id: string,
+  action: string,
+  value: unknown,
+  { legacyRef = null }: { legacyRef?: string | null } = {},
+): WorkLedger {
+  const input = value as WorkInput;
   parseRecordId(id, "work");
   requireCondition(Object.hasOwn(actions, action), `Unknown work action: ${action}`);
   fields(input, ["expectedRevision", "actor", "source", ...actions[action]], action);
@@ -477,15 +554,15 @@ export function changeWork(ledger, id, action, input, { legacyRef = null } = {})
   const current = currentWorks(ledger).get(id);
   const requestHash = createHash("sha256").update(JSON.stringify({ action, input })).digest("hex");
   if (current?.revision === input.expectedRevision + 1 && current.requestHash === requestHash)
-    return ledger;
+    return ledger!;
   requireCondition(
     (current?.revision ?? 0) === input.expectedRevision,
     `Work revision conflict: current revision is ${current?.revision ?? 0}; show and reconcile before retrying`,
   );
   const nextLedger = structuredClone(ledger ?? { version: 1, works: [] });
-  const works = currentWorks(nextLedger);
+  const works = new Map<string, Work>(currentWorks(nextLedger));
   const recordedAt = new Date().toISOString();
-  let work;
+  let work: Work;
   if (action === "create") {
     requireCondition(!current, `Work already exists: ${id}`);
     requireCondition(
@@ -501,7 +578,7 @@ export function changeWork(ledger, id, action, input, { legacyRef = null } = {})
     if (parent !== null) {
       parseRecordId(parent, "parent");
       requireCondition(works.has(parent), `Unknown parent: ${parent}`);
-      assertOwner(works.get(parent), input.actor);
+      assertOwner(works.get(parent)!, input.actor);
     }
     const required = input.required ?? true;
     requireCondition(typeof required === "boolean", "required must be boolean");
@@ -511,7 +588,7 @@ export function changeWork(ledger, id, action, input, { legacyRef = null } = {})
       owner: input.actor,
       goal: input.goal,
       scope: input.scope,
-      criteria: input.criteria,
+      criteria: criteria(input.criteria),
       parent,
       contributesTo: ids(input.contributesTo ?? [], "contributesTo"),
       dependsOn: ids(input.dependsOn ?? [], "dependsOn"),
@@ -534,14 +611,14 @@ export function changeWork(ledger, id, action, input, { legacyRef = null } = {})
   const saved = appendRevision(nextLedger, work, action, input, recordedAt, requestHash);
   if (
     ["create", "revise", "request-changes", "cancel", "reopen"].includes(action) ||
-    (action === "assign" && current.definitionRevision !== saved.definitionRevision) ||
-    (action === "report" && !isDeepStrictEqual(current.checks, saved.checks))
+    (action === "assign" && current!.definitionRevision !== saved.definitionRevision) ||
+    (action === "report" && !isDeepStrictEqual(current!.checks, saved.checks))
   )
     invalidateConsumers(nextLedger, saved, current, input, recordedAt);
   return nextLedger;
 }
 
-export function presentWork(work, history) {
+export function presentWork(work: WorkRevision, history?: WorkRevision[]): VisibleWork {
   const { requestHash: _requestHash, ...visible } = work;
   return {
     ...visible,
@@ -559,7 +636,11 @@ export function presentWork(work, history) {
   };
 }
 
-export function showWork(ledger, id, { tree = false, history = false } = {}) {
+export function showWork(
+  ledger: WorkLedger | null,
+  id: string,
+  { tree = false, history = false }: QueryOptions = {},
+) {
   const works = currentWorks(ledger);
   const work = works.get(id);
   requireCondition(work, `Unknown work: ${id}`);
@@ -569,12 +650,12 @@ export function showWork(ledger, id, { tree = false, history = false } = {}) {
       for (const candidate of works.values())
         if (candidate.parent === selectedId) selected.add(candidate.id);
   }
-  const listed = [...selected].map((selectedId) => works.get(selectedId));
-  function stoppedParent(entry) {
-    let parent = entry.parent === null ? null : works.get(entry.parent);
+  const listed = [...selected].map((selectedId) => works.get(selectedId)!);
+  function stoppedParent(entry: Work) {
+    let parent = entry.parent === null ? null : works.get(entry.parent)!;
     while (parent) {
       if (["paused", "cancelled"].includes(parent.status)) return parent;
-      parent = parent.parent === null ? null : works.get(parent.parent);
+      parent = parent.parent === null ? null : works.get(parent.parent)!;
     }
     return null;
   }
@@ -587,14 +668,14 @@ export function showWork(ledger, id, { tree = false, history = false } = {}) {
   return {
     work: presentWork(
       work,
-      history ? ledger.works.find((record) => record.id === id).revisions : undefined,
+      history ? ledger!.works.find((record) => record.id === id)!.revisions : undefined,
     ),
     children: [...works.values()]
       .filter((entry) => entry.parent === id)
       .map((entry) => presentWork(entry)),
     dependencies: work.dependsOn.map((dependency) => ({
       id: dependency,
-      status: works.get(dependency).status,
+      status: works.get(dependency)!.status,
     })),
     ...(tree ? { works: listed.map((entry) => presentWork(entry)) } : {}),
     ready: listed
@@ -602,7 +683,7 @@ export function showWork(ledger, id, { tree = false, history = false } = {}) {
         (entry) =>
           entry.status === "active" &&
           !stoppedParent(entry) &&
-          entry.dependsOn.every((dependency) => works.get(dependency).status === "complete"),
+          entry.dependsOn.every((dependency) => works.get(dependency)!.status === "complete"),
       )
       .map(({ id }) => id),
     blocked: listed
@@ -610,13 +691,13 @@ export function showWork(ledger, id, { tree = false, history = false } = {}) {
         (entry) =>
           entry.status === "blocked" ||
           stoppedParent(entry) ||
-          entry.dependsOn.some((dependency) => works.get(dependency).status !== "complete"),
+          entry.dependsOn.some((dependency) => works.get(dependency)!.status !== "complete"),
       )
       .map((entry) => ({
         id: entry.id,
         status: entry.status,
         dependsOn: entry.dependsOn,
-        ...(stoppedParent(entry) ? { stoppedBy: stoppedParent(entry).id } : {}),
+        ...(stoppedParent(entry) ? { stoppedBy: stoppedParent(entry)!.id } : {}),
       })),
     awaitingReview: listed.filter(({ status }) => status === "submitted").map(({ id }) => id),
     missingCriteria,

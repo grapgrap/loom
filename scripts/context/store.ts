@@ -1,3 +1,5 @@
+import type { ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
+export type ProjectLocation = Awaited<ReturnType<typeof resolveProjectLocation>>;
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, open, readFile, readdir, realpath, rename, unlink } from "node:fs/promises";
@@ -10,7 +12,7 @@ export function resolveDataDirectory({
   home: userHome = homedir(),
   env: environment = process.env,
   override: dataDirectoryOverride,
-} = {}) {
+}: { platform?: string; home?: string; env?: NodeJS.ProcessEnv; override?: string } = {}) {
   const platformPath = platform === "win32" ? win32 : posix;
   const configuredDirectory = dataDirectoryOverride ?? environment.LOOM_DATA_DIR;
   if (configuredDirectory !== undefined) {
@@ -34,7 +36,10 @@ export function resolveDataDirectory({
   return platformPath.join(xdgDataDirectory, "loom");
 }
 
-export async function resolveProjectLocation({ cwd = process.cwd(), directory } = {}) {
+export async function resolveProjectLocation({
+  cwd = process.cwd(),
+  directory,
+}: { cwd?: string; directory?: string } = {}) {
   const checkoutDirectory = await realpath(resolve(cwd));
   const gitEnvironment = { ...process.env };
   for (const key of [
@@ -46,14 +51,15 @@ export async function resolveProjectLocation({ cwd = process.cwd(), directory } 
     "GIT_ALTERNATE_OBJECT_DIRECTORIES",
   ])
     delete gitEnvironment[key];
-  const gitProcessOptions = {
+  const gitProcessOptions: ExecFileSyncOptionsWithStringEncoding = {
     encoding: "utf8",
     env: gitEnvironment,
     stdio: ["ignore", "pipe", "pipe"],
   };
   try {
     execFileSync("git", ["--version"], gitProcessOptions);
-  } catch (error) {
+  } catch (caught) {
+    const error = caught as NodeJS.ErrnoException & { stderr?: Buffer };
     if (error.code === "ENOENT") {
       throw Object.assign(
         new Error(
@@ -77,7 +83,8 @@ export async function resolveProjectLocation({ cwd = process.cwd(), directory } 
       ["-C", checkoutDirectory, "rev-parse", "--path-format=absolute", "--git-common-dir"],
       gitProcessOptions,
     );
-  } catch (error) {
+  } catch (caught) {
+    const error = caught as NodeJS.ErrnoException & { stderr?: Buffer };
     throw new Error(
       `Cannot identify the Git repository at ${checkoutDirectory}: ${error.stderr?.toString().trim() || error.message}`,
     );
@@ -92,25 +99,31 @@ export async function resolveProjectLocation({ cwd = process.cwd(), directory } 
   };
 }
 
-export async function readStoredRecord(path, parse) {
+export async function readStoredRecord<T>(
+  path: string,
+  parse: (value: unknown) => T,
+): Promise<T | null> {
   let serializedRecord;
   try {
     serializedRecord = await readFile(path, "utf8");
-  } catch (error) {
+  } catch (caught) {
+    const error = caught as NodeJS.ErrnoException & { stderr?: Buffer };
     if (error.code === "ENOENT") return null;
     throw error;
   }
   try {
     return parse(JSON.parse(serializedRecord));
-  } catch (error) {
+  } catch (caught) {
+    const error = caught as NodeJS.ErrnoException & { stderr?: Buffer };
     throw new Error(`Invalid record at ${path}: ${error.message}`);
   }
 }
 
-export async function readDirectoryEntries(directory) {
+export async function readDirectoryEntries(directory: string) {
   try {
     return await readdir(directory, { withFileTypes: true });
-  } catch (error) {
+  } catch (caught) {
+    const error = caught as NodeJS.ErrnoException & { stderr?: Buffer };
     if (error.code === "ENOENT") return [];
     throw error;
   }
@@ -118,13 +131,14 @@ export async function readDirectoryEntries(directory) {
 
 const lockTimeoutMs = 5000;
 
-async function acquireRecordLock(lockPath) {
+async function acquireRecordLock(lockPath: string) {
   const lockDeadline = Date.now() + lockTimeoutMs;
   while (true) {
     let lock;
     try {
       lock = await open(lockPath, "wx", 0o600);
-    } catch (error) {
+    } catch (caught) {
+      const error = caught as NodeJS.ErrnoException & { stderr?: Buffer };
       if (error.code !== "EEXIST") throw error;
       if (Date.now() >= lockDeadline) {
         throw new Error(
@@ -139,7 +153,8 @@ async function acquireRecordLock(lockPath) {
         JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }),
       );
       return lock;
-    } catch (error) {
+    } catch (caught) {
+      const error = caught as NodeJS.ErrnoException & { stderr?: Buffer };
       await lock.close();
       await unlink(lockPath);
       throw error;
@@ -147,7 +162,7 @@ async function acquireRecordLock(lockPath) {
   }
 }
 
-async function writeRecordAtomically(path, record) {
+async function writeRecordAtomically(path: string, record: unknown) {
   const temporaryPath = `${path}.${randomUUID()}.tmp`;
   const file = await open(temporaryPath, "wx", 0o600);
   try {
@@ -165,7 +180,20 @@ async function writeRecordAtomically(path, record) {
   }
 }
 
-export async function updateStoredRecord({ path, parse, update }) {
+type RecordUpdate<T, U> = {
+  path: string;
+  parse: (value: unknown) => T;
+  update: (current: NoInfer<T> | null) => U | Promise<U>;
+};
+export function updateStoredRecord<T>(options: RecordUpdate<T, NoInfer<T>>): Promise<T>;
+export function updateStoredRecord<T>(
+  options: RecordUpdate<T, NoInfer<T> | null>,
+): Promise<T | null>;
+export async function updateStoredRecord<T>({
+  path,
+  parse,
+  update,
+}: RecordUpdate<T, T | null>): Promise<T | null> {
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const lockPath = `${path}.lock`;
   const lock = await acquireRecordLock(lockPath);

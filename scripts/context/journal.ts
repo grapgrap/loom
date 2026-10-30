@@ -1,3 +1,5 @@
+import type { WorkJournal, RecordSource, NoteContent } from "./model.ts";
+import type { ProjectLocation } from "./store.ts";
 import { isDeepStrictEqual } from "node:util";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
@@ -9,10 +11,11 @@ import {
   validateRecordRevisions,
   validateRecordSource,
   validateText,
-} from "./records.mjs";
-import { updateStoredRecord } from "./store.mjs";
+} from "./records.ts";
+import { updateStoredRecord } from "./store.ts";
 
-export function parseWorkJournal(journal) {
+export function parseWorkJournal(value: unknown): WorkJournal {
+  const journal = value as WorkJournal;
   validateRecordVersion(journal);
   validateRecordRevisions(journal.revisions, (note) => {
     parseRecordId(note.requestKey);
@@ -22,18 +25,27 @@ export function parseWorkJournal(journal) {
     }
   });
   if (
-    new Set(journal.revisions.map(({ requestKey }) => requestKey)).size !== journal.revisions.length
+    new Set(journal!.revisions.map(({ requestKey }) => requestKey)).size !==
+    journal.revisions.length
   ) {
     throw new Error("Duplicate record request keys");
   }
-  return journal;
+  return journal!;
 }
 
-export function workJournalPath(location, work) {
+export function workJournalPath(location: ProjectLocation, work: string) {
   return join(location.projectDirectory, "works", work, "notes.json");
 }
 
-export async function appendWorkNote(location, { work, text, source, key: retryKey }) {
+export async function appendWorkNote(
+  location: ProjectLocation,
+  {
+    work,
+    text,
+    source,
+    key: retryKey,
+  }: { work: string; text: string; source: RecordSource; key?: string },
+) {
   if (retryKey !== undefined) parseRecordId(retryKey);
   validateText(text, "text");
   validateRecordSource(source);
@@ -41,7 +53,7 @@ export async function appendWorkNote(location, { work, text, source, key: retryK
   const noteContent = { text: text.trim(), source, requestKey };
   let updated;
   try {
-    updated = await updateStoredRecord({
+    updated = await updateStoredRecord<WorkJournal>({
       path: workJournalPath(location, work),
       parse: createRecordParser(work, parseWorkJournal),
       update(journal) {
@@ -62,9 +74,9 @@ export async function appendWorkNote(location, { work, text, source, key: retryK
               { code: "LOOM_RECORD_CONFLICT" },
             );
           }
-          return journal;
+          return journal!;
         }
-        return appendRecordRevision(
+        return appendRecordRevision<NoteContent, { id: string }>(
           journal,
           { id: work },
           {
@@ -74,33 +86,37 @@ export async function appendWorkNote(location, { work, text, source, key: retryK
         );
       },
     });
-  } catch (error) {
-    if (!["LOOM_RECORD_FORGOTTEN", "LOOM_RECORD_CONFLICT"].includes(error.code)) {
+  } catch (caught) {
+    const error = caught as NodeJS.ErrnoException;
+    if (!["LOOM_RECORD_FORGOTTEN", "LOOM_RECORD_CONFLICT"].includes(error.code ?? "")) {
       error.message += `; retry the same record with --key ${requestKey}`;
     }
     throw error;
   }
   const savedNote = updated.revisions.find((note) => note.requestKey === requestKey);
-  return { ref: `note:${work}@${savedNote.revision}`, work, ...savedNote };
+  return { ref: `note:${work}@${savedNote!.revision}`, work, ...savedNote };
 }
 
-export async function eraseWorkNote(location, { work, revision: noteNumber }) {
-  const updated = await updateStoredRecord({
+export async function eraseWorkNote(
+  location: ProjectLocation,
+  { work, revision: noteNumber }: { work: string; revision: number },
+) {
+  const updated = await updateStoredRecord<WorkJournal>({
     path: workJournalPath(location, work),
     parse: createRecordParser(work, parseWorkJournal),
     update(journal) {
       const erasedNote = journal?.revisions[noteNumber - 1];
       if (!erasedNote) throw new Error("Original note does not exist");
-      if (erasedNote.forgotten) return journal;
+      if (erasedNote.forgotten) return journal!;
       return {
-        ...journal,
-        revisions: journal.revisions.map((note) =>
+        ...journal!,
+        revisions: journal!.revisions.map((note) =>
           note.revision === noteNumber
             ? {
                 revision: noteNumber,
                 recordedAt: note.recordedAt,
                 requestKey: note.requestKey,
-                forgotten: true,
+                forgotten: true as const,
               }
             : note,
         ),

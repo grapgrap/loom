@@ -1,9 +1,10 @@
+import type { Fixture } from "./testing.ts";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { fixture, invoke, run } from "./testing.mjs";
+import { fixture, invoke, run } from "./testing.ts";
 
-function record(project, work, text) {
+function record(project: Fixture, work: string, text: string) {
   return run(project, ["record", "--work", work, "--source", "Observed during work"], text);
 }
 
@@ -23,7 +24,7 @@ test("first recall identifies work from notes before consolidation", (t) => {
   const last = record(project, "login", "Reproduced the race; the correction is next.");
   record(project, "login-ui", "Improve keyboard navigation on the login screen.");
   const recalled = run(project, ["recall"]);
-  const login = recalled.works.find(({ id }) => id === "login");
+  const login = recalled.works.find(({ id }: { id: string }) => id === "login");
   expect(login.firstNote).toStrictEqual({ ref: first.ref, excerpt: first.text });
   expect(login.latestNote).toStrictEqual({ ref: last.ref, excerpt: last.text });
   expect(login.status).toBe(null);
@@ -75,7 +76,7 @@ test("invalid tidy values leave originals pending and valid retries can proceed"
     [{ scope: { type: "projects" } }, "scope.type"],
     [{ status: "retired" }, "status"],
     [{ sources: null }, "sources"],
-  ]) {
+  ] as const) {
     const result = invoke(project, ["tidy", "apply"], {
       snapshot: batch.snapshot,
       memories: [{ ...memory, ...overrides }],
@@ -118,6 +119,6 @@ test("tidy pages existing context and returns only applied changes", (t) => {
     snapshot: second.snapshot,
     memories: [{ ...memories[0], text: "Updated alpha" }],
   });
-  expect(applied.memories.map(({ id }) => id)).toStrictEqual(["alpha"]);
+  expect(applied.memories.map(({ id }: { id: string }) => id)).toStrictEqual(["alpha"]);
   expect(run(project, ["recall"]).memories.length).toBe(3);
 });

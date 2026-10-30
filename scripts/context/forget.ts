@@ -1,22 +1,24 @@
-import { eraseWorkNote } from "./journal.mjs";
+import type { ProjectLocation } from "./store.ts";
+import type { ErasureRequest, ConsolidationHistory, StoredMemory } from "./model.ts";
+import { eraseWorkNote } from "./journal.ts";
 import {
   forgetMemoryRecord,
   parseMemoryRecord,
   presentLatestRevision,
   createRecordParser,
-} from "./records.mjs";
-import { memoryRecordPath } from "./sources.mjs";
-import { updateStoredRecord } from "./store.mjs";
-import { consolidationHistoryPath } from "./tidy.mjs";
+} from "./records.ts";
+import { memoryRecordPath } from "./sources.ts";
+import { updateStoredRecord } from "./store.ts";
+import { consolidationHistoryPath } from "./tidy.ts";
 import {
   getLatestConsolidation,
   eraseFromConsolidationHistory,
   parseConsolidationHistory,
-} from "./consolidation.mjs";
+} from "./consolidation.ts";
 
-export async function eraseContext(location, request) {
+export async function eraseContext(location: ProjectLocation, request: ErasureRequest) {
   let erased;
-  const updatedHistory = await updateStoredRecord({
+  const updatedHistory = await updateStoredRecord<ConsolidationHistory>({
     path: consolidationHistoryPath(location),
     parse: parseConsolidationHistory,
     async update(history) {
@@ -28,7 +30,7 @@ export async function eraseContext(location, request) {
         });
       }
       const { memoryId, expectedRevision } = request;
-      const memory = await updateStoredRecord({
+      const memory = await updateStoredRecord<StoredMemory>({
         path: memoryRecordPath(location, memoryId),
         parse: createRecordParser(memoryId, parseMemoryRecord),
         update: (memory) => (memory === null ? null : forgetMemoryRecord(memory, expectedRevision)),

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { parseMemoryInput, parseCheckpointInput, validateRecordSource } from "./records.mjs";
+import { parseMemoryInput, parseCheckpointInput, validateRecordSource } from "./records.ts";
 
 const memory = {
   expectedRevision: 0,
@@ -17,7 +17,7 @@ test("memory input identifies invalid fields before accepting a record", () => {
     [{ ...memory, source: null }, "source"],
     [{ ...memory, scope: { type: "projects" } }, "scope.type"],
     [{ ...memory, scope: { type: "work" } }, "scope.id"],
-  ]) {
+  ] as const) {
     expect(() => parseMemoryInput(input)).toThrowError(
       expect.objectContaining({ name: "Error", message: expect.stringContaining(field) }),
     );
@@ -41,7 +41,7 @@ test("work input accepts only documented states and validates evidence and next 
     [{ status: "completed" }, "status"],
     [{ evidence: null }, "evidence"],
     [{ next: {} }, "next"],
-  ]) {
+  ] as const) {
     expect(() => parseCheckpointInput({ ...checkpoint, ...overrides })).toThrowError(
       expect.objectContaining({ name: "Error", message: expect.stringContaining(field) }),
     );

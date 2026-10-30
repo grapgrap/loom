@@ -69,7 +69,7 @@ tidy는 미처리 묶음을 읽고 BM25 검색으로 관련 원본을 찾은 뒤
 
 미처리 원본 20개 또는 가장 오래된 미처리 원본이 24시간 지난 경우 `recall`에 정리 필요 신호가 표시됩니다. `work`가 착수 시점과 검증한 단위가 끝난 시점에 확인하므로 한 대화에서 오래 이어가는 업무도 정리할 수 있습니다. 명시적인 `$loom:tidy` 요청은 이 조건을 기다리지 않습니다. 이 확인은 호출 시 수행하며 백그라운드 예약 실행을 설치하지 않습니다.
 
-[맥락 스크립트](scripts/context/cli.mjs)는 Node.js 20 이상과 Git으로 실행하며 별도 npm 의존성은 필요하지 않습니다. 기본 데이터 루트는 macOS의 `~/Library/Application Support/loom`, Windows의 `%LOCALAPPDATA%\loom`, Linux의 `$XDG_DATA_HOME/loom` 또는 `~/.local/share/loom`입니다. 플러그인 설치 디렉터리와 Git 체크아웃 밖에 저장하며 같은 로컬 저장소의 워크트리들은 공유합니다. 별도 클론이나 기기 간 동기화는 제공하지 않습니다.
+[맥락 스크립트](scripts/context/cli.ts)는 Node.js 22.18 이상인 22.x, 24.x 또는 26 이상과 Git으로 실행합니다. Node만 지원하며 빌드나 별도 npm 런타임 의존성 없이 TypeScript를 직접 실행합니다. 기본 데이터 루트는 macOS의 `~/Library/Application Support/loom`, Windows의 `%LOCALAPPDATA%\loom`, Linux의 `$XDG_DATA_HOME/loom` 또는 `~/.local/share/loom`입니다. 플러그인 설치 디렉터리와 Git 체크아웃 밖에 저장하며 같은 로컬 저장소의 워크트리들은 공유합니다. 별도 클론이나 기기 간 동기화는 제공하지 않습니다.
 
 샌드박스가 저장 경로에 대한 쓰기를 제한하면 에이전트가 실제 경로와 저장 목적을 설명해 실행 호스트의 기존 승인 절차로 권한을 요청합니다. 승인되면 같은 경로에서 저장을 재시도하고 결과를 다시 읽어 확인합니다.
 
@@ -81,14 +81,14 @@ tidy는 미처리 묶음을 읽고 BM25 검색으로 관련 원본을 찾은 뒤
 
 실제 작업에서 관찰한 실패와 누락을 근거로 지침이나 실행 수단을 고칩니다. 변경 후 같은 조건에서 결과가 나아졌는지 확인합니다. 형식 검사는 스킬의 판단이나 실행 효과를 증명하지 않습니다.
 
-이 저장소에서 제공하는 스크립트는 기본적으로 `.mjs`로 작성합니다. 개발 도구는 Node.js 22.12 이상인 22.x, 24.x 또는 26 이상에서 실행합니다. 개발 의존성은 `package.json`에 고정한 Yarn 버전과 `pnpm` 노드 링커를 사용합니다. 각 클론에서 의존성을 설치하고 Git 훅을 한 번 설정합니다.
+스크립트와 테스트는 TypeScript(`.ts`)로 작성하고 import에 `.ts` 확장자를 명시합니다. 실행 시 제거 가능한 타입 문법을 사용하며 개발 도구도 맥락 CLI와 같은 Node.js 버전을 지원합니다. 개발 의존성은 `package.json`에 고정한 Yarn 버전과 `pnpm` 노드 링커를 사용합니다. 각 클론에서 의존성을 설치하고 Git 훅을 한 번 설정합니다.
 
 ```bash
 yarn install --immutable
 yarn hooks:install
 ```
 
-Oxlint로 JavaScript를 검사하고 Oxfmt로 소스·설정·Markdown의 형식을 통일합니다. 과거 기록인 `.loom/`은 제외합니다. Lefthook은 커밋 전에 저장소 전체의 린트·포맷을 검사하며 파일을 수정하거나 스테이징하지 않습니다. `yarn lint:fix`와 `yarn format`으로 수정한 뒤 커밋할 변경을 직접 스테이징합니다.
+TypeScript로 타입을 검사하고 Oxlint로 린트, Oxfmt로 소스·설정·Markdown의 형식을 통일합니다. 과거 기록인 `.loom/`은 제외합니다. Lefthook은 커밋 전에 저장소 전체의 타입·린트·포맷을 검사하며 파일을 수정하거나 스테이징하지 않습니다. `yarn lint:fix`와 `yarn format`으로 수정한 뒤 커밋할 변경을 직접 스테이징합니다.
 
 검사와 테스트는 다음 명령으로 실행합니다.
 
@@ -96,10 +96,13 @@ Oxlint로 JavaScript를 검사하고 Oxfmt로 소스·설정·Markdown의 형식
 yarn lint
 yarn format:check
 yarn check
+yarn typecheck
 yarn test
 ```
 
-`yarn check`는 메타데이터, 설정의 일치, 로컬 파일·제목 참조를 확인합니다. `yarn test`는 커밋 훅과 별도로 Vitest 테스트를 한 번 실행합니다. 감시 모드는 `yarn test:watch`, 단일 파일 실행은 `yarn test scripts/context/records.test.mjs`를 사용합니다. 감시 모드에서는 맥락 CLI 소스나 실행 진입점이 바뀌면 별도 Node 프로세스를 호출하는 테스트를 포함해 전체 테스트를 다시 실행합니다.
+`yarn typecheck`는 스크립트, 테스트와 Vitest 설정을 엄격한 TypeScript 설정으로 검사하며 파일을 생성하지 않습니다. Node 직접 실행은 타입을 제거할 뿐 검사하지 않으므로 커밋 훅에서도 린트, 포맷과 함께 타입 검사를 실행합니다.
+
+`yarn check`는 메타데이터, 설정의 일치, 로컬 파일·제목 참조를 확인합니다. `yarn test`는 커밋 훅과 별도로 Vitest 테스트를 한 번 실행합니다. 감시 모드는 `yarn test:watch`, 단일 파일 실행은 `yarn test scripts/context/records.test.ts`를 사용합니다. 감시 모드에서는 맥락 CLI 소스나 실행 진입점이 바뀌면 별도 Node 프로세스를 호출하는 테스트를 포함해 전체 테스트를 다시 실행합니다.
 
 실제 작업에서는 목표와 범위를 지켰는지, 필요한 확인을 수행했는지, 결과에 증거가 있는지를 과정과 산출물에서 확인합니다. 스킬 적용 과정의 설명만으로 성공을 판정하지 않습니다.
 

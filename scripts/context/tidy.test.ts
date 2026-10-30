@@ -1,15 +1,16 @@
+import type { Fixture } from "./testing.ts";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { calculateTidyStatus } from "./consolidation.mjs";
+import { calculateTidyStatus } from "./consolidation.ts";
 
-import { fixture, git, invoke, run, concurrentRequest } from "./testing.mjs";
+import { fixture, git, invoke, run, concurrentRequest } from "./testing.ts";
 
-function record(project, work, text, source = text) {
+function record(project: Fixture, work: string, text: string, source = text) {
   return run(project, ["record", "--work", work, "--source", source], text);
 }
 
-function memory(id, text, sources, overrides = {}) {
+function memory(id: string, text: string, sources: string[], overrides = {}) {
   return {
     id,
     scope: { type: "project" },
@@ -123,7 +124,7 @@ test("tidy publishes grounded changes while preserving raw records, other work, 
   expect(resumed.memories[0].text).toBe("Send daily records through stdin.");
   expect(resumed.memories[0].supersedes).toStrictEqual([old.ref]);
   expect(resumed.work.goal).toBe("Save context without checkout changes.");
-  expect(resumed.pending.map(({ ref }) => ref)).toStrictEqual([arrived.ref]);
+  expect(resumed.pending.map(({ ref }: { ref: string }) => ref)).toStrictEqual([arrived.ref]);
   expect(run(project, ["read", "--ref", old.ref]).text).toBe(old.text);
   expect(run(project, ["recall", "--work", "other"]).work.progress).toBe(other.text);
   expect(git(project.repo, "status", "--porcelain")).toBe("");
@@ -191,8 +192,8 @@ test("bounded tidy batches never skip remaining records or convert uncertainty i
     "An experiment remains inconclusive.",
   ].map((text) => record(project, "experiment", text));
   const first = run(project, ["tidy", "prepare", "--limit", "2"]);
-  expect(first.records.map(({ ref }) => ref)).toStrictEqual(
-    notes.slice(0, 2).map(({ ref }) => ref),
+  expect(first.records.map(({ ref }: { ref: string }) => ref)).toStrictEqual(
+    notes.slice(0, 2).map(({ ref }: { ref: string }) => ref),
   );
   expect(first.remaining).toBe(1);
   run(project, ["tidy", "apply"], {
@@ -207,10 +208,10 @@ test("bounded tidy batches never skip remaining records or convert uncertainty i
   expect(run(project, ["recall"]).memories).toStrictEqual([]);
   const resumed = run(project, ["recall", "--work", "experiment"]);
   expect(resumed.memories[0].status).toBe("unresolved");
-  expect(resumed.pending.map(({ ref }) => ref)).toStrictEqual([notes[2].ref]);
-  expect(run(project, ["tidy", "prepare"]).records.map(({ ref }) => ref)).toStrictEqual([
-    notes[2].ref,
-  ]);
+  expect(resumed.pending.map(({ ref }: { ref: string }) => ref)).toStrictEqual([notes[2].ref]);
+  expect(
+    run(project, ["tidy", "prepare"]).records.map(({ ref }: { ref: string }) => ref),
+  ).toStrictEqual([notes[2].ref]);
 });
 
 test("snapshot hashes define the processed batch without a duplicate cursor or reference list", (t) => {
@@ -229,7 +230,9 @@ test("snapshot hashes define the processed batch without a duplicate cursor or r
   const snapshot = JSON.parse(readFileSync(snapshotPath, "utf8"));
   expect(Object.hasOwn(snapshot, "cursor")).toBe(false);
   expect(Object.hasOwn(snapshot, "refs")).toBe(false);
-  expect(Object.keys(snapshot.hashes)).toStrictEqual(prepared.slice(0, 2).map(({ ref }) => ref));
+  expect(Object.keys(snapshot.hashes)).toStrictEqual(
+    prepared.slice(0, 2).map(({ ref }: { ref: string }) => ref),
+  );
   snapshot.hashes = Object.fromEntries(Object.entries(snapshot.hashes).reverse());
   writeFileSync(snapshotPath, JSON.stringify(snapshot));
   const arrived = record(project, "storage", "Arrived after preparation.");
@@ -239,9 +242,9 @@ test("snapshot hashes define the processed batch without a duplicate cursor or r
     checkpoint: {},
     note: { earlier: 1, storage: 2 },
   });
-  expect(run(project, ["recall", "--work", "storage"]).pending.map(({ ref }) => ref)).toStrictEqual(
-    [prepared[2].ref, arrived.ref],
-  );
+  expect(
+    run(project, ["recall", "--work", "storage"]).pending.map(({ ref }: { ref: string }) => ref),
+  ).toStrictEqual([prepared[2].ref, arrived.ref]);
   expect(run(project, ["tidy", "apply"], { snapshot: batch.snapshot }).revision).toBe(
     applied.revision,
   );
@@ -323,8 +326,11 @@ test("a partial tidy preserves existing agreements and leaves unreviewed origina
     memories: [memory("first", "First constraint.", [batch.records[0].ref])],
   });
   const resumed = run(project, ["recall"]);
-  expect(resumed.memories.map(({ id }) => id).sort()).toStrictEqual(["first", "second"]);
-  expect(resumed.pending.map(({ ref }) => ref)).toStrictEqual(["memory:second@1"]);
+  expect(resumed.memories.map(({ id }: { id: string }) => id).sort()).toStrictEqual([
+    "first",
+    "second",
+  ]);
+  expect(resumed.pending.map(({ ref }: { ref: string }) => ref)).toStrictEqual(["memory:second@1"]);
 });
 
 test("a tidy with no changes preserves existing memories and exposes their original sources", (t) => {
@@ -373,7 +379,9 @@ test("legacy adoption preserves the latest value known to prepare and leaves lat
   const recalled = run(project, ["recall"]);
   expect(recalled.memories[0]?.text).toBe("Current agreement.");
   expect(recalled.memories[0].sources).toStrictEqual(["memory:current-rule@2"]);
-  expect(recalled.pending.map(({ ref }) => ref)).toStrictEqual(["memory:current-rule@3"]);
+  expect(recalled.pending.map(({ ref }: { ref: string }) => ref)).toStrictEqual([
+    "memory:current-rule@3",
+  ]);
   expect(recalled.tidy.pendingRecords).toBe(1);
 });
 
@@ -461,7 +469,9 @@ test("retiring a derived memory preserves its original source and unrelated memo
     snapshot: next.snapshot,
     retire: [{ id: "duplicate", reason: "Merged into first.", sources: [merge.ref] }],
   });
-  expect(run(project, ["recall"]).memories.map(({ id }) => id)).toStrictEqual(["first"]);
+  expect(run(project, ["recall"]).memories.map(({ id }: { id: string }) => id)).toStrictEqual([
+    "first",
+  ]);
   expect(run(project, ["read", "--ref", note.ref]).text).toBe(note.text);
 });
 
@@ -625,7 +635,7 @@ test("tidy is due by pending volume or age while processed records do not trigge
   const cursor = { memory: {}, checkpoint: {}, note: {} };
   const view = { revision: 0, cursor };
   const fresh = Array.from({ length: 20 }, (_, i) => ({
-    kind: "note",
+    kind: "note" as const,
     id: "ongoing",
     revision: i + 1,
     recordedAt: new Date(now - 1000).toISOString(),
@@ -649,14 +659,18 @@ test("archive search can cross work boundaries, while an explicit work scope nar
   const project = fixture(t);
   const first = record(project, "first", "A storage constraint.");
   const second = record(project, "second", "Another storage constraint.");
-  const all = run(project, ["search", "--query", "storage"]).results.map(({ ref }) => ref);
+  const all = run(project, ["search", "--query", "storage"]).results.map(
+    ({ ref }: { ref: string }) => ref,
+  );
   expect(new Set(all)).toStrictEqual(new Set([first.ref, second.ref]));
   expect(
-    run(project, ["search", "--query", "storage", "--work", "first"]).results.map(({ ref }) => ref),
+    run(project, ["search", "--query", "storage", "--work", "first"]).results.map(
+      ({ ref }: { ref: string }) => ref,
+    ),
   ).toStrictEqual([first.ref]);
 });
 
-function concurrent(project, work, text) {
+function concurrent(project: Fixture, work: string, text: string) {
   return concurrentRequest(project, ["record", "--work", work, "--source", text], text);
 }
 
@@ -672,7 +686,9 @@ test("concurrent daily writers preserve all observations without sharing work st
   const second = run(project, ["recall", "--work", "second"]);
   expect(first.pending.length).toBe(4);
   expect(second.pending.length).toBe(4);
-  expect(new Set([...first.pending, ...second.pending].map(({ ref }) => ref)).size).toBe(8);
+  expect(
+    new Set([...first.pending, ...second.pending].map(({ ref }: { ref: string }) => ref)).size,
+  ).toBe(8);
 });
 
 test("concurrent tidy writers have one winner instead of overwriting each other's interpretation", async (t) => {

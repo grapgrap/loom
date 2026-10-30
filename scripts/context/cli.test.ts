@@ -1,18 +1,27 @@
+import type { Fixture } from "./testing.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 
-import { fixture, git, invoke as invokeCli, run as runCli, concurrentRequest } from "./testing.mjs";
+import { fixture, git, invoke as invokeCli, run as runCli, concurrentRequest } from "./testing.ts";
 
-const cliPath = fileURLToPath(new URL("cli.mjs", import.meta.url));
+const cliPath = fileURLToPath(new URL("cli.ts", import.meta.url));
 
-function invoke(project, command, { args = [], input, cwd } = {}) {
+function invoke(
+  project: Fixture,
+  command: string,
+  { args = [], input, cwd }: { args?: string[]; input?: unknown; cwd?: string } = {},
+) {
   return invokeCli(project, [command, ...args], input, cwd);
 }
 
-function run(project, command, { args = [], input, cwd } = {}) {
+function run(
+  project: Fixture,
+  command: string,
+  { args = [], input, cwd }: { args?: string[]; input?: unknown; cwd?: string } = {},
+) {
   return runCli(project, [command, ...args], input, cwd);
 }
 
@@ -33,7 +42,7 @@ function checkpoint(overrides = {}) {
     goal: "Add context recall to Loom.",
     status: "active",
     progress: "Storage behavior has been verified; skill integration remains.",
-    evidence: ["yarn test scripts/context/cli.test.mjs: storage checks passed"],
+    evidence: ["yarn test scripts/context/cli.test.ts: storage checks passed"],
     next: ["Connect recall and checkpoint commands to work."],
     source: { type: "agent", reference: "Chat: observed CLI results." },
     ...overrides,
@@ -84,10 +93,12 @@ test("separate clones and unrelated work scopes do not share memories", (t) => {
     args: ["--id", "second-work"],
     input: memory({ scope: { type: "work", id: "second" } }),
   });
-  expect(run(project, "recall").memories.map(({ id }) => id)).toStrictEqual(["shared"]);
+  expect(run(project, "recall").memories.map(({ id }: { id: string }) => id)).toStrictEqual([
+    "shared",
+  ]);
   expect(
     run(project, "recall", { args: ["--work", "first"] })
-      .memories.map(({ id }) => id)
+      .memories.map(({ id }: { id: string }) => id)
       .sort(),
   ).toStrictEqual(["first-work", "shared"]);
   expect(run(project, "recall", { cwd: clone }).memories).toStrictEqual([]);
@@ -290,7 +301,11 @@ test(
   },
 );
 
-function invokeConcurrent(project, command, { args, input }) {
+function invokeConcurrent(
+  project: Fixture,
+  command: string,
+  { args, input }: { args: string[]; input: unknown },
+) {
   return concurrentRequest(project, [command, ...args], input);
 }
 

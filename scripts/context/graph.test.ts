@@ -1,18 +1,19 @@
+import type { Fixture } from "./testing.ts";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "vitest";
-import { fixture, invoke, run } from "./testing.mjs";
+import { fixture, invoke, run } from "./testing.ts";
 
-function note(project, text, work = "storage") {
+function note(project: Fixture, text: string, work = "storage") {
   return run(project, ["record", "--work", work, "--source", "User agreement"], text);
 }
 
-function entity(id, source) {
+function entity(id: string, source: string) {
   return { id, kind: "concept", name: id, sources: [source] };
 }
 
-function statement(id, subject, object, source, overrides = {}) {
+function statement(id: string, subject: string, object: string, source: string, overrides = {}) {
   return {
     id,
     subject,
@@ -26,7 +27,7 @@ function statement(id, subject, object, source, overrides = {}) {
   };
 }
 
-function publish(project, graph, extra = {}) {
+function publish(project: Fixture, graph: unknown, extra = {}) {
   const batch = run(project, ["tidy", "prepare"]);
   const input = { snapshot: batch.snapshot, graph, ...extra };
   return { input, result: run(project, ["tidy", "apply"], input) };
@@ -106,16 +107,22 @@ test("replacement is published at tidy, preserves the old statement, and reports
     },
   );
   assert.deepEqual(
-    run(project, ["graph"]).statements.map(({ id }) => id),
+    run(project, ["graph"]).statements.map(({ id }: { id: string }) => id),
     ["new-choice"],
   );
   const historical = run(project, ["graph", "--history"]);
-  assert.equal(historical.statements.find(({ id }) => id === old.id).status, "superseded");
-  assert.deepEqual(historical.statements.find(({ id }) => id === old.id).supersededBy, [
-    "new-choice",
-  ]);
+  assert.equal(
+    historical.statements.find(({ id }: { id: string }) => id === old.id).status,
+    "superseded",
+  );
   assert.deepEqual(
-    result.report.changes.map(({ kind, id, action }) => [kind, id, action]),
+    historical.statements.find(({ id }: { id: string }) => id === old.id).supersededBy,
+    ["new-choice"],
+  );
+  assert.deepEqual(
+    result.report.changes.map(
+      ({ kind, id, action }: { kind: string; id: string; action: string }) => [kind, id, action],
+    ),
     [
       ["memory", "writer-policy", "updated"],
       ["work", "storage", "added"],
@@ -143,16 +150,16 @@ test("graph queries preserve paths and scope, and limits disclose omitted statem
   });
   const shallow = run(project, ["graph", "--entity", "a", "--depth", "1"]);
   assert.deepEqual(
-    shallow.statements.map(({ id }) => id),
+    shallow.statements.map(({ id }: { id: string }) => id),
     ["a-b"],
   );
   const deep = run(project, ["graph", "--entity", "a", "--depth", "2"]);
   assert.deepEqual(
-    deep.paths.find(({ statements }) => statements.length === 2),
+    deep.paths.find(({ statements }: { statements: string[] }) => statements.length === 2),
     { entities: ["a", "b", "c"], statements: ["a-b", "b-c"] },
   );
   assert.equal(
-    deep.statements.some(({ id }) => id === "other-c"),
+    deep.statements.some(({ id }: { id: string }) => id === "other-c"),
     false,
   );
   assert.equal(run(project, ["graph", "--work", "other"]).statements.length, 3);
@@ -223,7 +230,7 @@ test("inferences keep premises, and forgetting a premise removes dependent graph
   const queried = run(project, ["graph", "--query", "interpretation", "--limit", "1"]);
   assert.equal(queried.premises[0].id, "premise");
   assert.equal(
-    queried.sources.some(({ ref }) => ref === source.ref),
+    queried.sources.some(({ ref }: { ref: string }) => ref === source.ref),
     true,
   );
   const location = run(project, ["location"]);
@@ -248,7 +255,7 @@ test("literal objects, unresolved statements, retirement, and no-change reports 
     ],
   });
   assert.equal(
-    initial.report.changes.find(({ kind }) => kind === "statement").after.status,
+    initial.report.changes.find(({ kind }: { kind: string }) => kind === "statement").after.status,
     "unresolved",
   );
   note(project, "Reviewed the records without changing the graph.");
@@ -324,11 +331,13 @@ test("a replaced premise marks dependent inferences for review and includes them
     ],
   });
   for (const id of ["conclusion", "followup"]) {
-    const statement = result.graph.statements.find((statement) => statement.id === id);
+    const statement = result.graph.statements.find(
+      (statement: { id: string }) => statement.id === id,
+    );
     assert.equal(statement.status, "unresolved");
     assert.equal(statement.reviewNeeded.length, 1);
     assert.equal(
-      result.report.changes.find((change) => change.id === id).after.status,
+      result.report.changes.find((change: { id: string }) => change.id === id).after.status,
       "unresolved",
     );
   }
@@ -402,14 +411,14 @@ test("an unresolved replacement cannot remove an accepted decision, including ch
     {
       name: "retired premise",
       status: "active",
-      change: (ref) => ({
+      change: (ref: string) => ({
         retire: [{ id: "premise", reason: "No longer applies.", sources: [ref] }],
       }),
     },
     {
       name: "superseded premise",
       status: "active",
-      change: (ref) => ({
+      change: (ref: string) => ({
         statements: [statement("new-premise", "a", "b", ref, { supersedes: ["premise"] })],
       }),
     },
@@ -427,7 +436,7 @@ test("an unresolved replacement cannot remove an accepted decision, including ch
     const before = run(project, ["graph"]);
     const next = note(project, "A replacement inferred from the premise.");
     const batch = run(project, ["tidy", "prepare"]);
-    const premiseChanges = scenario.change(next.ref);
+    const premiseChanges: { statements?: unknown[] } = scenario.change(next.ref);
     const replacement = statement("replacement", "a", "b", next.ref, {
       origin: { kind: "inferred", premises: ["premise"] },
       supersedes: ["accepted"],
@@ -441,15 +450,18 @@ test("an unresolved replacement cannot remove an accepted decision, including ch
     assert.match(rejected.stderr, /unresolved statement cannot supersede/i, scenario.name);
     assert.deepEqual(run(project, ["graph"]), before, scenario.name);
     assert.deepEqual(
-      run(project, ["recall", "--work", "storage"]).pending.map(({ ref }) => ref),
+      run(project, ["recall", "--work", "storage"]).pending.map(({ ref }: { ref: string }) => ref),
       [next.ref],
     );
 
     graph.statements[0] = { ...replacement, supersedes: [] };
     const accepted = run(project, ["tidy", "apply"], { snapshot: batch.snapshot, graph });
-    assert.equal(accepted.graph.statements.find(({ id }) => id === "accepted").status, "active");
     assert.equal(
-      accepted.graph.statements.find(({ id }) => id === "replacement").status,
+      accepted.graph.statements.find(({ id }: { id: string }) => id === "accepted").status,
+      "active",
+    );
+    assert.equal(
+      accepted.graph.statements.find(({ id }: { id: string }) => id === "replacement").status,
       "unresolved",
     );
   }
@@ -471,10 +483,16 @@ test("a sequence of accepted replacements in one batch preserves its final decis
     const { result } = publish(project, {
       statements: reverse ? statements.toReversed() : statements,
     });
-    assert.equal(result.graph.statements.find(({ id }) => id === "initial").status, "superseded");
-    assert.equal(result.graph.statements.find(({ id }) => id === "middle").status, "superseded");
+    assert.equal(
+      result.graph.statements.find(({ id }: { id: string }) => id === "initial").status,
+      "superseded",
+    );
+    assert.equal(
+      result.graph.statements.find(({ id }: { id: string }) => id === "middle").status,
+      "superseded",
+    );
     assert.deepEqual(
-      run(project, ["graph"]).statements.map(({ id }) => id),
+      run(project, ["graph"]).statements.map(({ id }: { id: string }) => id),
       ["final"],
     );
   }
@@ -523,7 +541,7 @@ test("a work-scoped legacy memory establishes the work for graph statements and 
   assert.equal(recalled.memories[0].text, "An existing work agreement.");
   assert.equal(recalled.work.id, scope.id);
   assert.deepEqual(
-    recalled.graph.statements.map(({ id }) => id),
+    recalled.graph.statements.map(({ id }: { id: string }) => id),
     ["legacy-rule"],
   );
   assert.deepEqual(recalled.pending, []);
@@ -550,13 +568,16 @@ test("resubmitting an unchanged replacement does not prevent later review of its
     statements: [replacement],
     retire: [{ id: "premise", reason: retired.text, sources: [retired.ref] }],
   });
-  assert.equal(result.graph.statements.find(({ id }) => id === "initial").status, "superseded");
   assert.equal(
-    result.graph.statements.find(({ id }) => id === replacement.id).status,
+    result.graph.statements.find(({ id }: { id: string }) => id === "initial").status,
+    "superseded",
+  );
+  assert.equal(
+    result.graph.statements.find(({ id }: { id: string }) => id === replacement.id).status,
     "unresolved",
   );
   assert.deepEqual(
-    result.report.changes.map(({ id }) => id),
+    result.report.changes.map(({ id }: { id: string }) => id),
     ["accepted-replacement", "premise"],
   );
 });

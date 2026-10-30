@@ -1,6 +1,6 @@
 # 공통 업무 CLI 계약
 
-`work`는 단독 업무와 위임 업무에 같은 목표·범위·완료 조건·보고 구조를 사용한다. 이 CLI에 등록된 업무는 managed: true로 표시된다. `orchestrate`는 이 업무들을 연결하고 배정하며 결과를 수락한다. 아래 명령은 [작업 맥락](context.md)의 CLI·프로젝트·데이터 루트를 그대로 사용한다. 명령 이름 앞에 `node "<plugin-root>/scripts/context/cli.mjs"`를 붙인다.
+`work`는 단독 업무와 위임 업무에 같은 목표·범위·완료 조건·보고 구조를 사용한다. 이 CLI에 등록된 업무는 managed: true로 표시된다. `orchestrate`는 이 업무들을 연결하고 배정하며 결과를 수락한다. 아래 명령은 [작업 맥락](context.md)의 CLI·프로젝트·데이터 루트를 그대로 사용한다. 명령 이름 앞에 `node "<plugin-root>/scripts/context/cli.ts"`를 붙인다.
 
 ## 업무를 정의하고 조회한다
 

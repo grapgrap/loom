@@ -1,17 +1,32 @@
+import type { Scope } from "./model.ts";
+import type { Fixture } from "./testing.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { fixture, git, run } from "./testing.mjs";
+import { fixture, git, run } from "./testing.ts";
 
-function recordDaily(project, work, text, source, cwd = project.repo) {
+function recordDaily(
+  project: Fixture,
+  work: string,
+  text: string,
+  source: string | undefined,
+  cwd = project.repo,
+) {
   return run(project, ["record", "--work", work, "--source", source ?? text], text, cwd);
 }
 
-function graphEntity(id, source) {
+function graphEntity(id: string, source: string) {
   return { id, kind: "concept", name: id, sources: [source] };
 }
 
-function graphStatement(id, subject, object, scope, source, overrides = {}) {
+function graphStatement(
+  id: string,
+  subject: string,
+  object: string,
+  scope: Scope,
+  source: string,
+  overrides = {},
+) {
   return {
     id,
     subject,
@@ -25,7 +40,7 @@ function graphStatement(id, subject, object, scope, source, overrides = {}) {
   };
 }
 
-function scopedMemory(id, scope, text, source, overrides = {}) {
+function scopedMemory(id: string, scope: Scope, text: string, source: string, overrides = {}) {
   return {
     id,
     scope,
@@ -36,7 +51,7 @@ function scopedMemory(id, scope, text, source, overrides = {}) {
   };
 }
 
-function publish(project, graph, extra = {}, cwd = project.repo) {
+function publish(project: Fixture, graph: unknown, extra = {}, cwd = project.repo) {
   const batch = run(project, ["tidy", "prepare"], undefined, cwd);
   const result = run(
     project,
@@ -66,7 +81,7 @@ test("a question-only client derives work scope from search before reading curre
   const candidateWork = search.results[0].scope.id;
   expect(candidateWork).toBe("storage-retrieval");
 
-  const scope = { type: "work", id: candidateWork };
+  const scope: Scope = { type: "work", id: candidateWork };
   publish(
     project,
     {
@@ -90,12 +105,14 @@ test("a question-only client derives work scope from search before reading curre
   );
 
   const recalled = run(project, ["recall", "--work", candidateWork]);
-  expect(recalled.memories.map(({ id }) => id)).toStrictEqual(["storage-policy"]);
+  expect(recalled.memories.map(({ id }: { id: string }) => id)).toStrictEqual(["storage-policy"]);
   expect(recalled.memories[0].sources).toStrictEqual([current.ref]);
   const graph = run(project, ["graph", "--work", candidateWork]);
-  expect(graph.statements.map(({ id }) => id)).toStrictEqual(["current-storage-policy"]);
+  expect(graph.statements.map(({ id }: { id: string }) => id)).toStrictEqual([
+    "current-storage-policy",
+  ]);
   expect(graph.statements[0].scope).toStrictEqual(scope);
-  expect(graph.sources.map(({ ref }) => ref)).toContain(current.ref);
+  expect(graph.sources.map(({ ref }: { ref: string }) => ref)).toContain(current.ref);
 });
 
 test("same Git common-dir keeps contradictory worktree observations with version conditions and sources", (t) => {
@@ -153,8 +170,8 @@ test("same Git common-dir keeps contradictory worktree observations with version
     `code version ${newerCommit}`,
     newerWorktree,
   );
-  const olderScope = { type: "work", id: "parser-v1" };
-  const newerScope = { type: "work", id: "parser-v2" };
+  const olderScope: Scope = { type: "work", id: "parser-v1" };
+  const newerScope: Scope = { type: "work", id: "parser-v2" };
   publish(project, {
     entities: [
       graphEntity("parser", older.ref),
@@ -212,10 +229,12 @@ test("a new decision remains pending until tidy replaces the adopted statement a
     "Replacement decision",
   );
   const beforeReplacement = run(project, ["recall", "--work", "storage"]);
-  expect(beforeReplacement.pending.map(({ ref }) => ref)).toStrictEqual([newDecision.ref]);
+  expect(beforeReplacement.pending.map(({ ref }: { ref: string }) => ref)).toStrictEqual([
+    newDecision.ref,
+  ]);
   expect(run(project, ["graph", "--work", "storage"]).statements[0].id).toBe(oldStatement.id);
   const batch = run(project, ["tidy", "prepare"]);
-  expect(batch.records.map(({ ref }) => ref)).toStrictEqual([newDecision.ref]);
+  expect(batch.records.map(({ ref }: { ref: string }) => ref)).toStrictEqual([newDecision.ref]);
 
   const newStatement = graphStatement(
     "storage-choice-v2",
@@ -237,12 +256,14 @@ test("a new decision remains pending until tidy replaces the adopted statement a
   });
 
   const current = run(project, ["graph", "--work", "storage"]);
-  expect(current.statements.map(({ id }) => id)).toStrictEqual([newStatement.id]);
+  expect(current.statements.map(({ id }: { id: string }) => id)).toStrictEqual([newStatement.id]);
   const history = run(project, ["graph", "--work", "storage", "--history"]);
-  expect(history.statements.find(({ id }) => id === oldStatement.id)).toMatchObject({
-    status: "superseded",
-    supersededBy: [newStatement.id],
-  });
+  expect(history.statements.find(({ id }: { id: string }) => id === oldStatement.id)).toMatchObject(
+    {
+      status: "superseded",
+      supersededBy: [newStatement.id],
+    },
+  );
   expect(run(project, ["read", "--ref", old.ref]).text).toBe(old.text);
   expect(run(project, ["recall", "--work", "storage"]).pending).toStrictEqual([]);
 });
