@@ -44,7 +44,9 @@ function restoreMemories(archive, history, presentation) {
   const memories = current.memories
     .filter(
       (memory) =>
-        memory.status !== "retired" && memory.sources.every((ref) => availableRefs.has(ref)),
+        memory.status !== "retired" &&
+        memory.status !== "absorbed" &&
+        memory.sources.every((ref) => availableRefs.has(ref)),
     )
     .map((memory) => presentEntry(memory, { ...presentation, collection: "memories" }));
   const consolidatedIds = new Set(current.memories.map(({ id }) => id));

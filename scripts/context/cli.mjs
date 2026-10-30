@@ -30,7 +30,7 @@ Commands:
   search      Rank original records with BM25: --query <text>.
   read        Read an exact original record: --ref <kind:id@revision>.
   graph       Read statements and their evidence paths: --entity <id> or --query <text>.
-  tidy prepare  Freeze an unprocessed batch for the tidy skill.
+  tidy prepare  Freeze an unprocessed batch; --revisit also selects existing memories.
   tidy apply    Apply grounded changes from JSON stdin using the prepared snapshot.
   tidy status   Show pending count and whether consolidation is due.
   remember    Create or revise a memory: --id <id>, JSON input.
@@ -44,6 +44,7 @@ Options:
   --query <text>     Filter recalled memories by words in current text and reason.
   --history         Include prior revisions in recall; current revisions are the default.
   --full            Include all work summaries and graph context in recall.
+  --revisit         Reconsider existing memories, optionally scoped by --work and --query.
   --tree            Include descendants in work show.
   --entity <id>      Start graph traversal at this entity.
   --depth <n>        Graph traversal depth, 1-5 (default: 2).
@@ -79,6 +80,7 @@ function parseCommandLine() {
       input: { type: "string" },
       history: { type: "boolean" },
       full: { type: "boolean" },
+      revisit: { type: "boolean" },
       help: { type: "boolean" },
       source: { type: "string" },
       by: { type: "string" },
@@ -107,7 +109,7 @@ function parseCommandLine() {
     search: ["query", "work", "limit"],
     read: ["ref"],
     graph: ["work", "query", "history", "limit", "entity", "depth"],
-    "tidy:prepare": ["limit", "offset"],
+    "tidy:prepare": ["limit", "offset", "revisit", "work", "query"],
     "tidy:apply": ["input"],
     "tidy:status": [],
     "work:show": ["work", "tree", "history"],
@@ -168,6 +170,12 @@ function parseCommandLine() {
   if (command === "search" && !options.query?.trim())
     throw new Error("search requires --query <text>");
   if (command === "read" && !options.ref) throw new Error("read requires --ref <kind:id@revision>");
+  if (
+    command === "tidy:prepare" &&
+    !options.revisit &&
+    (options.work !== undefined || options.query !== undefined)
+  )
+    throw new Error("tidy prepare --work and --query require --revisit");
   if (command === "forget") {
     if (options.ref !== undefined) {
       const note = parseSourceReference(options.ref);
@@ -267,7 +275,7 @@ async function runCli() {
       result = await readSource(location, options.ref);
       break;
     case "tidy:prepare":
-      result = await prepareTidyBatch(location, options.limit, options.offset);
+      result = await prepareTidyBatch(location, options);
       break;
     case "tidy:apply":
       result = await applyTidyChanges(location, writeInput);

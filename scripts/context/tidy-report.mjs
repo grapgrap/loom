@@ -13,7 +13,7 @@ function collectionChanges(kind, previous, current) {
         : newEntry === null
           ? "removed"
           : newEntry.status !== oldEntry.status &&
-              ["retired", "superseded"].includes(newEntry.status)
+              ["retired", "superseded", "absorbed"].includes(newEntry.status)
             ? newEntry.status
             : "updated";
     return [{ kind, id, action, before: oldEntry, after: newEntry }];

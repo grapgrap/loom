@@ -10,7 +10,7 @@ tidy apply에는 원본을 검토해 결정한 기억·그래프와 기존 업�
 node "<plugin-root>/scripts/context/cli.mjs" tidy prepare --cwd "<checkout>" --limit 20
 ```
 
-- `snapshot`: 반영할 때 전달할 준비 결과의 ID다. 미처리 기록이 없으면 `null`이다.
+- `snapshot`: 반영할 때 전달할 준비 결과의 ID다. 미처리 기록과 선택한 재검토 기억이 없으면 `null`이다.
 - `records`: 이번 묶음에서 모두 검토할 원본이다. remember·checkpoint·work의 이전 리비전도 포함한다.
 - `current`: 보존하거나 갱신할 현재 기억과 업무 상태다. `current.memories`에는 `remember`로 저장한 기억도 원본 ref와 함께 포함한다.
 - `current.retired`: 이미 현재 기억에서 제외한 항목의 ID·범위·제외 이유다. 과거 원본을 찾았다는 이유만으로 다시 활성화하지 않는다.
@@ -24,9 +24,13 @@ node "<plugin-root>/scripts/context/cli.mjs" tidy prepare --cwd "<checkout>" --l
 
 첫 정리에서도 변경하지 않은 기존 기억은 보존한다. 기억을 보존하는 것과 원본을 검토 완료로 표시하는 것은 별개다. 준비 후 바뀐 원본은 `recall`의 `pending`에서 확인한다.
 
+기존 기억을 재검토하려면 `tidy prepare --revisit`을 사용한다. 새 원본이 없어도 `current.memories`가 있으면 snapshot을 만든다. `--query`는 원본과 기억의 검색 텍스트에 모든 검색어가 포함된 항목을 선택하고, `--work`는 프로젝트 공통과 해당 업무로 범위를 한정한다. 두 필터는 `--revisit`과 함께 사용한다. `--work`가 없으면 모든 업무의 기억을 주제로 찾을 수 있다. 이 선택은 패턴을 자동으로 도출하거나 기억의 유효성을 판정하지 않는다.
+
+재검토 snapshot은 버전 2이며 `memoryIds`는 해당 페이지의 `current.memories` ID다. 구 CLI가 새 수용 요청을 무시하고 반영하지 않도록 재검토 snapshot부터 새 형식을 사용한다. `--limit`과 `--offset`은 선택된 기억의 페이지에 적용한다. `absorb.from`에는 그 snapshot에 포함된 기억만 쓸 수 있으므로 여러 페이지의 수용은 각각 준비하고 반영한다. 앞선 반영으로 목록이 바뀌면 다음 페이지의 범위를 다시 확인한다. 기존 기준 리비전 검사와 원본 해시 검사를 재사용한다.
+
 ## 변경분
 
-입력에는 `snapshot`과 변경할 항목만 담는다. `memories`, `works`, `retire`, `graph`는 생략할 수 있으며, 생략한 기존 항목은 유지된다. 원본을 모두 검토했지만 변경할 내용이 없으면 `snapshot`만 반영해 해당 묶음을 처리 완료로 표시한다.
+입력에는 `snapshot`과 변경할 항목만 담는다. `memories`, `works`, `retire`, `absorb`, `graph`는 생략할 수 있으며, 생략한 기존 항목은 유지된다. 원본을 모두 검토했지만 변경할 내용이 없으면 `snapshot`만 반영해 해당 묶음을 처리 완료로 표시한다.
 
 `graph`의 대상·진술·제외 요청은 [그래프 계약](../../work/references/context-graph.md)에 따라 구성한다. 기억·업무 상태와 같은 기준 리비전·원본 범위에서 검사하고 한 번에 저장한다.
 
@@ -50,6 +54,45 @@ works는 기존 checkpoint·record 업무의 요약만 갱신한다. managed ID�
 업무 상태에는 준비 당시 확인한 체크포인트 리비전도 보존한다. 명시적으로 반영한 최신 판단을 이후 묶음의 과거 체크포인트가 덮어쓰지 않으며, 준비 후 작성한 새 체크포인트는 다음 조회에서 우선 반영된다.
 
 `retire`의 각 항목은 `{"id":"기억-id","reason":"제외 이유","sources":["원본-ref"]}`다. 해당 기억을 현재 조회에서 제외하고 원본과 정리 이력은 보존한다. 원본을 삭제할 때는 `forget`을 사용한다.
+
+## 경험을 다른 기억에 수용한다
+
+`absorb`는 기존 기억의 경험을 다른 기억에 수용하는 연산이다. 모델은 적용 조건과 판단 기준을 담은 패턴, 별도로 필요한 현재 계약이나 예외를 `memories`에 작성한다. CLI는 의미의 포괄성을 판단하지 않으며 선택한 ID와 근거, 현재 상태와 변경의 일관성을 검사한다.
+
+```json
+{
+  "snapshot": "<snapshot-id>",
+  "memories": [
+    {
+      "id": "retry-boundary",
+      "scope": { "type": "project" },
+      "text": "실행 이력 저장에서 앱의 배치 재시도와 SDK 요청 재시도를 구분한다.",
+      "reason": "두 계층의 실패 전달 계약이 다르다.",
+      "sources": ["note:storage@1", "note:storage@2"]
+    },
+    {
+      "id": "sdk-current-contract",
+      "scope": { "type": "work", "id": "storage" },
+      "text": "현재 저장 구현은 SDK 기본 재시도를 유지한다.",
+      "reason": "현재 구현에 필요한 정확한 선택이다.",
+      "sources": ["note:storage@2"]
+    }
+  ],
+  "absorb": [
+    {
+      "from": ["app-retry-experience", "sdk-retry-experience"],
+      "into": ["retry-boundary", "sdk-current-contract"],
+      "reason": "경험을 패턴으로 수용하고 현재 계약은 구체적으로 남긴다."
+    }
+  ]
+}
+```
+
+`from`은 `--revisit` snapshot에서 선택한 기존 기억 ID, `into`는 이번 변경 뒤에 존재하는 `active` 기억 ID의 배열이다. 대상은 기존 기억이거나 같은 입력의 `memories`로 작성할 수 있다. 미확정 패턴만으로 기존 경험을 수용하지 않는다. 같은 기억을 한 변경에서 갱신, 퇴역 또는 수용 대상으로 중복 지정할 수 없으며, `into`를 같은 변경의 `from`으로 지정할 수도 없다. 잘못된 입력은 변경 전체를 거부한다.
+
+수용된 기억은 `absorbed` 상태로 ID, 적용 범위, 원본 ref와 `absorption: {into, reason}`만 남기고 현재 `text`와 `reason`은 제거한다. `recall`과 다음 `prepare`의 기억 목록에는 나오지 않으며, 기존 `remember` 원본이 남아 있어도 자동 복원하지 않는다. 새로운 관찰을 남길 때는 새 기억 ID를 쓴다. 수용된 기억과 관련된 실제 업무 상태는 변경하지 않는다.
+
+첫 수용 반영부터 정리 저장 형식은 버전 3이다. 이 CLI는 버전 1과 2도 읽으며, 수용 데이터에는 버전 3을 지원하는 CLI를 사용한다. 원본과 과거 정리본은 이 연산에서 삭제하지 않는다. 후속 정리본에는 수용된 옛 본문이 기억으로 복사되지 않지만, 이력과 원본에서 같은 세부를 찾을 수 있는 경우는 남는다.
 
 ref는 조회 결과의 note:업무-id@번호, memory:기억-id@리비전, checkpoint:업무-id@리비전, work:업무-id@리비전을 사용한다. 근거로 인용할 원본을 실제로 읽고 준비 시점까지 존재한 원본만 이번 결과에 연결한다. 새 업무의 상태와 정리 상태는 별도 리비전이며 tidy를 기다리지 않고 work show에서 현재 진행을 확인한다.
 
@@ -99,7 +142,7 @@ CLI는 원본 확인부터 반영까지 원본 삭제와 같은 잠금으로 보
 | `report.processed`       | 이번에 검토 완료로 반영한 원본 ref 배열.                                                                |
 | `report.remaining`       | 반영 시점에 남은 미처리 원본 수. 이후 새로 들어온 기록 수는 `recall`에서 확인한다.                      |
 | `report.changes`         | 실제 변경된 기억(`memory`)·업무(`work`)·대상(`entity`)·진술(`statement`)의 목록.                        |
-| 변경의 `id`, `action`    | 바뀐 항목과 `added`, `updated`, `retired`, `superseded` 등의 변화.                                      |
+| 변경의 `id`, `action`    | 바뀐 항목과 `added`, `updated`, `retired`, `absorbed`, `superseded` 등의 변화.                          |
 | 변경의 `before`, `after` | 변경 전후의 내용. 새 항목의 `before`는 `null`이다. 근거와 적용 조건, 추가 할 일도 이 내용에서 확인한다. |
 
 같은 `snapshot`·변경분을 직후 재시도하면 같은 리비전과 같은 리포트를 반환한다. 실패한 반영의 리포트는 만들지 않는다. 실제 변경이 없는 검토에도 `changes: []`와 처리한 범위를 반환한다. 사용자가 원본을 삭제하면 리포트에 남은 해당 내용과 연결도 함께 제거한다.

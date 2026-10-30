@@ -56,15 +56,22 @@ function validateConsolidatedMemoryFields(memory) {
   validateObject(memory, "memory");
   parseRecordId(memory.id);
   validateMemoryScope(memory.scope);
-  validateText(memory.text, "text");
-  validateText(memory.reason, "reason");
   validateRequiredSourceReferences(memory.sources, "sources");
   if (memory.supersedes !== undefined) validateSourceReferences(memory.supersedes, "supersedes");
+  if (memory.status === "absorbed") {
+    validateObject(memory.absorption, "absorption");
+    validateMemoryIds(memory.absorption.into, "absorption.into");
+    assertCondition(memory.absorption.into.length > 0, "Absorption needs a destination memory");
+    validateText(memory.absorption.reason, "absorption.reason");
+    return;
+  }
+  validateText(memory.text, "text");
+  validateText(memory.reason, "reason");
 }
 
 function validateConsolidatedMemory(memory) {
   validateConsolidatedMemoryFields(memory);
-  validateChoice(memory.status, ["active", "unresolved", "retired"], "status");
+  validateChoice(memory.status, ["active", "unresolved", "retired", "absorbed"], "status");
   if (memory.retirement !== undefined) {
     validateRetirementEvidence(memory.retirement);
   }
@@ -93,17 +100,19 @@ function validateMemoryRetirement(retirement) {
 
 export function parseTidySnapshot(snapshot) {
   validateObject(snapshot, "snapshot");
-  assertCondition(snapshot.version === 1, "Unsupported tidy snapshot version");
+  assertCondition([1, 2].includes(snapshot.version), "Unsupported tidy snapshot version");
   parseRecordId(snapshot.id);
   parseRevisionNumber(snapshot.baseRevision);
   validateRevisionCursor(snapshot.bounds);
+  if (snapshot.version === 2 || snapshot.memoryIds !== undefined)
+    validateMemoryIds(snapshot.memoryIds, "memoryIds");
   return snapshot;
 }
 
 export function parseConsolidationHistory(history) {
   validateObject(history, "history");
   validateArray(history.forgotten, "forgotten");
-  assertCondition([1, 2].includes(history.version), "Unsupported tidy store version");
+  assertCondition([1, 2, 3].includes(history.version), "Unsupported tidy store version");
   history.forgotten.forEach((id) => parseRecordId(id));
   validateRecordRevisions(history.revisions, (revision) => {
     if (revision.snapshot !== null) parseRecordId(revision.snapshot);
@@ -207,14 +216,42 @@ export function parseTidyChanges(input) {
     validateMemoryRetirement(retirement);
     return retirement;
   });
-  const memoryIds = [...changes.memories, ...changes.retire].map(({ id }) => id);
+  if (input.absorb !== undefined) {
+    validateArray(input.absorb, "absorb");
+    changes.absorb = input.absorb.map((absorption) => {
+      validateObject(absorption, "absorb entry");
+      const { from, into, reason } = absorption;
+      validateMemoryIds(from, "absorb.from");
+      validateMemoryIds(into, "absorb.into");
+      assertCondition(
+        from.length > 0 && into.length > 0,
+        "Absorption needs source and destination memories",
+      );
+      validateText(reason, "absorb.reason");
+      return { from, into, reason };
+    });
+  }
+  const absorbedIds = (changes.absorb ?? []).flatMap(({ from }) => from);
+  const memoryIds = [...changes.memories, ...changes.retire]
+    .map(({ id }) => id)
+    .concat(absorbedIds);
   assertCondition(
     new Set(memoryIds).size === memoryIds.length,
-    "A memory cannot be written or retired twice",
+    "A memory cannot be written, retired or absorbed twice",
+  );
+  assertCondition(
+    (changes.absorb ?? []).every(({ into }) => into.every((id) => !absorbedIds.includes(id))),
+    "An absorption destination cannot also be absorbed in the same change",
   );
   const workIds = changes.works.map(({ id }) => id);
   assertCondition(new Set(workIds).size === workIds.length, "A work cannot be written twice");
   return changes;
+}
+
+function validateMemoryIds(ids, label) {
+  validateArray(ids, label);
+  ids.forEach(parseRecordId);
+  assertCondition(new Set(ids).size === ids.length, `Duplicate ${label}`);
 }
 
 function sortObjectKeys(value) {
@@ -248,7 +285,10 @@ function assertSourceReferencesAvailable(archive, snapshot, entries) {
   }
 }
 
-function applyMemoryChanges({ existingMemories, forgottenMemoryIds, memoryRecords }, changes) {
+function applyMemoryChanges(
+  { existingMemories, forgottenMemoryIds, memoryRecords, reviewedMemoryIds },
+  changes,
+) {
   const memoriesById = new Map(existingMemories.map((memory) => [memory.id, memory]));
   for (const memory of changes.memories) {
     assertCondition(
@@ -259,6 +299,10 @@ function applyMemoryChanges({ existingMemories, forgottenMemoryIds, memoryRecord
     assertCondition(!originalRecord?.forgotten, `Memory ${memory.id} was forgotten; use a new ID`);
     const existingMemory = memoriesById.get(memory.id) ?? originalRecord;
     assertCondition(
+      existingMemory?.status !== "absorbed",
+      `Memory ${memory.id} was absorbed; use a new ID`,
+    );
+    assertCondition(
       !existingMemory || isDeepStrictEqual(existingMemory.scope, memory.scope),
       "A memory's scope cannot change",
     );
@@ -267,7 +311,31 @@ function applyMemoryChanges({ existingMemories, forgottenMemoryIds, memoryRecord
   for (const { id, reason, sources } of changes.retire) {
     const retiredMemory = memoriesById.get(id);
     assertCondition(retiredMemory, `Cannot retire missing memory: ${id}`);
+    assertCondition(retiredMemory.status !== "absorbed", `Memory ${id} was already absorbed`);
     memoriesById.set(id, { ...retiredMemory, status: "retired", retirement: { reason, sources } });
+  }
+  for (const { from, into, reason } of changes.absorb ?? []) {
+    for (const id of into)
+      assertCondition(
+        memoriesById.get(id)?.status === "active",
+        `Absorption destination must be an active memory: ${id}`,
+      );
+    for (const id of from) {
+      assertCondition(reviewedMemoryIds.includes(id), `Memory was not selected for review: ${id}`);
+      const memory = memoriesById.get(id);
+      assertCondition(
+        memory && ["active", "unresolved"].includes(memory.status),
+        `Cannot absorb missing or inactive memory: ${id}`,
+      );
+      memoriesById.set(id, {
+        id,
+        scope: memory.scope,
+        status: "absorbed",
+        sources: memory.sources,
+        supersedes: memory.supersedes ?? [],
+        absorption: { into, reason },
+      });
+    }
   }
   return [...memoriesById.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
@@ -404,6 +472,7 @@ export function buildConsolidation({ history, archive, snapshot, prepared, recor
       existingMemories,
       forgottenMemoryIds: history?.forgotten ?? [],
       memoryRecords: archive.memories,
+      reviewedMemoryIds: snapshot.memoryIds ?? [],
     },
     changes,
   );
@@ -458,7 +527,7 @@ export function buildConsolidation({ history, archive, snapshot, prepared, recor
     findUnprocessedSources(archive, revision.cursor).length,
   );
   return {
-    version: 2,
+    version: Math.max(history?.version ?? 2, changes.absorb?.length ? 3 : 2),
     forgotten: history?.forgotten ?? [],
     revisions: [...(history?.revisions ?? []), revision],
   };

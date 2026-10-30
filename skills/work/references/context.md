@@ -39,6 +39,7 @@ node "<plugin-root>/scripts/context/cli.mjs" recall --cwd "<checkout>" --work co
 - `unfinishedWorksRemaining`·`unreviewedWorksRemaining`은 각각 다음 페이지에 남은 항목 수다. 두 목록은 `--work`·기억 검색어와 관계없이 프로젝트 전체를 대상으로 한다. 현재 맡긴 업무를 식별하는 데 사용하며 다른 대화의 업무를 실행할 권한을 부여하지 않는다.
 - `--query`를 붙이면 내용·이유에 모든 검색어가 포함된 현재 기억만 반환한다. 과거 원본을 조사할 때는 `search`를 사용한다.
 - `--history`는 기억·업무 상태의 이전 리비전을 확인할 때 사용한다.
+- 패턴에 수용된 기억은 `absorbed` 상태의 연결만 남고 현재 기억 목록에는 나오지 않는다. 수용 대상과 남겨 둔 구체 기억을 사용하며, 같은 ID로 옛 세부를 자동 복원하지 않는다. 시간 경과와 수용 여부를 혼동하지 않는다.
 
 관계와 근거는 독립 `graph` 명령이나 `recall --full`의 `graph`에서 읽는다. 새 기록을 `pending`에서 함께 읽고 적용 범위, 미확정 상태와 조건을 확인한다. `recall`에서 `--entity`와 `--depth`는 `--full`을 함께 지정해야 한다. 관계를 더 조사하거나 `tidy`에서 진술을 구성할 때는 [그래프 계약](context-graph.md)을 읽는다.
 
@@ -217,5 +218,7 @@ CLI는 잠금과 임시 파일 교체로 기록을 보호한다. 잠금이 남�
 | `record` 원본               | `forget --ref note:<work>@<number>`                                                                           |
 
 원본을 삭제하면 그 원본을 `sources`·`evidence`의 근거로 삼는 정리 결과도 모든 정리 이력에서 제거한다. 삭제된 입력의 재시도나 오래된 `snapshot`으로 내용을 복원하지 못하게 한다. `supersedes`로만 연결된 기억은 현재 근거가 남아 있으므로 연결만 제거하고 기억은 유지한다.
+
+기억의 경험을 패턴과 현재 필요한 구체 기억에 수용할 때는 [tidy의 수용 계약](../../tidy/references/consolidation.md#경험을-다른-기억에-수용한다)을 사용한다. 수용된 현재 본문을 제거하는 `absorb`와 원본 및 그 근거에 의존하는 내용을 지우는 `forget`은 서로 다른 동작이다.
 
 remember·기존 checkpoint 호출과 데이터도 지원한다. 두 명령을 직접 다룰 때는 [이전 계약](context-legacy.md)을 읽는다. location·recall·search·read·graph·tidy status·work show는 조회만으로 저장 디렉터리를 만들지 않는다. 같은 프로젝트를 다루는 작업자는 work 원본과 새 업무 계약을 지원하는 CLI를 사용한다.
