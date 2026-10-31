@@ -122,6 +122,7 @@ export function parseWorkLedger(input: unknown): WorkLedger {
         work.id === record.id && work.revision === index + 1,
         "Invalid work revision identity",
       );
+      validateText(work.recordedAt, "work.recordedAt");
       requireCondition(Number.isFinite(Date.parse(work.recordedAt)), "Invalid work timestamp");
       parseRevisionNumber(work.definitionRevision, "definitionRevision");
       requireCondition(work.definitionRevision > 0, "Work definition revision must be positive");
@@ -144,6 +145,7 @@ export function parseWorkLedger(input: unknown): WorkLedger {
       );
       validateChecks(work.checks, work);
       if (work.assignment !== null) {
+        validateObject(work.assignment, "assignment");
         parseRecordId(work.assignment.worker, "worker");
         parseRecordId(work.assignment.reviewer, "reviewer");
         requireCondition(
@@ -153,35 +155,103 @@ export function parseWorkLedger(input: unknown): WorkLedger {
         if (work.assignment.executionId !== null)
           validateText(work.assignment.executionId, "executionId");
       }
-      if (work.submission !== null) {
-        validateText(work.submission.ref, "submission.ref");
-        parseRevisionNumber(work.submission.definitionRevision);
-        validateText(work.submission.summary, "submission.summary");
-        texts(work.submission.artifacts, "submission.artifacts");
-      }
+      validateSubmission(work, record.revisions);
     });
   }
   const works = currentWorks(ledger);
   validateRelations(works);
-  for (const work of works.values()) {
+  for (const work of works.values())
     if (["complete", "submitted"].includes(work.status)) assertFinished(work, works);
-    if (work.status === "submitted")
-      requireCondition(
-        work.assignment !== null && work.submission?.review === null,
-        "Submitted work needs a pending assigned result",
-      );
-    if (work.status === "complete" && work.assignment !== null)
-      requireCondition(
-        work.submission?.review?.verdict === "accepted",
-        "Assigned completion needs reviewer acceptance",
-      );
-  }
   return ledger;
 }
 
-function validateChecks(value: unknown, work: Work): asserts value is Check[] {
+function validateSubmission(work: WorkRevision, revisions: WorkRevision[]) {
+  const submission = work.submission;
+  if (submission === null) {
+    requireCondition(work.status !== "submitted", "Submitted work needs a submission");
+    requireCondition(
+      work.status !== "complete" || work.assignment === null,
+      "Assigned completion needs reviewer acceptance",
+    );
+    return;
+  }
+  validateObject(submission, "submission");
+  requireCondition(work.assignment !== null, "Submission needs an assignment");
+  validateText(submission.ref, "submission.ref");
+  requireCondition(
+    work.action !== "submit" || submission.ref === `work:${work.id}@${work.revision}`,
+    "submission.ref must identify its creation revision",
+  );
+  parseRevisionNumber(submission.definitionRevision, "submission.definitionRevision");
+  requireCondition(
+    submission.definitionRevision === work.definitionRevision,
+    "Submission definition is stale",
+  );
+  validateText(submission.summary, "submission.summary");
+  texts(submission.artifacts, "submission.artifacts");
+  validateChecks(submission.checks, work, "submission.checks");
+  requireCondition(
+    submission.checks.length === work.criteria.length &&
+      submission.checks.every(({ verdict }) => verdict === "met"),
+    "Submission needs verified checks for every criterion",
+  );
+  const review = submission.review;
+  if (review !== null) {
+    validateObject(review, "submission.review");
+    validateChoice(review.verdict, ["accepted", "changes-requested"], "submission.review.verdict");
+    parseRecordId(review.actor, "submission.review.actor");
+    requireCondition(
+      review.actor === work.assignment.reviewer,
+      "Submission review must identify the assigned reviewer",
+    );
+    validateText(review.reason, "submission.review.reason");
+    texts(review.evidence, "submission.review.evidence");
+    requireCondition(
+      review.verdict !== "accepted" || review.evidence.length > 0,
+      "Accepted submission review needs evidence",
+    );
+    validateRecordSource(review.source);
+  }
+  const expectedReview =
+    work.status === "submitted"
+      ? null
+      : work.status === "complete"
+        ? "accepted"
+        : "changes-requested";
+  requireCondition(
+    work.status !== "cancelled" &&
+      (expectedReview === null ? review === null : review?.verdict === expectedReview),
+    "Submission review does not match the work status",
+  );
+  if (["submitted", "complete"].includes(work.status))
+    requireCondition(
+      work.next.length === 0 && isDeepStrictEqual(work.checks, submission.checks),
+      "Finished work must preserve its submitted checks and have no next actions",
+    );
+
+  // A changes-requested result retains the old snapshot while live checks are revised.
+  const original = revisions.find(
+    ({ revision }) => `work:${work.id}@${revision}` === submission.ref && revision <= work.revision,
+  );
+  requireCondition(
+    original?.action === "submit" &&
+      original.status === "submitted" &&
+      original.submission?.ref === submission.ref &&
+      original.submission.review === null,
+    "submission.ref must identify a submitted revision of this work",
+  );
+  requireCondition(
+    original.definitionRevision === submission.definitionRevision &&
+      original.submission.summary === submission.summary &&
+      isDeepStrictEqual(original.submission.artifacts, submission.artifacts) &&
+      isDeepStrictEqual(original.submission.checks, submission.checks),
+    "Submission payload differs from its submitted revision",
+  );
+}
+
+function validateChecks(value: unknown, work: Work, label = "checks"): asserts value is Check[] {
   const checks = value as Check[];
-  validateArray(checks, "checks");
+  validateArray(checks, label);
   const known = new Set(work.criteria.map(({ id }) => id));
   for (const check of checks) {
     fields(check, ["criterionId", "verdict", "observation", "evidence"], "check");

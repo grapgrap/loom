@@ -137,7 +137,8 @@ export function parseCheckpointInput(value: unknown) {
   return checkpoint;
 }
 
-function validateTimestamp(timestamp: string) {
+function validateTimestamp(timestamp: unknown) {
+  validateText(timestamp, "recordedAt");
   assertCondition(Number.isFinite(Date.parse(timestamp)), "Invalid recordedAt timestamp");
 }
 
@@ -166,6 +167,7 @@ export function validateRecordRevisions<T extends { revision: number; recordedAt
 export function parseMemoryRecord(value: unknown): StoredMemory {
   const memory = value as StoredMemory;
   validateRecordVersion(memory);
+  if (memory.forgotten !== undefined) validateChoice(memory.forgotten, [false, true], "forgotten");
   if (memory.forgotten === true) {
     assertCondition(parseRevisionNumber(memory.revision) > 1, "Invalid forgotten memory revision");
     validateTimestamp(memory.recordedAt);

@@ -1,5 +1,4 @@
-import type { Statement, Entity } from "./model.ts";
-import type { Consolidation } from "../tidy/model.ts";
+import type { Statement, Entity, PublishedGraph } from "./model.ts";
 import type { SourceArchive } from "../sources/model.ts";
 import type { QueryOptions } from "../model.ts";
 type GraphPath = { entities: string[]; statements: string[] };
@@ -103,7 +102,7 @@ function collectPremises(selected: Statement[], statementsById: Map<string, Stat
 }
 
 export function queryGraph(
-  consolidation: Consolidation,
+  published: PublishedGraph,
   sourceArchive: SourceArchive,
   { work, query, entity, history, depth = 2, limit = 50 }: QueryOptions = {},
 ) {
@@ -113,7 +112,7 @@ export function queryGraph(
       .map((source) => [source.ref, source]),
   );
   const supportedGraph = eraseFromGraph(
-    consolidation.graph ?? emptyGraph(),
+    published.graph ?? emptyGraph(),
     (ref) => !availableSources.has(ref),
   );
   const statements = supportedGraph.statements.filter(
@@ -135,7 +134,7 @@ export function queryGraph(
     [...selected, ...premises, ...selectedEntities].flatMap(({ sources }) => sources),
   );
   return {
-    revision: consolidation.revision,
+    revision: published.revision,
     entities: selectedEntities,
     statements: selected,
     premises,

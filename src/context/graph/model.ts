@@ -30,4 +30,15 @@ export type Statement = {
 
 export type Graph = { entities: Entity[]; statements: Statement[] };
 
-export type GraphChanges = Graph & { retire: (Retirement & { id: string })[] };
+export type NewStatement = Omit<
+  Statement,
+  "status" | "retirement" | "supersededBy" | "reviewNeeded"
+> & { status: "active" | "unresolved" };
+
+export type GraphChanges = {
+  entities: Entity[];
+  statements: NewStatement[];
+  retire: (Retirement & { id: string })[];
+};
+
+export type PublishedGraph = { revision: number; graph?: Graph };

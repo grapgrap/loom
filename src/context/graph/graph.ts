@@ -1,6 +1,14 @@
-import type { Entity, Statement, Graph, GraphChanges } from "./model.ts";
+import type { Entity, Statement, NewStatement, Graph, GraphChanges } from "./model.ts";
+import type { Retirement } from "../model.ts";
 import { isDeepStrictEqual } from "node:util";
-import { parseRecordId, validateMemoryScope, validateText } from "../records/records.ts";
+import {
+  parseRecordId,
+  validateMemoryScope,
+  validateText,
+  validateObject,
+  validateArray,
+  validateChoice,
+} from "../records/records.ts";
 import { validateRequiredSourceReferences } from "../sources/sources.ts";
 
 export function emptyGraph(): Graph {
@@ -11,22 +19,84 @@ function assertCondition(condition: unknown, message: string): asserts condition
   if (!condition) throw new Error(message);
 }
 
-function validateIds(ids: string[], label: string) {
+function validateIds(ids: unknown, label: string): asserts ids is string[] {
+  validateArray(ids, label);
   ids.forEach((id) => parseRecordId(id));
   assertCondition(new Set(ids).size === ids.length, `Duplicate ${label}`);
 }
 
-function parseEntity(input: unknown): Entity {
-  const { id, kind, name, aliases = [], sources } = input as Entity;
-  parseRecordId(id);
-  parseRecordId(kind);
-  validateText(name, "entity.name");
-  aliases.forEach((alias) => validateText(alias, "entity.alias"));
-  validateRequiredSourceReferences(sources, "entity.sources");
-  return { id, kind, name, aliases, sources };
+function validateTexts(values: unknown, label: string): asserts values is string[] {
+  validateArray(values, label);
+  values.forEach((value) => validateText(value, label));
 }
 
-function parseStatement(input: unknown): Statement {
+function validateEntity(input: unknown): asserts input is Entity {
+  validateObject(input, "entity");
+  parseRecordId(input.id);
+  parseRecordId(input.kind);
+  validateText(input.name, "entity.name");
+  validateTexts(input.aliases, "entity.aliases");
+  validateRequiredSourceReferences(input.sources, "entity.sources");
+}
+
+function parseEntity(input: unknown): Entity {
+  validateObject(input, "entity");
+  const { id, kind, name, aliases = [], sources } = input;
+  const entity = { id, kind, name, aliases, sources };
+  validateEntity(entity);
+  return entity;
+}
+
+function validateRetirement(input: unknown): asserts input is Retirement {
+  validateObject(input, "statement retirement");
+  validateText(input.reason, "statement retirement reason");
+  validateRequiredSourceReferences(input.sources, "statement retirement sources");
+}
+
+function validateStatementContent(input: unknown): asserts input is Omit<Statement, "status"> {
+  validateObject(input, "statement");
+  [input.id, input.subject, input.predicate].forEach((id) => parseRecordId(id));
+  validateObject(input.object, "statement.object");
+  if (input.object.entity !== undefined) parseRecordId(input.object.entity);
+  else
+    assertCondition(
+      Object.hasOwn(input.object, "value") && input.object.value !== undefined,
+      "statement.object must contain an entity or value",
+    );
+  validateText(input.text, "statement.text");
+  validateMemoryScope(input.scope);
+  validateRequiredSourceReferences(input.sources, "statement.sources");
+  validateIds(input.supersedes, "superseded statement IDs");
+  validateIds(input.contradicts, "contradicted statement IDs");
+  validateTexts(input.conditions, "statement.conditions");
+  validateObject(input.origin, "statement.origin");
+  validateChoice(input.origin.kind, ["stated", "inferred"], "statement.origin.kind");
+  if (input.origin.kind === "inferred") {
+    validateIds(input.origin.premises, "premise IDs");
+    assertCondition(input.origin.premises.length > 0, "An inferred statement needs premises");
+  }
+  const { validFrom, validUntil } = input;
+  for (const [field, timestamp] of [
+    ["validFrom", validFrom],
+    ["validUntil", validUntil],
+  ] as const) {
+    if (timestamp === undefined) continue;
+    validateText(timestamp, `statement.${field}`);
+    assertCondition(Number.isFinite(Date.parse(timestamp)), `Invalid statement.${field} timestamp`);
+  }
+  if (validFrom !== undefined && validUntil !== undefined) {
+    assertCondition(
+      Date.parse(validFrom as string) < Date.parse(validUntil as string),
+      "Statement validity must end after it starts",
+    );
+  }
+  if (input.retirement !== undefined) validateRetirement(input.retirement);
+  if (input.supersededBy !== undefined) validateIds(input.supersededBy, "supersededBy IDs");
+  if (input.reviewNeeded !== undefined) validateIds(input.reviewNeeded, "reviewNeeded IDs");
+}
+
+function parseStatement(input: unknown): NewStatement {
+  validateObject(input, "statement");
   const {
     id,
     subject,
@@ -42,64 +112,56 @@ function parseStatement(input: unknown): Statement {
     conditions = [],
     validFrom,
     validUntil,
-  } = input as Statement;
-  [id, subject, predicate].forEach((id) => parseRecordId(id));
-  if (object.entity !== undefined) parseRecordId(object.entity);
-  validateText(text, "statement.text");
-  validateMemoryScope(scope);
-  validateRequiredSourceReferences(sources, "statement.sources");
-  validateIds(supersedes, "superseded statement IDs");
-  validateIds(contradicts, "contradicted statement IDs");
-  conditions.forEach((condition) => validateText(condition, "statement.condition"));
-  if (origin.kind === "inferred") {
-    validateIds(origin.premises, "premise IDs");
-    assertCondition(origin.premises.length > 0, "An inferred statement needs premises");
-  }
-  for (const timestamp of [validFrom, validUntil]) {
-    if (timestamp !== undefined)
-      assertCondition(
-        Number.isFinite(Date.parse(timestamp)),
-        "Invalid statement validity timestamp",
-      );
-  }
-  if (validFrom !== undefined && validUntil !== undefined) {
-    assertCondition(
-      Date.parse(validFrom) < Date.parse(validUntil),
-      "Statement validity must end after it starts",
-    );
-  }
-  return {
+  } = input;
+  validateChoice(status, ["active", "unresolved"], "statement.status");
+  const statement = {
     id,
     subject,
     predicate,
-    object: object.entity !== undefined ? { entity: object.entity } : { value: object.value },
+    object,
     text,
     scope,
     sources,
-    origin:
-      origin.kind === "inferred"
-        ? { kind: origin.kind, premises: origin.premises }
-        : { kind: origin.kind },
-    status,
+    origin,
     supersedes,
     contradicts,
     conditions,
     ...(validFrom === undefined ? {} : { validFrom }),
     ...(validUntil === undefined ? {} : { validUntil }),
   };
+  validateStatementContent(statement);
+  return {
+    ...statement,
+    status,
+    object:
+      statement.object.entity !== undefined
+        ? { entity: statement.object.entity }
+        : { value: statement.object.value },
+    origin:
+      statement.origin.kind === "inferred"
+        ? { kind: statement.origin.kind, premises: statement.origin.premises }
+        : { kind: statement.origin.kind },
+  };
+}
+
+function parseStatementRetirement(input: unknown): Retirement & { id: string } {
+  validateObject(input, "statement retirement");
+  const { id, reason, sources } = input;
+  const retirement = { id: parseRecordId(id), reason, sources };
+  validateRetirement(retirement);
+  return retirement;
 }
 
 export function parseGraphChanges(value: unknown = {}): GraphChanges {
-  const input = value as Partial<GraphChanges>;
+  validateObject(value, "graph");
+  const { entities = [], statements = [], retire = [] } = value;
+  validateArray(entities, "graph.entities");
+  validateArray(statements, "graph.statements");
+  validateArray(retire, "graph.retire");
   const changes = {
-    entities: (input.entities ?? []).map(parseEntity),
-    statements: (input.statements ?? []).map(parseStatement),
-    retire: (input.retire ?? []).map(({ id, reason, sources }) => {
-      parseRecordId(id);
-      validateText(reason, "statement retirement reason");
-      validateRequiredSourceReferences(sources, "statement retirement sources");
-      return { id, reason, sources };
-    }),
+    entities: entities.map(parseEntity),
+    statements: statements.map(parseStatement),
+    retire: retire.map(parseStatementRetirement),
   };
   validateIds(
     changes.entities.map(({ id }) => id),
@@ -155,27 +217,30 @@ function assertGraphReferences(graph: Graph) {
   assertNoCycles(statements, (statement) => statement.supersedes, "Replacement");
 }
 
-export function validateGraph(graph: Graph) {
-  graph.entities.forEach(parseEntity);
-  graph.statements.forEach((statement) => {
-    parseStatement(statement);
-    if (statement.retirement) {
-      validateText(statement.retirement.reason, "statement retirement reason");
-      validateRequiredSourceReferences(
-        statement.retirement.sources,
-        "statement retirement sources",
-      );
-    }
+export function validateGraph(graph: unknown): asserts graph is Graph {
+  validateObject(graph, "graph");
+  validateArray(graph.entities, "graph.entities");
+  validateArray(graph.statements, "graph.statements");
+  const entities = graph.entities.map((entity) => {
+    validateEntity(entity);
+    return entity;
+  });
+  const statements = graph.statements.map((statement) => {
+    validateObject(statement, "statement");
+    const { status } = statement;
+    validateChoice(status, ["active", "unresolved", "retired", "superseded"], "statement.status");
+    validateStatementContent(statement);
+    return { ...statement, status };
   });
   validateIds(
-    graph.entities.map(({ id }) => id),
+    entities.map(({ id }) => id),
     "entity IDs",
   );
   validateIds(
-    graph.statements.map(({ id }) => id),
+    statements.map(({ id }) => id),
     "statement IDs",
   );
-  assertGraphReferences(graph);
+  assertGraphReferences({ entities, statements });
 }
 
 function flagOutdatedInferences(statements: Map<string, Statement>) {

@@ -22,6 +22,7 @@ import {
   createRecordParser,
   parseRevisionNumber,
   validateArray,
+  validateText,
 } from "../records/records.ts";
 import { workJournalPath, parseWorkJournal } from "../records/journal.ts";
 import { readDirectoryEntries, readStoredRecord } from "../storage/store.ts";
@@ -37,6 +38,7 @@ export function checkpointRecordPath(location: ProjectLocation, workId: string) 
 }
 
 export function parseSourceReference(reference: string): SourceReference {
+  validateText(reference, "source reference");
   const referenceParts = /^(memory|checkpoint|note|work):([^@]+)@([1-9][0-9]*)$/.exec(reference);
   if (!referenceParts) throw new Error(`Invalid source reference: ${reference}`);
   const [, kind, recordId, revisionText] = referenceParts;

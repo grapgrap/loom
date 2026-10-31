@@ -11,6 +11,7 @@ import {
   validateRecordVersion,
   validateRecordRevisions,
   validateRecordSource,
+  validateChoice,
   validateText,
 } from "./records.ts";
 import { updateStoredRecord } from "../storage/store.ts";
@@ -20,6 +21,7 @@ export function parseWorkJournal(value: unknown): WorkJournal {
   validateRecordVersion(journal);
   validateRecordRevisions(journal.revisions, (note) => {
     parseRecordId(note.requestKey);
+    if (note.forgotten !== undefined) validateChoice(note.forgotten, [false, true], "forgotten");
     if (!note.forgotten) {
       validateText(note.text, "text");
       validateRecordSource(note.source);
