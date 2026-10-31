@@ -24,12 +24,14 @@ Size alone does not require human approval. Questions that observation or an exp
 | `orchestrate` | Plan, relate, assign, track, submit, and accept work through the shared work CLI.                                     |
 | `understand`  | Reconstruct the current picture from code, runtime evidence, and history. Direct invocation investigates and reports. |
 | `architect`   | Ground implementation and verification in usage examples, responsibilities, state, and interfaces.                    |
-| `verify`      | Judge finish conditions on the real artifact and user path as confirmed, failed, or inconclusive.                     |
+| `verify`      | Prepare tests or temporary verification tools before implementation, then check actual outcomes during and after it.  |
 | `review`      | Find gaps in decisions and evidence through counterexamples, then check the findings themselves.                      |
 | `write`       | Connect problems, evidence, judgments, and conclusions; refine wording while preserving meaning and constraints.      |
 | `tidy`        | Consolidate records and work history into grounded project memories and graphs while preserving originals.            |
 
 Requests for explanation, design, verification, or review stay within that scope. Implementation and fixes follow the scope of the work entrusted to the agent.
+
+Use `verify` before implementation to define verification criteria and prepare executable checks. Reuse existing checks, add tests or temporary verification tools where needed, and run them to capture an expected failure or baseline. When only preparation is requested, hand over the checks and execution instructions; implementing product behavior remains subject to the assigned scope.
 
 Loom's [principles](references/principles.md) describe the domain responsibilities, contracts, and dependencies a change must preserve. When design decisions concern responsibilities, contracts, or dependencies, skills consult this shared document and select relevant principles from the task's purpose and impact. Each principle includes application situations and examples. `work` is the default single-agent route; use `orchestrate` for multi-agent collaboration.
 
