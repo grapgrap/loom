@@ -8,28 +8,32 @@
 
 로드한 `work/SKILL.md`가 있는 폴더를 기준으로 `../../scripts/context/`의 절대 경로를 구한다. 아래 `<plugin-root>`는 그 플러그인의 루트이고, `<checkout>`은 현재 저장소의 체크아웃 또는 워크트리 경로다. 예시의 경로를 실제 값으로 바꾸고 공백이 있는 경로는 인용한다.
 
-macOS·Linux·WSL의 첫 조회:
+업무 CLI로 관리하는 현재 맡긴 전체 업무를 알면 `work show --work <전체-id> --tree`로 현재 정의, 하위 업무, 선행 상태와 남은 조건을 확인한다. 판단에 필요한 기억과 원본은 선택한 업무 범위에서 보충한다. 소속 업무나 중단 뒤 복귀할 업무를 찾지 못하면 `recall`로 프로젝트의 미완료, 미검토와 결과 검토 대기 후보를 확인하고 현재 요청의 범위와 원문에 대조한다. 기존 checkpoint 업무의 조회는 [이전 계약](context-legacy.md)을 따른다.
+
+macOS, Linux와 WSL에서 현재 전체 업무를 조회하는 예:
 
 ```sh
-sh "<plugin-root>/scripts/context/cli.sh" recall --cwd "<checkout>"
+sh "<plugin-root>/scripts/context/cli.sh" work show --cwd "<checkout>" --work "<전체-id>" --tree
 ```
 
-Windows PowerShell의 첫 조회:
+Windows PowerShell에서 같은 업무를 조회하는 예:
 
 ```powershell
-& "<plugin-root>\scripts\context\cli.cmd" recall --cwd "<checkout>"
+& "<plugin-root>\scripts\context\cli.cmd" work show --cwd "<checkout>" --work "<전체-id>" --tree
 ```
 
-[셸](../../../scripts/context/cli.sh)·[CMD](../../../scripts/context/cli.cmd) 진입점은 Node의 존재와 버전을 확인한 뒤 [CLI](../../../scripts/context/cli.ts)에 인수와 stdin을 전달한다. 실행 환경을 확인한 뒤에는 `.ts`를 직접 호출할 수 있다.
+[셸](../../../scripts/context/cli.sh)과 [CMD](../../../scripts/context/cli.cmd) 진입점은 Node의 존재와 버전을 확인한 뒤 [CLI](../../../scripts/context/cli.ts)에 인수와 stdin을 전달한다. 실행 환경을 확인한 뒤에는 `.ts`를 직접 호출할 수 있다. 다음은 선택한 업무의 기억을 보충하는 예다.
 
 ```sh
 node "<plugin-root>/scripts/context/cli.ts" recall --cwd "<checkout>" --work context-cli
 ```
 
-기본 조회는 프로젝트 기억과 업무별 ID·목표·상태를 반환한다. 기록이 있는 업무에는 `firstNote`·`latestNote`로 첫 기록과 최근 기록의 ref·발췌도 제공한다. 정리 전에는 목표·상태가 `null`일 수 있으므로 발췌로 관련 업무를 찾고, 필요한 본문은 `read --ref`로 확인한다. 현재 요청에 해당하는 업무를 선택한 뒤 `--work`로 그 업무의 기억과 상태를 읽는다. 최근 기록이라는 이유만으로 다른 업무를 재개하지 않는다. 한 세션에서 업무를 계속하거나 여러 세션에서 서로 다른 업무를 다룰 수 있으므로, 세션과 업무를 일대일로 대응시키지 않는다. 새 업무의 목표와 맡긴 범위는 첫 기록에 남긴다.
+기본 `recall`은 현재 기억, 지정한 업무의 상태, 미처리 원본과 미완료 또는 검토가 필요한 업무를 반환한다. 현재 요청에 필요한 기억을 보충할 때는 `--work`로 그 업무의 범위를 선택한다. 관련 업무나 근거를 모르면 목적에 맞는 `search`로 후보를 찾는다. 최근 기록이라는 이유만으로 다른 업무를 재개하지 않는다. 한 세션에서 업무를 계속하거나 여러 세션에서 서로 다른 업무를 다룰 수 있으므로, 세션과 업무를 일대일로 대응시키지 않는다. 새 업무의 목표와 맡긴 범위는 첫 기록에 남긴다.
+
+전체 업무 목록과 그래프가 필요하면 `recall --full`을 사용한다. 이때 `works`와 `worksRemaining`, `graph`가 추가되며 기본 응답에는 세 필드가 없다. 업무 목록에는 ID, 목표, 상태와 `firstNote`, `latestNote`의 첫 기록과 최근 기록 ref 및 발췌가 있다. 정리 전에는 목표와 상태가 `null`일 수 있으므로 발췌로 관련 업무를 식별하고 필요한 본문은 `read --ref`로 확인한다.
 
 - `pending`은 조회 범위의 미처리 원본이다. 정리된 기억·업무 상태와 함께 읽는다.
-- `--limit`은 기억·업무 목록·미처리 원본 각각에 적용하며 기본 50, 최대 200이다. `memoriesRemaining`·`worksRemaining`·`pendingRemaining`은 각 목록의 다음 페이지에 남은 항목 수다. 필요한 항목이 남으면 `--offset`을 limit만큼 늘려 같은 조건으로 조회하거나 검색·원본 조회로 보충한다. 선택한 업무의 전체 상태인 `work`는 페이지와 무관하게 반환한다.
+- `--limit`은 각 목록에 적용하며 기본 50, 최대 200이다. `memoriesRemaining`과 `pendingRemaining`, `--full`의 `worksRemaining`은 각 목록의 다음 페이지에 남은 항목 수다. 필요한 항목이 남으면 `--offset`을 limit만큼 늘려 같은 조건으로 조회하거나 검색과 원본 조회로 보충한다. 선택한 업무의 전체 상태인 `work`는 페이지와 무관하게 반환한다.
 - `unresolved`는 미확정 판단이다. 업무에 한정된 사실은 해당 범위에서 적용하고, 완료로 기록된 결과도 현재 산출물과 대조한다.
 - `unfinishedWorks`는 `active`·`blocked`·`paused`·`submitted` 업무의 목표·진행·근거·다음 행동이다. submitted는 결과 검토 대기이며 작업자가 자동 재실행하지 않는다. 전체 업무 목록과 별도로 페이지를 나누므로 최근 완료 업무에 가려지지 않는다.
 - `unreviewedWorks`는 상태가 없는 기록이나 현재 상태 이후 검토할 새 기록이 있는 업무다. 원문을 읽어 추가 요청·완료·보류·취소 여부를 판단한다. 목록에 있다는 이유만으로 작업을 실행하거나 재개하지 않는다.
@@ -37,30 +41,15 @@ node "<plugin-root>/scripts/context/cli.ts" recall --cwd "<checkout>" --work con
 - `unfinishedWorksRemaining`·`unreviewedWorksRemaining`은 각각 다음 페이지에 남은 항목 수다. 두 목록은 `--work`·기억 검색어와 관계없이 프로젝트 전체를 대상으로 한다. 현재 맡긴 업무를 식별하는 데 사용하며 다른 대화의 업무를 실행할 권한을 부여하지 않는다.
 - `--query`를 붙이면 내용·이유에 모든 검색어가 포함된 현재 기억만 반환한다. 과거 원본을 조사할 때는 `search`를 사용한다.
 - `--history`는 기억·업무 상태의 이전 리비전을 확인할 때 사용한다.
+- 패턴에 수용된 기억은 `absorbed` 상태의 연결만 남고 현재 기억 목록에는 나오지 않는다. 수용 대상과 남겨 둔 구체 기억을 사용하며, 같은 ID로 옛 세부를 자동 복원하지 않는다. 시간 경과와 수용 여부를 혼동하지 않는다.
 
-`graph`에는 관련 대상·진술과 원본 근거의 연결이 담긴다. 새 기록을 `pending`에서 함께 읽고, 적용 범위·미확정 상태와 조건을 확인한다. 관계를 더 조사하거나 `tidy`에서 진술을 구성할 때는 [그래프 계약](context-graph.md)을 읽는다.
+관계와 근거는 독립 `graph` 명령이나 `recall --full`의 `graph`에서 읽는다. 새 기록을 `pending`에서 함께 읽고 적용 범위, 미확정 상태와 조건을 확인한다. `recall`에서 `--entity`와 `--depth`는 `--full`을 함께 지정해야 한다. 관계를 더 조사하거나 `tidy`에서 진술을 구성할 때는 [그래프 계약](context-graph.md)을 읽는다.
 
 ## 미완료 업무를 확인하고 재개한다
 
 독립적인 요청을 맡으면 `work ID`를 정하고 원래 사용자 목표를 `goal`에 보존한다. 조사나 문서 작성이 구현의 선행 단계라면 `progress`에 그 결과를, `next`에 남은 구현·검증을 둔다. 사용자와 범위를 바꾸지 않은 상태에서 구현 목표를 조사 목표로 축소해 완료하지 않는다. 짧은 질문에는 별도 업무를 만들 필요가 없으며, 작은 수정에 긴 계획 파일을 만들지 않는다.
 
-새 업무는 [공통 업무 CLI 계약](context-work.md)에 따라 work create로 목표·범위·확인 가능한 criteria를 정의한다. work show의 현재 work.revision을 다음 변경의 expectedRevision으로 사용한다. 이 업무는 managed: true로 표시되며 checkpoint나 tidy에서 현재 상태를 덮어쓸 수 없다.
-
-```sh
-node "<plugin-root>/scripts/context/cli.ts" work create --cwd "<checkout>" --work feature <<'LOOM_WORK'
-{
-  "expectedRevision": 0,
-  "actor": "main",
-  "goal": "요청한 기능을 구현하고 실제 사용 경로를 검증한다.",
-  "scope": "이번 요청의 구현과 검증을 맡는다.",
-  "criteria": [{"id":"behavior", "description":"요청한 사용 경로에서 기대 결과를 얻는다.", "verification":"합의한 입력과 환경에서 실제 사용 경로를 관찰한다."}],
-  "next": ["저장 경로를 구현하고 실제 사용 경로를 검증한다."],
-  "source": { "type": "agent", "reference": "실제 사용자 요청과 검증 결과의 위치" }
-}
-LOOM_WORK
-```
-
-수행 중에는 report로 progress·next와 조건별 관찰·판정·근거를 갱신한다. 다른 업무로 전환하기 전에 다음 행동을 보존한다. 조건 변경은 owner가 revise로 반영하고 무효화된 검증을 확인한다. 단독 업무는 complete, 위임 업무는 submit 후 reviewer의 accept로 끝난다. 처리 과정의 판단과 출처는 record에 보존한다.
+새 업무는 [공통 업무 CLI 계약](context-work.md)에 따라 목표와 범위, 확인 가능한 criteria를 정의한다. 같은 계약으로 수행 중 진행과 다음 행동, 조건별 검증을 갱신한다. 업무 상태 변경의 입력과 리비전, 완료와 수락 조건은 해당 계약에서 확인한다. 다른 업무로 전환하기 전에는 검증한 진행과 복귀할 다음 행동을 보존한다. 처리 과정의 판단과 출처는 `record`에 남긴다.
 
 기존 managed 표시가 없는 업무는 [checkpoint 계약](context-legacy.md)을 유지한다. 계속 수행할 기존 업무는 현재 recall과 원문을 읽고 create의 adopt: true로 명세를 정의해 전환한다. 이전 ref는 보존하며 이전 완료 선언을 새 조건의 검증으로 간주하지 않는다.
 
@@ -73,11 +62,11 @@ LOOM_WORK
 | `complete`  | 맡긴 목표를 검증한 근거가 있고 남은 행동이 없다. 하위 단계나 단기 요청의 완료와 전체 목표를 구분한다.                                               |
 | `cancelled` | 사용자가 취소한 업무다. `progress`에 취소 근거를 보존하고 `next`를 비운다. 자동 재개하지 않는다.                                                    |
 
-예를 들어 기능 A를 구현하다 README 오타 수정 B를 먼저 처리하면, A의 현재 위치와 다음 행동을 보존하고 `active`를 유지한다. B를 마친 뒤 `recall`을 다시 읽고 A가 현재 맡긴 미완료 업무임을 확인해 다음 행동을 수행한다. B의 완료만으로 전체 실행을 끝내지 않는다. 다른 업무를 잠깐 처리하는 것은 사용자 보류인 `paused`와 다르다.
+예를 들어 업무 CLI로 관리하는 기능 A를 구현하다 README 오타 수정 B를 먼저 처리하면, A의 현재 위치와 다음 행동을 보존하고 `active`를 유지한다. B를 마친 뒤 `work show --work A --tree`로 A의 남은 조건과 다음 행동을 확인해 계속한다. B의 완료만으로 전체 실행을 끝내지 않는다. 다른 업무를 잠깐 처리하는 것은 사용자 보류인 `paused`와 다르다.
 
-짧은 요청을 마쳤을 때, 대화를 재개했을 때, 최종 응답 전에는 미완료·미검토·결과 검토 대기 목록을 필요한 페이지까지 읽는다. unreviewedWorks의 원문과 work show의 현재 상태·선행 결과를 대조하고, 현재 요청·맡긴 범위·우선순위에 따라 다음 업무를 고른다. 여러 후보의 우선순위나 권한을 알 수 없으면 해당 선택만 사용자에게 확인한다. 실행 중인 다른 대화나 작업자와 중복되는 업무인지도 확인한다. 단순히 최근 기록이라는 이유로 다른 업무를 선택하지 않는다.
+짧은 요청을 마쳤을 때, 대화를 재개했을 때, 최종 응답 전에는 알고 있는 현재 맡긴 전체 업무의 `work show --work <전체-id> --tree`를 기본 점검으로 사용한다. 소속 업무나 중단 뒤 복귀할 업무를 찾지 못하면 `recall`의 미완료, 미검토와 결과 검토 대기 목록을 필요한 페이지까지 읽는다. 후보의 원문과 현재 상태, 선행 결과를 대조하고 현재 요청, 맡긴 범위와 우선순위에 따라 다음 업무를 고른다. 여러 후보의 우선순위나 권한을 알 수 없으면 해당 선택만 사용자에게 확인하고, 확인할 필요가 없는 업무는 계속한다. 다른 대화에 속한 업무는 원문과 권한을 확인하며 실행 중인 작업자에게 맡긴 업무는 중복 수행하지 않는다. 단순히 최근 기록이라는 이유로 다른 업무를 선택하지 않는다.
 
-`pending`이 비었다는 것은 미처리 원본이 없다는 뜻이며, 미완료 업무가 없다는 뜻이 아니다. 미완료 업무를 전부 이어가거나 실제 보류·막힘·취소를 확인한 뒤 실행을 마무리한다. CLI는 현재 상태와 근거를 반환하며, 다음 업무의 실행과 사용자 확인은 에이전트가 맡는다. 백그라운드 실행이나 새 세션을 자동으로 시작하지 않는다.
+`pending`이 비었다는 것은 미처리 원본이 없다는 뜻이며, 미완료 업무가 없다는 뜻이 아니다. 현재 맡긴 범위의 미완료 업무를 이어가거나 실제 보류, 막힘과 취소를 확인한 뒤 실행을 마무리한다. CLI는 현재 상태와 근거를 반환하며, 다음 업무의 실행과 사용자 확인은 에이전트가 맡는다. 백그라운드 실행이나 새 세션을 자동으로 시작하지 않는다.
 
 ## 관련 업무와 적용 조건을 찾는다
 
@@ -215,5 +204,7 @@ CLI는 잠금과 임시 파일 교체로 기록을 보호한다. 잠금이 남�
 | `record` 원본               | `forget --ref note:<work>@<number>`                                                                           |
 
 원본을 삭제하면 그 원본을 `sources`·`evidence`의 근거로 삼는 정리 결과도 모든 정리 이력에서 제거한다. 삭제된 입력의 재시도나 오래된 `snapshot`으로 내용을 복원하지 못하게 한다. `supersedes`로만 연결된 기억은 현재 근거가 남아 있으므로 연결만 제거하고 기억은 유지한다.
+
+기억의 경험을 패턴과 현재 필요한 구체 기억에 수용할 때는 [tidy의 수용 계약](../../tidy/references/consolidation.md#경험을-다른-기억에-수용한다)을 사용한다. 수용된 현재 본문을 제거하는 `absorb`와 원본 및 그 근거에 의존하는 내용을 지우는 `forget`은 서로 다른 동작이다.
 
 remember·기존 checkpoint 호출과 데이터도 지원한다. 두 명령을 직접 다룰 때는 [이전 계약](context-legacy.md)을 읽는다. location·recall·search·read·graph·tidy status·work show는 조회만으로 저장 디렉터리를 만들지 않는다. 같은 프로젝트를 다루는 작업자는 work 원본과 새 업무 계약을 지원하는 CLI를 사용한다.

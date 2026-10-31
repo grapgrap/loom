@@ -3,6 +3,7 @@ import type {
   ConsolidationHistory,
   Consolidation,
   Memory,
+  ContentMemory,
   ConsolidatedWork,
 } from "../tidy/model.ts";
 import type { QueryOptions, Scope, RecordSource, Revision } from "../model.ts";
@@ -99,8 +100,10 @@ function restoreMemories(
   const { current, availableRefs } = presentation;
   const memories: RecalledMemory[] = current.memories
     .filter(
-      (memory) =>
-        memory.status !== "retired" && memory.sources.every((ref) => availableRefs.has(ref)),
+      (memory): memory is ContentMemory =>
+        memory.status !== "retired" &&
+        memory.status !== "absorbed" &&
+        memory.sources.every((ref) => availableRefs.has(ref)),
     )
     .map((memory) => presentEntry(memory, { ...presentation, collection: "memories" }));
   const consolidatedIds = new Set(current.memories.map(({ id }) => id));
@@ -256,8 +259,6 @@ export function buildRecall(
   return {
     memories: memories.slice(offset, end),
     memoriesRemaining: Math.max(0, memories.length - end),
-    works: summaries.slice(offset, end),
-    worksRemaining: Math.max(0, summaries.length - end),
     unfinishedWorks: unfinishedWorks.slice(offset, end),
     unfinishedWorksRemaining: Math.max(0, unfinishedWorks.length - end),
     unreviewedWorks: unreviewedWorks.slice(offset, end),
@@ -267,7 +268,13 @@ export function buildRecall(
     work: options.work === undefined ? null : (works.get(options.work) ?? null),
     pending: pending.slice(offset, end),
     pendingRemaining: Math.max(0, pending.length - end),
-    graph: queryGraph(current, archive, options),
+    ...(options.full
+      ? {
+          works: summaries.slice(offset, end),
+          worksRemaining: Math.max(0, summaries.length - end),
+          graph: queryGraph(current, archive, options),
+        }
+      : {}),
     tidy: calculateTidyStatus(archive, current),
   };
 }

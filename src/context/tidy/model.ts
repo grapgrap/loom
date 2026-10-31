@@ -3,15 +3,29 @@ import type { WorkProgress } from "../work/model.ts";
 import type { Entity, Statement, Graph, GraphChanges } from "../graph/model.ts";
 import type { Cursor } from "../sources/model.ts";
 
-export type Memory = {
+type MemoryIdentity = {
   id: string;
   scope: Scope;
-  text: string;
-  reason: string;
   sources: string[];
   supersedes: string[];
-  status: "active" | "unresolved" | "retired";
   retirement?: Retirement;
+};
+
+export type ContentMemory = MemoryIdentity & {
+  text: string;
+  reason: string;
+  status: "active" | "unresolved" | "retired";
+};
+
+export type Memory =
+  | ContentMemory
+  | (MemoryIdentity & {
+      status: "absorbed";
+      absorption: { into: string[]; reason: string };
+    });
+
+type NewMemory = Omit<ContentMemory, "status" | "retirement"> & {
+  status: "active" | "unresolved";
 };
 
 export type ConsolidatedWork = WorkProgress & {
@@ -26,13 +40,23 @@ export type TidySnapshot = {
   baseRevision: number;
   bounds: Cursor;
   hashes: Record<string, string>;
+  memoryIds?: string[];
+};
+
+export type TidyPreparationOptions = {
+  limit: number;
+  offset?: number;
+  revisit?: boolean;
+  work?: string;
+  query?: string;
 };
 
 export type TidyChanges = {
   snapshot: string;
-  memories: Memory[];
+  memories: NewMemory[];
   works: ConsolidatedWork[];
   retire: (Retirement & { id: string })[];
+  absorb?: { from: string[]; into: string[]; reason: string }[];
   graph?: GraphChanges;
 };
 

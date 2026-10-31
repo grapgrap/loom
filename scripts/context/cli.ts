@@ -34,24 +34,24 @@ Commands:
               Change structured work through JSON stdin: --work <id>.
   work show   Read structured work, readiness and review gaps: --work <id> [--tree].
   location    Show the resolved project and storage paths without creating files.
-  recall      Read memories, work summaries, unfinished work and state-review candidates.
+  recall      Read memories, selected work, pending originals and unfinished/review candidates.
   record      Append daily plain text from stdin: --work <id> --source <reference>.
   search      Rank original records with BM25: --query <text>.
   read        Read an exact original record: --ref <kind:id@revision>.
   graph       Read statements and their evidence paths: --entity <id> or --query <text>.
-  tidy prepare  Freeze an unprocessed batch for the tidy skill.
+  tidy prepare  Freeze an unprocessed batch; --revisit also selects existing memories.
   tidy apply    Apply grounded changes from JSON stdin using the prepared snapshot.
   tidy status   Show pending count and whether consolidation is due.
-  remember    Create or revise a memory: --id <id>, JSON input.
-  checkpoint  Save work status, progress and next actions: --work <id>, JSON input.
   forget      Erase a memory: --id <id> --revision <n>; or a daily original: --ref note:work@n.
 
 Options:
   --cwd <path>       Git checkout or worktree (default: current directory).
   --data-dir <path>  Absolute storage override (otherwise LOOM_DATA_DIR or OS default).
-  --work <id>        Include this work's scoped memories and full checkpoint in recall.
+  --work <id>        Select work-scoped memories and current work state in recall.
   --query <text>     Filter recalled memories by words in current text and reason.
   --history         Include prior revisions in recall; current revisions are the default.
+  --full            Include all work summaries and graph context in recall.
+  --revisit         Reconsider existing memories, optionally scoped by --work and --query.
   --tree            Include descendants in work show.
   --entity <id>      Start graph traversal at this entity.
   --depth <n>        Graph traversal depth, 1-5 (default: 2).
@@ -66,8 +66,8 @@ Options:
 
 Requires Node.js 22.18+ in 22.x, 24.x, or 26+, and Git. Use cli.sh (macOS/Linux) or cli.cmd (Windows) to diagnose missing Node.
 Exit code 2 requests dependency setup by the agent; other failures use exit code 1.
-remember/checkpoint inputs require expectedRevision; record does not.
-See skills/work/references/context.md for schemas and recording policy.`;
+See skills/work/references/context.md for schemas and recording policy.
+Legacy remember/checkpoint writers remain supported; see skills/work/references/context-legacy.md.`;
 
 function parseCommandLine() {
   const {
@@ -86,6 +86,8 @@ function parseCommandLine() {
       query: { type: "string" },
       input: { type: "string" },
       history: { type: "boolean" },
+      full: { type: "boolean" },
+      revisit: { type: "boolean" },
       help: { type: "boolean" },
       source: { type: "string" },
       by: { type: "string" },
@@ -106,7 +108,7 @@ function parseCommandLine() {
   if (words.length !== (grouped ? 2 : 1)) throw new Error(usage);
   const optionsByCommand: Record<string, string[]> = {
     location: [],
-    recall: ["work", "query", "history", "limit", "offset", "entity", "depth"],
+    recall: ["work", "query", "history", "full", "limit", "offset", "entity", "depth"],
     remember: ["id", "input"],
     checkpoint: ["work", "input"],
     forget: ["id", "revision", "ref"],
@@ -114,7 +116,7 @@ function parseCommandLine() {
     search: ["query", "work", "limit"],
     read: ["ref"],
     graph: ["work", "query", "history", "limit", "entity", "depth"],
-    "tidy:prepare": ["limit", "offset"],
+    "tidy:prepare": ["limit", "offset", "revisit", "work", "query"],
     "tidy:apply": ["input"],
     "tidy:status": [],
     "work:show": ["work", "tree", "history"],
@@ -137,6 +139,12 @@ function parseCommandLine() {
   const allowedOptions = ["cwd", "data-dir", ...optionsByCommand[command]];
   if (names.some((name) => !allowedOptions.includes(name)))
     throw new Error(`Unsupported option for ${command}`);
+  if (
+    command === "recall" &&
+    !options.full &&
+    names.some((name) => ["entity", "depth"].includes(name))
+  )
+    throw new Error("recall --entity and --depth require --full; use graph for focused lookup");
   if (command === "remember" || (command === "forget" && options.ref === undefined))
     parseRecordId(options.id);
   if (
@@ -170,6 +178,12 @@ function parseCommandLine() {
     throw new Error("search requires --query <text>");
   if (command === "read" && !options.ref) throw new Error("read requires --ref <kind:id@revision>");
   let erasureRequest: ErasureRequest | undefined;
+  if (
+    command === "tidy:prepare" &&
+    !options.revisit &&
+    (options.work !== undefined || options.query !== undefined)
+  )
+    throw new Error("tidy prepare --work and --query require --revisit");
   if (command === "forget") {
     if (options.ref !== undefined) {
       const note = parseSourceReference(options.ref);
@@ -278,7 +292,7 @@ async function runCli() {
       result = await readSource(location, options.ref!);
       break;
     case "tidy:prepare":
-      result = await prepareTidyBatch(location, options.limit, options.offset);
+      result = await prepareTidyBatch(location, options);
       break;
     case "tidy:apply":
       result = await applyTidyChanges(location, writeInput);

@@ -1,13 +1,19 @@
 import type { ProjectLocation } from "../storage/store.ts";
-import type { SourceArchive } from "../sources/model.ts";
+import type { Memory, TidyPreparationOptions } from "./model.ts";
+import type { OriginalSource, SourceArchive } from "../sources/model.ts";
 import type { Consolidation, TidyChanges } from "./model.ts";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { createRecordParser } from "../records/records.ts";
-import { findUnprocessedSources, readSourceArchive } from "../sources/sources.ts";
+import {
+  findUnprocessedSources,
+  matchesContextScope,
+  readSourceArchive,
+} from "../sources/sources.ts";
 import { updateStoredRecord, readStoredRecord } from "../storage/store.ts";
 import { emptyGraph } from "../graph/graph.ts";
 import { presentWork } from "../work/work.ts";
+import { extractSearchText } from "../sources/search.ts";
 import {
   parseConsolidationHistory,
   getLatestConsolidation,
@@ -38,12 +44,14 @@ function currentPage(
   consolidation: Consolidation,
   limit: number,
   offset: number,
+  matchesSelection: (entry: Memory | OriginalSource) => boolean,
 ) {
   const legacyWorks = consolidation.works.filter(
     (work) => !(archive.works ?? []).some(({ id }) => id === work.id),
   );
   const memories = collectMemoryBaseline(archive, consolidation).filter(
-    ({ status }) => status !== "retired",
+    (memory) =>
+      memory.status !== "retired" && memory.status !== "absorbed" && matchesSelection(memory),
   );
   const retired = consolidation.memories
     .filter(({ status }) => status === "retired")
@@ -64,22 +72,36 @@ function currentPage(
   };
 }
 
-export async function prepareTidyBatch(location: ProjectLocation, limit: number, offset = 0) {
+export async function prepareTidyBatch(
+  location: ProjectLocation,
+  { limit, offset = 0, revisit, work, query }: TidyPreparationOptions,
+) {
   const [archive, history] = await Promise.all([
     readSourceArchive(location),
     readConsolidationHistory(location),
   ]);
   const consolidation = getLatestConsolidation(history);
-  const pending = findUnprocessedSources(archive, consolidation.cursor);
+  const queryWords = (query ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+  const matchesSelection = (entry: Memory | OriginalSource) => {
+    if ("status" in entry && entry.status === "absorbed") return false;
+    return (
+      (work === undefined || matchesContextScope(entry, work)) &&
+      queryWords.every((word) => extractSearchText(entry).toLowerCase().includes(word))
+    );
+  };
+  const pending = findUnprocessedSources(archive, consolidation.cursor).filter(matchesSelection);
   const records = pending.slice(0, limit);
-  const current = currentPage(archive, consolidation, limit, offset);
-  if (!records.length) return { snapshot: null, records: [], remaining: 0, current };
+  const current = currentPage(archive, consolidation, limit, offset, matchesSelection);
+  const review = revisit ? current.memories : [];
+  if (!records.length && !review.length)
+    return { snapshot: null, records: [], remaining: 0, current };
   const snapshot = {
-    version: 1,
+    version: revisit ? 2 : 1,
     id: randomUUID(),
     baseRevision: consolidation.revision,
     bounds: archive.bounds,
     hashes: Object.fromEntries(records.map((source) => [source.ref, hashOriginalSource(source)])),
+    ...(revisit ? { memoryIds: review.map(({ id }) => id) } : {}),
   };
   await updateStoredRecord({
     path: snapshotPath(location, snapshot.id),
@@ -96,7 +118,10 @@ export async function prepareTidyBatch(location: ProjectLocation, limit: number,
 }
 
 function appliedChanges(current: Consolidation, changes: TidyChanges) {
-  const memoryIds = new Set([...changes.memories, ...changes.retire].map(({ id }) => id));
+  const memoryIds = new Set([
+    ...[...changes.memories, ...changes.retire].map(({ id }) => id),
+    ...(changes.absorb ?? []).flatMap(({ from }) => from),
+  ]);
   const workIds = new Set(changes.works.map(({ id }) => id));
   return {
     ...current,

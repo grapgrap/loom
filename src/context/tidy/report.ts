@@ -28,7 +28,7 @@ function collectionChanges<K extends keyof TidyEntries>(
           : "status" in newEntry &&
               "status" in oldEntry &&
               newEntry.status !== oldEntry.status &&
-              ["retired", "superseded"].includes(newEntry.status)
+              ["retired", "superseded", "absorbed"].includes(newEntry.status)
             ? newEntry.status
             : "updated";
     return [{ kind, id, action, before: oldEntry, after: newEntry } as TidyChange];
@@ -80,7 +80,7 @@ export function eraseFromTidyReport(
     const statement = entry as Statement;
     const supportedIds = presentIds.statement;
     return {
-      ...entry,
+      ...statement,
       supersedes: statement.supersedes.filter((id) => supportedIds.has(id)),
       contradicts: statement.contradicts.filter((id) => supportedIds.has(id)),
       ...(statement.supersededBy
