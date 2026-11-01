@@ -23,7 +23,6 @@ function submission(project: Fixture) {
     [
       "report",
       {
-        actor: "worker",
         progress: "Verified",
         next: [],
         checks: [
@@ -31,7 +30,7 @@ function submission(project: Fixture) {
         ],
       },
     ],
-    ["submit", { actor: "worker", summary: "Ready", artifacts: [] }],
+    ["submit", { summary: "Ready", artifacts: [] }],
   ] as const) {
     work = run(project, ["work", action, "--work", "result"], {
       expectedRevision: work.revision,

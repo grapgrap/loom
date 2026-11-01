@@ -1,6 +1,6 @@
 # 공통 업무 CLI 계약
 
-`work`는 단독 업무와 위임 업무에 같은 목표·범위·완료 조건·보고 구조를 사용한다. 이 CLI에 등록된 업무는 managed: true로 표시된다. `orchestrate`는 이 업무들을 연결하고 배정하며 결과를 수락한다. 아래 명령은 [작업 맥락](context.md)의 CLI·프로젝트·데이터 루트를 그대로 사용한다. 명령 이름 앞에 `node "<plugin-root>/scripts/context/cli.ts"`를 붙인다.
+`work`는 단독 업무와 위임 업무에 같은 목표, 범위, 완료 조건과 보고 구조를 사용한다. 이 CLI에 등록된 업무는 managed: true로 표시된다. 업무 변경은 owner만 실행한다. 단독 업무에서는 수행자가 owner이고, 위임 업무에서는 `orchestrate`를 실행하는 조율자가 owner다. 서브 에이전트는 CLI로 명세와 근거를 조회하고, 판단과 수행 결과는 호스트로 조율자에게 반환한다. 이해완료 상태나 명령은 두지 않는다. 아래 명령은 [작업 맥락](context.md)의 CLI, 프로젝트와 데이터 루트를 그대로 사용한다. 명령 이름 앞에 `node "<plugin-root>/scripts/context/cli.ts"`를 붙인다.
 
 ## 업무를 정의하고 조회한다
 
@@ -40,7 +40,7 @@ create의 actor가 계획과 완료 판단을 맡는 owner가 된다. `goal`은 
 
 ## 조건별로 보고한다
 
-`work report --work <id>`는 수행자가 확인한 현재 진행·다음 행동과 조건별 관찰을 저장한다.
+`work report --work <id>`는 owner가 현재 진행, 다음 행동과 조건별 관찰을 저장한다. 위임 업무에서는 조율자가 작업자의 호스트 보고를 현재 명세와 대조하여 기록한다. `source`와 증거에 실제 보고자 및 보고와 산출물의 위치를 연결한다.
 
 ```json
 {
@@ -74,13 +74,13 @@ checks를 생략하거나 빈 배열로 전달하면 기존 조건 보고를 보
 
 ## 위임하고 결과를 수락한다
 
-1. owner가 `work assign --work <id>`에 공통 입력과 `worker`, `reviewer`를 전달한다. worker와 reviewer는 서로 달라야 한다. 조율자가 결과를 수락한다면 reviewer를 조율자 ID로 지정한다. 이후 조건 보고는 worker가 맡는다.
-2. 호스트 도구로 작업자를 실행하고 `executionId`를 연결한다. 같은 worker·reviewer로 assign을 다시 호출해 실행 ID만 붙이면 기존 보고와 제출을 보존한다. 담당자를 바꾸면 이전 검증·제출을 무효화한다.
-3. worker가 report로 조건을 확인하고 `work submit`에 공통 입력, `summary`, `artifacts` 배열을 전달한다. 완료와 같은 조건을 검사한 뒤 상태를 submitted로 바꾸고 정의 리비전·조건 보고·산출물을 제출에 고정한다. 반환된 `submission.ref`를 메인에게 전달한다.
-4. reviewer가 실제 결과를 검토하고 `work accept`에 공통 입력, `submission`, `reason`, `evidence` 배열을 전달한다. submission은 현재 제출의 정확한 ref다. 수락하면 업무가 complete가 된다. assigned 업무는 complete 명령으로 이 단계를 건너뛸 수 없다.
-5. 보완은 `work request-changes`에 공통 입력, `submission`, `reason`, 보완할 조건 ID 배열 `criteria`를 전달한다. criteria를 생략하면 모든 조건을 다시 확인한다. 상태는 active로 돌아가고 지정한 조건 보고를 지운다. worker가 보완·재보고·재제출하면 새 ref를 검토한다.
+1. owner인 조율자가 `work assign --work <id>`에 공통 입력과 `worker`, `reviewer`를 전달한다. worker와 reviewer는 서로 달라야 한다. 조율자가 직접 검토한다면 reviewer를 조율자 ID로 지정한다. 두 필드는 수행과 검토의 담당자를 식별하며 CLI 변경 권한을 부여하지 않는다.
+2. 조율자가 호스트 도구로 작업자를 실행하고 `executionId`를 연결한다. 같은 worker와 reviewer로 assign을 다시 호출해 실행 ID만 붙이면 기존 보고와 제출을 보존한다. 담당자를 바꾸면 이전 검증과 제출을 무효화한다.
+3. 작업자는 `work show`, `recall`, `search`, `read`, `graph`로 현재 명세와 근거를 읽고, 읽은 명세의 ref와 조건별 관찰, 근거, 산출물과 남은 일을 호스트로 반환한다. 조율자가 현재 명세와 대조하여 report를 저장한다. 결과가 준비되면 조율자가 `work submit`에 공통 입력, `summary`, `artifacts` 배열을 전달한다. 완료와 같은 조건을 검사한 뒤 상태를 submitted로 바꾸고 정의 리비전, 조건 보고와 산출물을 제출에 고정한다.
+4. reviewer가 실제 결과를 검토하고 조율자가 `work accept`에 공통 입력, `submission`, `reason`, `evidence` 배열을 전달한다. reviewer가 별도 서브 에이전트라면 검토 결과를 호스트로 반환하며, 조율자가 그 근거를 확인해 수락한다. submission은 현재 제출의 정확한 ref다. 수락하면 업무가 complete가 된다. assigned 업무는 complete 명령으로 이 단계를 건너뛸 수 없다.
+5. 보완은 조율자가 `work request-changes`에 공통 입력, `submission`, `reason`, 보완할 조건 ID 배열 `criteria`를 전달한다. criteria를 생략하면 모든 조건을 다시 확인한다. 상태는 active로 돌아가고 지정한 조건 보고를 지운다. 작업자가 보완한 결과를 호스트로 반환하면 조율자가 report와 submit을 저장하고 새 ref를 검토한다.
 
-submitted는 미완료 업무지만 worker가 자동으로 다시 수행할 상태는 아니다. `recall.awaitingReviewWorks`와 work show의 awaitingReview에서 reviewer의 다음 행동을 확인한다. 메인은 호스트의 대기·알림 도구로 실행 상태를 확인하고, 새 결과를 업무 CLI에 대조한다. CLI는 에이전트를 실행하거나 메시지를 전송하지 않는다.
+submitted는 조율자가 수신 결과를 등록하고 검토를 기다리는 상태다. worker가 자동으로 다시 수행할 상태는 아니다. `recall.awaitingReviewWorks`와 work show의 awaitingReview에서 검토할 결과를 확인한다. 조율자는 호스트의 대기 및 알림 도구로 실행 상태를 확인하고, 새 결과를 업무 CLI에 대조한다. CLI는 에이전트를 실행하거나 메시지를 전송하지 않는다. 기존 worker와 reviewer가 기록한 원장은 계속 조회할 수 있지만 새 변경은 owner만 실행한다.
 
 ## 계획을 갱신하고 기록을 이어간다
 
@@ -88,6 +88,6 @@ submitted는 미완료 업무지만 worker가 자동으로 다시 수행할 상�
 
 조건·담당 변경, 재개, 새로운 검증 보고는 기여하는 상위 조건과 의존 업무의 검증도 무효화한다. 기여 조건을 바꾸면 이전·새 상위 조건을 모두 다시 확인한다. 영향받은 complete·submitted는 active로 돌아가고 새 리비전이 생긴다. 상위의 무관한 조건 보고는 보존한다. blocked·paused·cancelled는 기존 이유와 상태를 유지하며 재확인 이유만 recheckReason에 추가한다. 취소된 업무의 next는 비운 채 유지한다. 이전 제출은 새 조건이나 리비전의 결과로 수락할 수 없다. 상위 조건을 제거하려면 먼저 그 조건을 참조하는 하위 명세를 조정한다.
 
-처리 과정의 판단·합의·출처는 기존 record로 계속 남긴다. 업무 CLI는 현재 정의·수행·검증·수락 상태를 소유하며, tidy는 그 이력을 근거로 기억과 그래프를 정리한다. tidy나 checkpoint가 managed 업무 상태를 덮어쓰는 요청은 거부한다.
+처리 과정의 판단, 합의와 출처는 단독 수행자나 조율자가 기존 record로 남긴다. 서브 에이전트는 저장 명령을 실행하지 않고 필요한 기록 내용을 호스트로 보고한다. 업무 CLI는 현재 정의, 수행, 검증과 수락 상태를 소유하며, tidy는 그 이력을 근거로 기억과 그래프를 정리한다. tidy나 checkpoint가 managed 업무 상태를 덮어쓰는 요청은 거부한다.
 
 기존 업무는 recall로 원문과 상태를 읽은 뒤 create에 `adopt: true`와 확인 가능한 새 명세를 전달해 전환한다. 기존 checkpoint ref와 기록은 보존한다. 이전 완료 선언을 새 조건의 met 증거로 자동 변환하지 않는다. 기존 업무를 전환하지 않으면 [이전 계약](context-legacy.md)을 계속 사용한다. 같은 프로젝트를 조율하는 에이전트는 이 업무 CLI를 지원하는 같은 버전을 사용한다.

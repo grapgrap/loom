@@ -44,13 +44,11 @@ function submitted() {
   });
   context.change("result", "assign", { worker: "worker", reviewer: "main" });
   context.change("result", "report", {
-    actor: "worker",
     progress: "Verified",
     checks: [check],
     next: [],
   });
   context.change("result", "submit", {
-    actor: "worker",
     summary: "Ready",
     artifacts: ["result.txt"],
   });
@@ -136,13 +134,11 @@ test("a resubmission cannot reuse the previous submission ref even when its payl
   const first = currentWorks(context.ledger).get("result")!.submission!;
   context.change("result", "request-changes", { submission: first.ref, reason: "Recheck" });
   context.change("result", "report", {
-    actor: "worker",
     progress: "Rechecked",
     checks: [check],
     next: [],
   });
   context.change("result", "submit", {
-    actor: "worker",
     summary: first.summary,
     artifacts: first.artifacts,
   });
@@ -168,7 +164,6 @@ test("changes-requested snapshots survive progress, blocked and paused reports u
   });
   for (const status of ["blocked", "paused", "active"]) {
     context.change("result", "report", {
-      actor: "worker",
       status,
       progress: "Waiting for the next check",
       checks: [],
@@ -177,7 +172,6 @@ test("changes-requested snapshots survive progress, blocked and paused reports u
     expect(parseWorkLedger(context.ledger)).toBe(context.ledger);
   }
   context.change("result", "report", {
-    actor: "worker",
     progress: "New observation",
     checks: [{ ...check, observation: "Rechecked" }],
     next: [],
@@ -199,13 +193,11 @@ test("submission payloads remain valid across execution binding, resubmission, a
   expect(parseWorkLedger(context.ledger)).toBe(context.ledger);
   context.change("result", "request-changes", { submission: original.ref, reason: "Recheck" });
   context.change("result", "report", {
-    actor: "worker",
     progress: "Rechecked",
     checks: [{ ...check, observation: "Rechecked" }],
     next: [],
   });
   const replacement = context.change("result", "submit", {
-    actor: "worker",
     summary: "Corrected",
     artifacts: [],
   });
@@ -235,14 +227,13 @@ test("historical accepted submissions remain valid when a dependency invalidates
     });
     if (id === "result") context.change(id, "assign", { worker: "worker", reviewer: "main" });
     context.change(id, "report", {
-      actor: id === "result" ? "worker" : "main",
       progress: "Verified",
       checks: [check],
       next: [],
     });
     if (id === "prerequisite") context.change(id, "complete");
     else {
-      const work = context.change(id, "submit", { actor: "worker", summary: "Ready" });
+      const work = context.change(id, "submit", { summary: "Ready" });
       context.change(id, "accept", {
         submission: work.submission!.ref,
         reason: "Reviewed",
@@ -255,6 +246,20 @@ test("historical accepted submissions remain valid when a dependency invalidates
   expect(result.status).toBe("active");
   expect(result.submission).toBeNull();
   expect(parseWorkLedger(context.ledger)).toBe(context.ledger);
+});
+
+test("past worker reports and submissions with a separate reviewer remain readable", () => {
+  const ledger = structuredClone(accepted().ledger);
+  for (const revision of ledger.works[0].revisions) {
+    if (revision.assignment) revision.assignment.reviewer = "historical-reviewer";
+    if (["report", "submit"].includes(revision.action)) revision.actor = "worker";
+    if (revision.submission?.review) {
+      revision.actor = "historical-reviewer";
+      revision.submission.review.actor = "historical-reviewer";
+    }
+  }
+  expect(parseWorkLedger(ledger)).toBe(ledger);
+  expect(currentWorks(ledger).get("result")!.status).toBe("complete");
 });
 
 test("legacy adoption and unrelated stored metadata remain readable", () => {

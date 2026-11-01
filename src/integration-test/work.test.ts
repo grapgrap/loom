@@ -1,5 +1,6 @@
 import type { Fixture } from "./testing.ts";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "vitest";
 import { fixture, invoke, run, concurrentRequest } from "./testing.ts";
 
@@ -26,8 +27,13 @@ function show(project: Fixture, id: string, ...options: string[]) {
   return run(project, ["work", "show", "--work", id, ...options]);
 }
 
-function inputFor(project: Fixture, id: string, input = {}) {
-  return { expectedRevision: show(project, id).work.revision, actor: "main", source, ...input };
+function inputFor(project: Fixture, id: string, input: Record<string, unknown> = {}) {
+  return {
+    expectedRevision: input.expectedRevision ?? show(project, id).work.revision,
+    actor: "main",
+    source,
+    ...input,
+  };
 }
 
 function change(project: Fixture, action: string, id: string, input = {}) {
@@ -87,7 +93,94 @@ test("a standalone work completes only after every agreed criterion has current 
   ).toBe(true);
 });
 
-test("delegation separates worker submission, coordinator acceptance and whole-work completion", (t) => {
+test("delegated participants read context while only the coordinator reports and submits", (t) => {
+  const project = fixture(t);
+  create(project, "child");
+  const assigned = change(project, "assign", "child", {
+    worker: "worker-1",
+    reviewer: "reviewer-1",
+  });
+  const path = join(run(project, ["location"]).projectDirectory, "work-state.json");
+  const before = readFileSync(path, "utf8");
+  expect(show(project, "child").work.assignment.worker).toBe("worker-1");
+  expect(run(project, ["recall", "--work", "child"]).work.ref).toBe(assigned.ref);
+  expect(run(project, ["read", "--ref", assigned.ref]).id).toBe("child");
+  expect(
+    run(project, ["search", "--work", "child", "--query", "Deliver"]).results.length,
+  ).toBeGreaterThan(0);
+  expect(readFileSync(path, "utf8")).toBe(before);
+
+  for (const actor of ["worker-1", "reviewer-1"]) {
+    const denied = invoke(project, ["work", "report", "--work", "child"], {
+      expectedRevision: assigned.revision,
+      actor,
+      source,
+      progress: "Claimed done",
+      next: [],
+    });
+    expect(denied.status).toBe(1);
+    expect(denied.stderr).toMatch(/Only work owner main/);
+    expect(readFileSync(path, "utf8")).toBe(before);
+  }
+  const observed = report(project, "child");
+  const reported = readFileSync(path, "utf8");
+  for (const actor of ["worker-1", "reviewer-1"]) {
+    const denied = invoke(project, ["work", "submit", "--work", "child"], {
+      expectedRevision: observed.revision,
+      actor,
+      source,
+      summary: "Claimed ready",
+    });
+    expect(denied.status).toBe(1);
+    expect(denied.stderr).toMatch(/Only work owner main/);
+    expect(readFileSync(path, "utf8")).toBe(reported);
+  }
+  const submitted = change(project, "submit", "child", {
+    summary: "Worker result received through the host",
+    artifacts: ["src/child.ts"],
+  });
+  expect(submitted).toMatchObject({ status: "submitted", actor: "main" });
+});
+
+test("only the coordinator records review decisions and corrected delegated results", (t) => {
+  const project = fixture(t);
+  create(project, "child");
+  change(project, "assign", "child", { worker: "worker-1", reviewer: "reviewer-1" });
+  report(project, "child");
+  const submitted = change(project, "submit", "child", { summary: "Received worker result" });
+  const path = join(run(project, ["location"]).projectDirectory, "work-state.json");
+  const before = readFileSync(path, "utf8");
+  for (const actor of ["worker-1", "reviewer-1"]) {
+    for (const action of ["accept", "request-changes"]) {
+      const denied = invoke(project, ["work", action, "--work", "child"], {
+        expectedRevision: submitted.revision,
+        actor,
+        source,
+        submission: submitted.submission.ref,
+        reason: "Reviewed",
+        ...(action === "accept" ? { evidence: ["review"] } : {}),
+      });
+      expect(denied.status).toBe(1);
+      expect(denied.stderr).toMatch(/Only work owner main/);
+      expect(readFileSync(path, "utf8")).toBe(before);
+    }
+  }
+  change(project, "request-changes", "child", {
+    submission: submitted.submission.ref,
+    reason: "Coordinator requests a corrected result",
+  });
+  report(project, "child");
+  const corrected = change(project, "submit", "child", { summary: "Corrected result" });
+  const accepted = change(project, "accept", "child", {
+    submission: corrected.submission.ref,
+    reason: "Coordinator checked the result and reviewer evidence",
+    evidence: ["reviewer-1 host report", "verified artifact"],
+  });
+  expect(accepted).toMatchObject({ status: "complete", actor: "main" });
+  expect(accepted.submission.review.actor).toBe("main");
+});
+
+test("delegation separates coordinator result registration, acceptance and whole-work completion", (t) => {
   const project = fixture(t);
   create(project, "whole", {
     criteria: [
@@ -104,9 +197,8 @@ test("delegation separates worker submission, coordinator acceptance and whole-w
   expect(
     invoke(project, ["work", "complete", "--work", "child"], inputFor(project, "child")).status,
   ).toBe(1);
-  report(project, "child", { actor: "worker-1" });
+  report(project, "child");
   const submitted = change(project, "submit", "child", {
-    actor: "worker-1",
     summary: "Implementation and verification are ready",
     artifacts: ["src/child.ts"],
   });
@@ -193,14 +285,15 @@ test("changed definitions invalidate submissions, accepted ancestors and depende
   const project = fixture(t);
   create(project, "whole");
   create(project, "child", { parent: "whole", contributesTo: ["c1"] });
-  change(project, "assign", "child", { worker: "worker-1", reviewer: "main" });
-  report(project, "child", { actor: "worker-1" });
+  const assigned = change(project, "assign", "child", { worker: "worker-1", reviewer: "main" });
+  const observed = report(project, "child", { expectedRevision: assigned.revision });
   const submitted = change(project, "submit", "child", {
-    actor: "worker-1",
+    expectedRevision: observed.revision,
     summary: "Ready",
     artifacts: [],
   });
-  change(project, "request-changes", "child", {
+  const rejected = change(project, "request-changes", "child", {
+    expectedRevision: submitted.revision,
     submission: submitted.submission.ref,
     reason: "The edge case is not established",
     criteria: ["c1"],
@@ -210,9 +303,9 @@ test("changed definitions invalidate submissions, accepted ancestors and depende
       ({ criterionId }: { criterionId: string }) => criterionId,
     ),
   ).toStrictEqual(["c1"]);
-  report(project, "child", { actor: "worker-1" });
+  const rechecked = report(project, "child", { expectedRevision: rejected.revision });
   const replacement = change(project, "submit", "child", {
-    actor: "worker-1",
+    expectedRevision: rechecked.revision,
     summary: "Corrected",
     artifacts: [],
   });
@@ -221,13 +314,15 @@ test("changed definitions invalidate submissions, accepted ancestors and depende
       project,
       ["work", "accept", "--work", "child"],
       inputFor(project, "child", {
+        expectedRevision: replacement.revision,
         submission: submitted.submission.ref,
         reason: "Old result",
         evidence: [submitted.ref],
       }),
     ).status,
   ).toBe(1);
-  change(project, "accept", "child", {
+  const accepted = change(project, "accept", "child", {
+    expectedRevision: replacement.revision,
     submission: replacement.submission.ref,
     reason: "Reviewed corrected result",
     evidence: [replacement.ref],
@@ -238,12 +333,14 @@ test("changed definitions invalidate submissions, accepted ancestors and depende
   report(project, "dependent");
   change(project, "complete", "dependent");
   change(project, "revise", "child", {
+    expectedRevision: accepted.revision,
     reason: "The user changed the acceptance condition",
     criteria: [{ ...criterion, description: "The new behavior works" }],
   });
   for (const id of ["child", "whole", "dependent"]) {
-    expect(show(project, id).work.status).toBe("active");
-    expect(show(project, id).missingCriteria).not.toHaveLength(0);
+    const current = show(project, id);
+    expect(current.work.status).toBe("active");
+    expect(current.missingCriteria).not.toHaveLength(0);
   }
 });
 
@@ -426,9 +523,8 @@ test("binding a host execution ID preserves an already submitted result", (t) =>
   const project = fixture(t);
   create(project, "child");
   change(project, "assign", "child", { worker: "worker-1", reviewer: "main" });
-  report(project, "child", { actor: "worker-1" });
+  report(project, "child");
   const submitted = change(project, "submit", "child", {
-    actor: "worker-1",
     summary: "Ready",
     artifacts: [],
   });

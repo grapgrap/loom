@@ -201,8 +201,8 @@ function validateSubmission(work: WorkRevision, revisions: WorkRevision[]) {
     validateChoice(review.verdict, ["accepted", "changes-requested"], "submission.review.verdict");
     parseRecordId(review.actor, "submission.review.actor");
     requireCondition(
-      review.actor === work.assignment.reviewer,
-      "Submission review must identify the assigned reviewer",
+      review.actor === work.owner || review.actor === work.assignment.reviewer,
+      "Submission review must identify the work owner or historical assigned reviewer",
     );
     validateText(review.reason, "submission.review.reason");
     texts(review.evidence, "submission.review.evidence");
@@ -311,12 +311,8 @@ function validateRelations(works: Map<string, Work>) {
   for (const id of works.keys()) visit(id);
 }
 
-function worker(work: Work) {
-  return work.assignment?.worker ?? work.owner;
-}
-
 function assertOwner(work: Work, actor: string) {
-  requireCondition(work.owner === actor, `Only work owner ${work.owner} can change its plan`);
+  requireCondition(work.owner === actor, `Only work owner ${work.owner} can change its state`);
 }
 
 function assertExecuting(work: Work) {
@@ -375,7 +371,6 @@ function applyAction(
 ) {
   switch (action) {
     case "revise": {
-      assertOwner(work, input.actor);
       validateText(input.reason, "reason");
       for (const field of [
         "goal",
@@ -397,7 +392,6 @@ function applyAction(
       break;
     }
     case "assign":
-      assertOwner(work, input.actor);
       parseRecordId(input.worker, "worker");
       parseRecordId(input.reviewer, "reviewer");
       requireCondition(input.worker !== input.reviewer, "Worker and reviewer must differ");
@@ -415,10 +409,6 @@ function applyAction(
       invalidate(work, "Assigned; current worker verification is required");
       break;
     case "report": {
-      requireCondition(
-        worker(work) === input.actor,
-        `Only assigned worker ${worker(work)} can report`,
-      );
       assertExecuting(work);
       validateText(input.progress, "progress");
       texts(input.next, "next");
@@ -443,10 +433,7 @@ function applyAction(
       break;
     }
     case "submit":
-      requireCondition(
-        work.assignment && worker(work) === input.actor,
-        "Only an assigned worker can submit a result",
-      );
+      requireCondition(work.assignment, "Only assigned work can have a submitted result");
       requireCondition(work.status === "active", "Only active work can be submitted");
       assertFinished(work, works);
       validateText(input.summary, "summary");
@@ -463,10 +450,6 @@ function applyAction(
       break;
     case "accept":
     case "request-changes": {
-      requireCondition(
-        work.assignment?.reviewer === input.actor,
-        `Only reviewer ${work.assignment?.reviewer ?? "(unassigned)"} can review`,
-      );
       requireCondition(
         work.status === "submitted" && work.submission?.ref === input.submission,
         "Submission is missing, stale or no longer awaiting review",
@@ -506,7 +489,6 @@ function applyAction(
       break;
     }
     case "complete":
-      assertOwner(work, input.actor);
       requireCondition(
         work.assignment === null,
         "Assigned work needs submission and reviewer acceptance",
@@ -516,7 +498,6 @@ function applyAction(
       work.status = "complete";
       break;
     case "cancel":
-      assertOwner(work, input.actor);
       validateText(input.reason, "reason");
       work.status = "cancelled";
       work.progress = input.reason;
@@ -524,7 +505,6 @@ function applyAction(
       work.submission = null;
       break;
     case "reopen":
-      assertOwner(work, input.actor);
       validateText(input.reason, "reason");
       work.status = "active";
       invalidate(work, input.reason);
@@ -614,6 +594,7 @@ export function changeWork(
   parseRecordId(input.actor, "actor");
   validateRecordSource(input.source);
   const current = currentWorks(ledger).get(id);
+  if (current) assertOwner(current, input.actor);
   const requestHash = createHash("sha256").update(JSON.stringify({ action, input })).digest("hex");
   if (current?.revision === input.expectedRevision + 1 && current.requestHash === requestHash)
     return ledger!;
