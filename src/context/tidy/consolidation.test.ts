@@ -56,23 +56,29 @@ test("consolidation rejects a state for work without any source records", () => 
 test("tidy is due by pending volume or age while processed records do not trigger it", () => {
   const now = Date.UTC(2026, 9, 15, 9);
   const cursor = { memory: {}, checkpoint: {}, note: {} };
-  const view = { revision: 0, cursor };
+  const view = { revision: 0, cursor, memories: [], works: [] };
+  const archive = { memories: [], checkpoints: [], journals: [], works: [], bounds: cursor };
   const fresh = Array.from({ length: 20 }, (_, i) => ({
-    kind: "note" as const,
+    ...note,
+    ref: `note:ongoing@${i + 1}`,
     id: "ongoing",
     revision: i + 1,
     recordedAt: new Date(now - 1000).toISOString(),
   }));
-  expect(calculateTidyStatus({ sources: fresh.slice(0, 19) }, view, now).due).toBe(false);
-  expect(calculateTidyStatus({ sources: fresh }, view, now).reasons).toStrictEqual([
+  expect(calculateTidyStatus({ ...archive, sources: fresh.slice(0, 19) }, view, now).due).toBe(
+    false,
+  );
+  expect(calculateTidyStatus({ ...archive, sources: fresh }, view, now).reasons).toStrictEqual([
     "record-count",
   ]);
   const old = { ...fresh[0], recordedAt: new Date(now - 24 * 60 * 60 * 1000).toISOString() };
-  expect(calculateTidyStatus({ sources: [old] }, view, now).reasons).toStrictEqual(["age"]);
+  expect(calculateTidyStatus({ ...archive, sources: [old] }, view, now).reasons).toStrictEqual([
+    "age",
+  ]);
   expect(
     calculateTidyStatus(
-      { sources: [old] },
-      { revision: 1, cursor: { ...cursor, note: { ongoing: 1 } } },
+      { ...archive, sources: [old] },
+      { ...view, revision: 1, cursor: { ...cursor, note: { ongoing: 1 } } },
       now,
     ).due,
   ).toBe(false);

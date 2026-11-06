@@ -124,7 +124,7 @@ test("tidy pages existing context and returns only applied changes", (t) => {
   expect(first.current.memoriesRemaining).toBe(2);
   expect(second.current.memories[0].id).toBe("beta");
   expect(first.records).toStrictEqual(second.records);
-  const applied = run(project, ["tidy", "apply"], {
+  const applied = run(project, ["tidy", "apply", "--full"], {
     snapshot: second.snapshot,
     memories: [{ ...memories[0], text: "Updated alpha" }],
   });

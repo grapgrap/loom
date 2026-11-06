@@ -56,7 +56,7 @@ test("a completed README interruption leaves the original outcome and next actio
     next: [],
   });
 
-  const recalled = run(project, ["recall", "--work", "readme-typo", "--limit", "1"]);
+  const recalled = run(project, ["recall", "--work", "readme-typo", "--full", "--limit", "1"]);
   expect(recalled.unfinishedWorks.map(({ id }: { id: string }) => id)).toStrictEqual([original.id]);
   expect(recalled.unfinishedWorks[0]).toMatchObject({
     goal: original.goal,
@@ -94,7 +94,7 @@ test("reopening completed work is visible before the new checkpoint is consolida
   const recalled = run(project, ["recall", "--work", "feature"]);
   expect(recalled.work.status).toBe("active");
   expect(recalled.work.checkpointRevision).toBe(2);
-  expect(recalled.unfinishedWorks[0].next).toStrictEqual(["Implement the additional behavior."]);
+  expect(recalled.work.next).toStrictEqual(["Implement the additional behavior."]);
 });
 
 test("a new completion immediately removes work from the unfinished list", (t) => {
@@ -227,7 +227,7 @@ test("unfinished work has its own pagination and is not hidden by recent complet
     evidence: ["Verified independently."],
     next: [],
   });
-  const first = run(project, ["recall", "--work", "recent-completed", "--limit", "1"]);
+  const first = run(project, ["recall", "--work", "recent-completed", "--full", "--limit", "1"]);
   const second = run(project, ["recall", "--limit", "1", "--offset", "1"]);
   expect(first.work.id).toBe("recent-completed");
   expect(first.unfinishedWorks).toHaveLength(1);

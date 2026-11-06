@@ -8,7 +8,7 @@ record와 업무 CLI는 각각 원본을 추가한다. 대상·진술·대체 �
 
 ## 그래프 변경분을 구성한다
 
-`tidy prepare`의 `current.graph`를 읽고, 필요한 과거 원본을 `search`·`read`로 확인한다. `tidy apply`의 `graph`에는 변경할 `entities`, 추가할 `statements`, 제외할 `retire`만 전달한다. 생략한 항목은 유지된다.
+`graph`로 관련 관계를 조회하거나 `tidy prepare --full`의 `current.graph`를 읽고, 필요한 과거 원본을 `search`와 `read`로 확인한다. `tidy apply`의 `graph`에는 변경할 `entities`, 추가할 `statements`, 제외할 `retire`만 전달한다. 생략한 항목은 유지된다.
 
 대상(`entities`)의 필드는 다음과 같다.
 

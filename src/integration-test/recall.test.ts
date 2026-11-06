@@ -62,8 +62,16 @@ test("default recall keeps resumable context while full recall adds work discove
   expect(compact.pending.map(({ ref }: { ref: string }) => ref)).toStrictEqual([pending.ref]);
 
   const full = run(project, ["recall", "--work", "storage", "--full"]);
-  const { works, worksRemaining, graph, ...context } = full;
-  expect(context).toStrictEqual(compact);
+  const { works, worksRemaining, graph, unfinishedWorks, awaitingReviewWorks, ...context } = full;
+  const {
+    unfinishedWorks: summaries,
+    awaitingReviewWorks: reviewSummaries,
+    ...compactContext
+  } = compact;
+  expect(unfinishedWorks[0].next).toStrictEqual(compact.work.next);
+  expect(summaries[0]).not.toHaveProperty("next");
+  expect(awaitingReviewWorks).toStrictEqual(reviewSummaries);
+  expect(context).toStrictEqual(compactContext);
   expect(works.map(({ id }: { id: string }) => id)).toStrictEqual(["storage"]);
   expect(worksRemaining).toBe(0);
   expect(graph).toStrictEqual(run(project, ["graph", "--work", "storage"]));

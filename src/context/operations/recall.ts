@@ -72,7 +72,7 @@ function presentEntry<T extends Memory | ConsolidatedWork>(
     recordedAt: current.recordedAt!,
     source: {
       type: "agent",
-      reference: `tidy revision ${current.revision}; sources: ${entry.sources.join(", ")}`,
+      reference: `tidy revision ${current.revision}`,
     },
   };
   if (includeHistory)
@@ -247,13 +247,18 @@ export function buildRecall(
       matchesContextScope(source, options.work) &&
       (source.kind === "note" || (history && source.latest)),
   );
-  const unfinishedWorks = summaries
+  const candidates = summaries.filter(
+    ({ id }) => options.full || options.work === undefined || id === options.work,
+  );
+  const presentCandidate = (summary: (typeof summaries)[number]) =>
+    options.full ? { ...works.get(summary.id), ...summary } : summary;
+  const unfinishedWorks = candidates
     .filter(({ status }) => ["active", "blocked", "paused", "submitted"].includes(status ?? ""))
-    .map((summary) => ({ ...works.get(summary.id), ...summary }));
-  const unreviewedWorks = findUnreviewedWorks(summaries, works, pendingSources);
-  const awaitingReviewWorks = summaries
+    .map(presentCandidate);
+  const unreviewedWorks = findUnreviewedWorks(candidates, works, pendingSources);
+  const awaitingReviewWorks = candidates
     .filter(({ status }) => status === "submitted")
-    .map((summary) => ({ ...works.get(summary.id), ...summary }));
+    .map(presentCandidate);
   const offset = options.offset ?? 0;
   const end = offset + (options.limit ?? 50);
   return {
@@ -275,7 +280,7 @@ export function buildRecall(
           graph: queryGraph(current, archive, options),
         }
       : {}),
-    tidy: calculateTidyStatus(archive, current),
+    tidy: calculateTidyStatus(archive, current, Date.now(), { ...options, history }),
   };
 }
 

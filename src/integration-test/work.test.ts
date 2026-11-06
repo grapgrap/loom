@@ -206,7 +206,7 @@ test("delegation separates coordinator result registration, acceptance and whole
   const tree = show(project, "whole", "--tree");
   expect(tree.awaitingReview).toStrictEqual(["child"]);
   expect(
-    run(project, ["recall", "--work", "whole"]).awaitingReviewWorks.map(
+    run(project, ["recall", "--work", "whole", "--full"]).awaitingReviewWorks.map(
       ({ id }: { id: string }) => id,
     ),
   ).toStrictEqual(["child"]);

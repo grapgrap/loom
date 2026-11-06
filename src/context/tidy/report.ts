@@ -121,3 +121,15 @@ export function eraseFromTidyReport(
       .filter(({ before, after }) => !isDeepStrictEqual(before, after)),
   };
 }
+
+export function summarizeTidyResult(result: Consolidation) {
+  return {
+    revision: result.revision,
+    recordedAt: result.recordedAt,
+    report: {
+      processed: result.report!.processed,
+      remaining: result.report!.remaining,
+      changes: result.report!.changes.map(({ kind, id, action }) => ({ kind, id, action })),
+    },
+  };
+}

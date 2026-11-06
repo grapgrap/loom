@@ -1,19 +1,15 @@
 import type { ProjectLocation } from "../storage/store.ts";
-import type { Memory, TidyPreparationOptions } from "./model.ts";
-import type { OriginalSource, SourceArchive } from "../sources/model.ts";
+import type { TidyPreparationOptions } from "./model.ts";
+import type { SourceArchive } from "../sources/model.ts";
 import type { Consolidation, TidyChanges } from "./model.ts";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { createRecordParser } from "../records/records.ts";
-import {
-  findUnprocessedSources,
-  matchesContextScope,
-  readSourceArchive,
-} from "../sources/sources.ts";
+import { findUnprocessedSources, readSourceArchive } from "../sources/sources.ts";
 import { updateStoredRecord, readStoredRecord } from "../storage/store.ts";
 import { emptyGraph } from "../graph/graph.ts";
 import { presentWork } from "../work/work.ts";
-import { extractSearchText } from "../sources/search.ts";
+import { contextSelection } from "./compaction.ts";
 import {
   parseConsolidationHistory,
   getLatestConsolidation,
@@ -44,7 +40,8 @@ function currentPage(
   consolidation: Consolidation,
   limit: number,
   offset: number,
-  matchesSelection: (entry: Memory | OriginalSource) => boolean,
+  matchesSelection: ReturnType<typeof contextSelection>,
+  full?: boolean,
 ) {
   const legacyWorks = consolidation.works.filter(
     (work) => !(archive.works ?? []).some(({ id }) => id === work.id),
@@ -53,55 +50,54 @@ function currentPage(
     (memory) =>
       memory.status !== "retired" && memory.status !== "absorbed" && matchesSelection(memory),
   );
+  const selectedWorks = legacyWorks.filter((entry) =>
+    matchesSelection({ ...entry, scope: { type: "work", id: entry.id } }),
+  );
+  const managedWorks = (archive.works ?? [])
+    .map((record) => presentWork(record.revisions.at(-1)!))
+    .filter((entry) =>
+      matchesSelection({ ...entry, workScope: entry.scope, scope: { type: "work", id: entry.id } }),
+    );
   const retired = consolidation.memories
-    .filter(({ status }) => status === "retired")
+    .filter((entry) => entry.status === "retired" && matchesSelection(entry))
     .map(({ id, scope, retirement }) => ({ id, scope, ...retirement }));
   const end = offset + limit;
   return {
     memories: memories.slice(offset, end),
     memoriesRemaining: Math.max(0, memories.length - end),
-    works: legacyWorks.slice(offset, end),
-    worksRemaining: Math.max(0, legacyWorks.length - end),
-    managedWorks: (archive.works ?? [])
-      .slice(offset, end)
-      .map((record) => presentWork(record.revisions.at(-1)!)),
-    managedWorksRemaining: Math.max(0, (archive.works ?? []).length - end),
+    works: selectedWorks.slice(offset, end),
+    worksRemaining: Math.max(0, selectedWorks.length - end),
+    managedWorks: managedWorks.slice(offset, end),
+    managedWorksRemaining: Math.max(0, managedWorks.length - end),
     retired: retired.slice(offset, end),
     retiredRemaining: Math.max(0, retired.length - end),
-    graph: consolidation.graph ?? emptyGraph(),
+    ...(full ? { graph: consolidation.graph ?? emptyGraph() } : {}),
   };
 }
 
 export async function prepareTidyBatch(
   location: ProjectLocation,
-  { limit, offset = 0, revisit, work, query }: TidyPreparationOptions,
+  { limit = 50, offset = 0, work, query, full }: TidyPreparationOptions,
 ) {
   const [archive, history] = await Promise.all([
     readSourceArchive(location),
     readConsolidationHistory(location),
   ]);
   const consolidation = getLatestConsolidation(history);
-  const queryWords = (query ?? "").toLowerCase().split(/\s+/).filter(Boolean);
-  const matchesSelection = (entry: Memory | OriginalSource) => {
-    if ("status" in entry && entry.status === "absorbed") return false;
-    return (
-      (work === undefined || matchesContextScope(entry, work)) &&
-      queryWords.every((word) => extractSearchText(entry).toLowerCase().includes(word))
-    );
-  };
+  const matchesSelection = contextSelection({ work, query });
   const pending = findUnprocessedSources(archive, consolidation.cursor).filter(matchesSelection);
   const records = pending.slice(0, limit);
-  const current = currentPage(archive, consolidation, limit, offset, matchesSelection);
-  const review = revisit ? current.memories : [];
+  const current = currentPage(archive, consolidation, limit, offset, matchesSelection, full);
+  const review = current.memories;
   if (!records.length && !review.length)
     return { snapshot: null, records: [], remaining: 0, current };
   const snapshot = {
-    version: revisit ? 2 : 1,
+    version: 2,
     id: randomUUID(),
     baseRevision: consolidation.revision,
     bounds: archive.bounds,
     hashes: Object.fromEntries(records.map((source) => [source.ref, hashOriginalSource(source)])),
-    ...(revisit ? { memoryIds: review.map(({ id }) => id) } : {}),
+    memoryIds: review.map(({ id }) => id),
   };
   await updateStoredRecord({
     path: snapshotPath(location, snapshot.id),

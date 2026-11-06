@@ -217,7 +217,7 @@ test("snapshot hashes define the processed batch without a duplicate cursor or r
   const project = fixture(t);
   record(project, "earlier", "Keep the processed range from earlier work.");
   const initial = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], { snapshot: initial.snapshot });
+  run(project, ["tidy", "apply", "--full"], { snapshot: initial.snapshot });
   const prepared = [
     record(project, "storage", "First observation."),
     record(project, "storage", "Second observation."),
@@ -235,7 +235,7 @@ test("snapshot hashes define the processed batch without a duplicate cursor or r
   snapshot.hashes = Object.fromEntries(Object.entries(snapshot.hashes).reverse());
   writeFileSync(snapshotPath, JSON.stringify(snapshot));
   const arrived = record(project, "storage", "Arrived after preparation.");
-  const applied = run(project, ["tidy", "apply"], { snapshot: batch.snapshot });
+  const applied = run(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot });
   expect(applied.cursor).toStrictEqual({
     memory: {},
     checkpoint: {},
@@ -244,7 +244,7 @@ test("snapshot hashes define the processed batch without a duplicate cursor or r
   expect(
     run(project, ["recall", "--work", "storage"]).pending.map(({ ref }: { ref: string }) => ref),
   ).toStrictEqual([prepared[2].ref, arrived.ref]);
-  expect(run(project, ["tidy", "apply"], { snapshot: batch.snapshot }).revision).toBe(
+  expect(run(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot }).revision).toBe(
     applied.revision,
   );
 });
@@ -261,16 +261,16 @@ test("legacy snapshot fields remain readable and hashless snapshots allow only a
   snapshot.refs = [note.ref];
   delete snapshot.hashes;
   writeFileSync(snapshotPath, JSON.stringify(snapshot));
-  const rejected = invoke(project, ["tidy", "apply"], { snapshot: batch.snapshot });
+  const rejected = invoke(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot });
   expect(rejected.status).toBe(1);
   expect(run(project, ["tidy", "status"]).revision).toBe(0);
   snapshot.hashes = hashes;
   writeFileSync(snapshotPath, JSON.stringify(snapshot));
-  const applied = run(project, ["tidy", "apply"], { snapshot: batch.snapshot });
+  const applied = run(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot });
   expect(applied.cursor).toStrictEqual(snapshot.cursor);
   delete snapshot.hashes;
   writeFileSync(snapshotPath, JSON.stringify(snapshot));
-  expect(run(project, ["tidy", "apply"], { snapshot: batch.snapshot }).revision).toBe(
+  expect(run(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot }).revision).toBe(
     applied.revision,
   );
   expect(run(project, ["recall", "--work", "storage"]).pending).toStrictEqual([]);

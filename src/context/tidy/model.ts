@@ -44,7 +44,8 @@ export type TidySnapshot = {
 };
 
 export type TidyPreparationOptions = {
-  limit: number;
+  limit?: number;
+  full?: boolean;
   offset?: number;
   revisit?: boolean;
   work?: string;

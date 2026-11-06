@@ -1,6 +1,6 @@
 import type { ErasureRequest } from "../../src/context/operations/forget.ts";
 import type { RecordSource } from "../../src/context/model.ts";
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { parseRecordId, parseRevisionNumber } from "../../src/context/records/records.ts";
 import { remember, checkpoint } from "../../src/context/operations/legacy.ts";
@@ -26,6 +26,7 @@ import {
 import { resolveProjectLocation } from "../../src/context/storage/store.ts";
 import { queryGraph } from "../../src/context/graph/query.ts";
 import { runWorkCommand } from "../../src/context/work/store.ts";
+import { summarizeTidyResult } from "../../src/context/tidy/report.ts";
 
 const usage = `Usage: node <plugin>/scripts/context/cli.ts <command> [options]
 
@@ -39,9 +40,9 @@ Commands:
   search      Rank original records with BM25: --query <text>.
   read        Read an exact original record: --ref <kind:id@revision>.
   graph       Read statements and their evidence paths: --entity <id> or --query <text>.
-  tidy prepare  Freeze an unprocessed batch; --revisit also selects existing memories.
+  tidy prepare  Prepare accumulated context and new records for compaction.
   tidy apply    Apply grounded changes from JSON stdin using the prepared snapshot.
-  tidy status   Show pending count and whether consolidation is due.
+  tidy status   Show scoped pending records, context size and growth signals.
   forget      Erase a memory: --id <id> --revision <n>; or a daily original: --ref note:work@n.
 
 Options:
@@ -50,8 +51,8 @@ Options:
   --work <id>        Select work-scoped memories and current work state in recall.
   --query <text>     Filter recalled memories by words in current text and reason.
   --history         Include prior revisions in recall; current revisions are the default.
-  --full            Include all work summaries and graph context in recall.
-  --revisit         Reconsider existing memories, optionally scoped by --work and --query.
+  --full            Include detailed work discovery in recall, graph in prepare, or full apply results.
+  --revisit         Compatibility alias; prepare always reconsiders existing memories.
   --tree            Include descendants in work show.
   --entity <id>      Start graph traversal at this entity.
   --depth <n>        Graph traversal depth, 1-5 (default: 2).
@@ -116,9 +117,9 @@ function parseCommandLine() {
     search: ["query", "work", "limit"],
     read: ["ref"],
     graph: ["work", "query", "history", "limit", "entity", "depth"],
-    "tidy:prepare": ["limit", "offset", "revisit", "work", "query"],
-    "tidy:apply": ["input"],
-    "tidy:status": [],
+    "tidy:prepare": ["limit", "offset", "revisit", "work", "query", "full"],
+    "tidy:apply": ["input", "full"],
+    "tidy:status": ["work", "query"],
     "work:show": ["work", "tree", "history"],
   };
   for (const action of [
@@ -178,12 +179,6 @@ function parseCommandLine() {
     throw new Error("search requires --query <text>");
   if (command === "read" && !options.ref) throw new Error("read requires --ref <kind:id@revision>");
   let erasureRequest: ErasureRequest | undefined;
-  if (
-    command === "tidy:prepare" &&
-    !options.revisit &&
-    (options.work !== undefined || options.query !== undefined)
-  )
-    throw new Error("tidy prepare --work and --query require --revisit");
   if (command === "forget") {
     if (options.ref !== undefined) {
       const note = parseSourceReference(options.ref);
@@ -204,11 +199,18 @@ function parseCommandLine() {
   };
 }
 
-function readJsonInput(inputPath: string | undefined): unknown {
+async function readInputText(inputPath?: string) {
+  if (inputPath !== undefined) return readFile(inputPath, "utf8");
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) chunks.push(chunk);
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+async function readJsonInput(inputPath: string | undefined): Promise<unknown> {
   if (inputPath === undefined && process.stdin.isTTY)
     throw new Error("Provide JSON via --input or stdin");
   try {
-    return JSON.parse(readFileSync(inputPath ?? 0, "utf8"));
+    return JSON.parse(await readInputText(inputPath));
   } catch (caught) {
     const error = caught as NodeJS.ErrnoException;
     throw new Error(`Cannot read JSON input: ${error.message}`);
@@ -236,7 +238,7 @@ async function runCli() {
     ["remember", "checkpoint", "tidy:apply"].includes(command) ||
     (command.startsWith("work:") && command !== "work:show")
   )
-    writeInput = readJsonInput(options.input);
+    writeInput = await readJsonInput(options.input);
   const location = await resolveProjectLocation({
     cwd: options.cwd,
     directory: options["data-dir"],
@@ -271,7 +273,7 @@ async function runCli() {
     case "record":
       result = await appendWorkNote(location, {
         work: options.work!,
-        text: readFileSync(0, "utf8"),
+        text: await readInputText(),
         key: options.key,
         source: {
           type: (options.by ?? "agent") as RecordSource["type"],
@@ -296,13 +298,19 @@ async function runCli() {
       break;
     case "tidy:apply":
       result = await applyTidyChanges(location, writeInput);
+      if (!options.full) result = summarizeTidyResult(result);
       break;
     case "tidy:status": {
       const [sourceArchive, consolidationHistory] = await Promise.all([
         readSourceArchive(location),
         readConsolidationHistory(location),
       ]);
-      result = calculateTidyStatus(sourceArchive, getLatestConsolidation(consolidationHistory));
+      result = calculateTidyStatus(
+        sourceArchive,
+        getLatestConsolidation(consolidationHistory),
+        Date.now(),
+        { ...options, history: consolidationHistory },
+      );
       break;
     }
     case "remember":

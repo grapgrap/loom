@@ -30,7 +30,7 @@ function statement(id: string, subject: string, object: string, source: string, 
 function publish(project: Fixture, graph: unknown, extra = {}) {
   const batch = run(project, ["tidy", "prepare"]);
   const input = { snapshot: batch.snapshot, graph, ...extra };
-  return { input, result: run(project, ["tidy", "apply"], input) };
+  return { input, result: run(project, ["tidy", "apply", "--full"], input) };
 }
 
 test("graph reads are empty and read-only until tidy publishes grounded statements", (t) => {
@@ -44,7 +44,7 @@ test("graph reads are empty and read-only until tidy publishes grounded statemen
     statements: [statement("single-writer-choice", "storage-choice", "one-writer", first.ref)],
   });
   assert.equal(result.graph.statements[0].id, "single-writer-choice");
-  assert.deepEqual(run(project, ["tidy", "apply"], input), result);
+  assert.deepEqual(run(project, ["tidy", "apply", "--full"], input), result);
   const recalled = run(project, ["recall", "--full", "--query", "storage-choice"]);
   assert.equal(recalled.graph.statements[0].id, "single-writer-choice");
   assert.equal(recalled.graph.sources[0].ref, first.ref);
@@ -180,17 +180,17 @@ test("bad graph references and conflicting replacements leave the graph and proc
       statements: [statement("broken", "a", "missing", source.ref)],
     },
   };
-  assert.match(invoke(project, ["tidy", "apply"], bad).stderr, /Unknown entity/);
+  assert.match(invoke(project, ["tidy", "apply", "--full"], bad).stderr, /Unknown entity/);
   assert.equal(run(project, ["recall", "--work", "storage"]).pending.length, 1);
   const later = note(project, "A record outside the prepared snapshot.");
   assert.equal(
-    invoke(project, ["tidy", "apply"], {
+    invoke(project, ["tidy", "apply", "--full"], {
       snapshot: batch.snapshot,
       graph: { entities: [entity("future", later.ref)] },
     }).status,
     1,
   );
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
     snapshot: batch.snapshot,
     graph: {
       entities: [entity("a", source.ref), entity("b", source.ref)],
@@ -203,7 +203,7 @@ test("bad graph references and conflicting replacements leave the graph and proc
     supersedes: ["initial"],
   });
   assert.match(
-    invoke(project, ["tidy", "apply"], {
+    invoke(project, ["tidy", "apply", "--full"], {
       snapshot: next.snapshot,
       graph: { statements: [replacement] },
     }).stderr,
@@ -282,20 +282,20 @@ test("premise cycles and attempts to change a statement in place are rejected", 
     origin: { kind: "inferred", premises: ["one"] },
   });
   assert.match(
-    invoke(project, ["tidy", "apply"], {
+    invoke(project, ["tidy", "apply", "--full"], {
       snapshot: batch.snapshot,
       graph: { entities, statements: [one, two] },
     }).stderr,
     /cycle/i,
   );
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
     snapshot: batch.snapshot,
     graph: { entities, statements: [statement("one", "a", "b", source.ref)] },
   });
   note(project, "A different interpretation.");
   const next = run(project, ["tidy", "prepare"]);
   assert.match(
-    invoke(project, ["tidy", "apply"], {
+    invoke(project, ["tidy", "apply", "--full"], {
       snapshot: next.snapshot,
       graph: { statements: [statement("one", "b", "a", source.ref)] },
     }).stderr,
@@ -498,7 +498,10 @@ test("replacement eligibility follows its explicit status while premise changes 
       ...premiseChanges,
       statements: [replacement, ...(premiseChanges.statements ?? [])],
     };
-    const rejected = invoke(project, ["tidy", "apply"], { snapshot: batch.snapshot, graph });
+    const rejected = invoke(project, ["tidy", "apply", "--full"], {
+      snapshot: batch.snapshot,
+      graph,
+    });
     assert.equal(rejected.status, 1, scenario.name);
     assert.match(rejected.stderr, /active statement can supersede/i, scenario.name);
     assert.deepEqual(run(project, ["graph"]), before, scenario.name);
@@ -508,7 +511,7 @@ test("replacement eligibility follows its explicit status while premise changes 
     );
 
     graph.statements[0] = { ...replacement, status: "active" };
-    const accepted = run(project, ["tidy", "apply"], { snapshot: batch.snapshot, graph });
+    const accepted = run(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot, graph });
     assert.equal(
       accepted.graph.statements.find(({ id }: { id: string }) => id === "accepted").status,
       "superseded",
@@ -574,11 +577,11 @@ test("a work-scoped legacy memory establishes the work for graph statements and 
     ],
   };
   assert.match(
-    invoke(project, ["tidy", "apply"], { snapshot: batch.snapshot, graph }).stderr,
+    invoke(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot, graph }).stderr,
     /Unknown work: unknown/,
   );
   graph.statements[0].scope = scope;
-  const result = run(project, ["tidy", "apply"], {
+  const result = run(project, ["tidy", "apply", "--full"], {
     snapshot: batch.snapshot,
     graph,
     works: [

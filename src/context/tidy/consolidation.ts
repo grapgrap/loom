@@ -40,6 +40,7 @@ import {
   eraseFromGraph,
 } from "../graph/graph.ts";
 import { createTidyReport, eraseFromTidyReport } from "./report.ts";
+import { contextSelection, measureContext } from "./compaction.ts";
 
 function assertCondition(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -151,11 +152,21 @@ export function getLatestConsolidation(history: ConsolidationHistory | null): Co
 }
 
 export function calculateTidyStatus(
-  archive: { sources: Pick<OriginalSource, "kind" | "id" | "revision" | "recordedAt">[] },
-  consolidation: Pick<Consolidation, "cursor" | "revision" | "recordedAt">,
+  archive: SourceArchive,
+  consolidation: Consolidation,
   nowMs = Date.now(),
+  options: { work?: string; query?: string; history?: ConsolidationHistory | null } = {},
 ) {
-  const unprocessedRecords = findUnprocessedSources(archive, consolidation.cursor);
+  const matchesSelection = contextSelection(options);
+  const unprocessedRecords = findUnprocessedSources(archive, consolidation.cursor).filter(
+    matchesSelection,
+  );
+  const memories = collectMemoryBaseline(archive, consolidation);
+  const { reasons: contextReasons, ...context } = measureContext(
+    memories.filter(matchesSelection),
+    unprocessedRecords,
+    options.history,
+  );
   const oldestPendingAt = unprocessedRecords.reduce(
     (earliest, { recordedAt }) => Math.min(earliest, Date.parse(recordedAt)),
     Infinity,
@@ -165,11 +176,12 @@ export function calculateTidyStatus(
   if (unprocessedRecords.length && nowMs - oldestPendingAt >= 24 * 60 * 60 * 1000)
     dueReasons.push("age");
   return {
-    due: dueReasons.length > 0,
+    due: dueReasons.length > 0 || contextReasons.length > 0,
     revision: consolidation.revision,
     pendingRecords: unprocessedRecords.length,
     lastTidiedAt: consolidation.recordedAt ?? null,
-    reasons: dueReasons,
+    reasons: [...dueReasons, ...contextReasons],
+    context,
   };
 }
 

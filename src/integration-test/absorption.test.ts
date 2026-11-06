@@ -50,7 +50,7 @@ test("revisit prepares existing memories without new records and preserves the s
       memory("other-local", note.text, [note.ref], { type: "work", id: "other" }),
     ],
   });
-  expect(run(project, ["tidy", "prepare"]).snapshot).toBe(null);
+  expect(run(project, ["tidy", "prepare"]).snapshot).toBeTypeOf("string");
   const revisit = run(project, [
     "tidy",
     "prepare",
