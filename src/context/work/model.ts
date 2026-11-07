@@ -12,11 +12,20 @@ export type WorkProgress = {
 
 export type Criterion = { id: string; description: string; verification: string };
 
+export type Basis = {
+  work: string;
+  definition: number;
+  target: string;
+  version: string;
+  conditions: string[];
+};
+
 export type Check = {
   criterionId: string;
   verdict: "met" | "unmet" | "unknown";
   observation: string;
   evidence: string[];
+  basis?: Basis;
 };
 
 export type Submission = {
@@ -61,6 +70,7 @@ export type WorkRevision = Work &
     actor: string;
     source: RecordSource;
     requestHash: string | null;
+    requestKey?: string;
   };
 
 export type WorkLedger = { version: number; works: { id: string; revisions: WorkRevision[] }[] };
@@ -71,3 +81,5 @@ export type VisibleWork = Omit<WorkRevision, "requestHash"> & {
   evidence: string[];
   history?: VisibleWork[];
 };
+
+export type AppliedWork = VisibleWork & { outcome: "applied"; replayed: boolean };

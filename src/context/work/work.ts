@@ -5,6 +5,7 @@ type WorkInput = {
   expectedRevision: number;
   actor: string;
   source: RecordSource;
+  requestKey?: string;
   goal: string;
   scope: string;
   criteria: Criterion[] | string[];
@@ -61,8 +62,12 @@ const actions: Record<string, string[]> = {
   reopen: ["reason"],
 };
 
-function requireCondition(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message);
+function requireCondition(
+  condition: unknown,
+  message: string,
+  outcome: "rejected" | "conflict" = "rejected",
+): asserts condition {
+  if (!condition) throw Object.assign(new Error(message), { outcome });
 }
 
 function fields(value: unknown, allowed: string[], label: string) {
@@ -105,15 +110,33 @@ export function currentWorks(ledger: WorkLedger | null) {
   return new Map((ledger?.works ?? []).map((record) => [record.id, record.revisions.at(-1)!]));
 }
 
+export function findRequest(ledger: WorkLedger | null, key: string) {
+  return ledger?.works
+    .flatMap(({ revisions }) => revisions)
+    .find(({ requestKey }) => requestKey === key);
+}
+
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value !== null && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entry]) => [key, canonical(entry)]),
+    );
+  return value;
+}
+
 export function parseWorkLedger(input: unknown): WorkLedger {
   const ledger = input as WorkLedger;
   validateObject(ledger, "work ledger");
-  requireCondition(ledger.version === 1, "Unsupported work ledger version");
+  requireCondition([1, 2].includes(ledger.version), "Unsupported work ledger version");
   validateArray(ledger.works, "works");
   ids(
     ledger.works.map(({ id }) => id),
     "work IDs",
   );
+  const requestKeys = new Set<string>();
   for (const record of ledger.works) {
     validateArray(record.revisions, "work revisions");
     requireCondition(record.revisions.length > 0, "Work needs a revision");
@@ -129,6 +152,17 @@ export function parseWorkLedger(input: unknown): WorkLedger {
       parseRecordId(work.owner, "owner");
       parseRecordId(work.actor, "actor");
       validateRecordSource(work.source);
+      if (work.requestKey !== undefined) {
+        parseRecordId(work.requestKey, "requestKey");
+        requireCondition(ledger.version === 2, "Request keys require work ledger version 2");
+        requireCondition(!requestKeys.has(work.requestKey), "Duplicate work request key");
+        requestKeys.add(work.requestKey);
+        requireCondition(
+          typeof work.requestHash === "string" && /^[a-f0-9]{64}$/.test(work.requestHash),
+          "A work request key needs its payload hash",
+        );
+        requireCondition(work.action !== "invalidated", "Invalidation cannot own a request key");
+      }
       validateText(work.goal, "goal");
       validateText(work.scope, "scope");
       validateText(work.progress, "progress");
@@ -144,6 +178,14 @@ export function parseWorkLedger(input: unknown): WorkLedger {
         "status",
       );
       validateChecks(work.checks, work);
+      if (
+        work.requestKey !== undefined &&
+        ["report", "submit", "complete", "accept"].includes(work.action)
+      )
+        requireBasis(
+          work.checks,
+          work.action === "report" ? record.revisions[index - 1]?.checks : [],
+        );
       if (work.assignment !== null) {
         validateObject(work.assignment, "assignment");
         parseRecordId(work.assignment.worker, "worker");
@@ -156,6 +198,9 @@ export function parseWorkLedger(input: unknown): WorkLedger {
           validateText(work.assignment.executionId, "executionId");
       }
       validateSubmission(work, record.revisions);
+      for (const check of [...work.checks, ...(work.submission?.checks ?? [])])
+        if (check.basis)
+          validateBasisReference(check, work.id, record.revisions.slice(0, index + 1));
     });
   }
   const works = currentWorks(ledger);
@@ -254,7 +299,7 @@ function validateChecks(value: unknown, work: Work, label = "checks"): asserts v
   validateArray(checks, label);
   const known = new Set(work.criteria.map(({ id }) => id));
   for (const check of checks) {
-    fields(check, ["criterionId", "verdict", "observation", "evidence"], "check");
+    fields(check, ["criterionId", "verdict", "observation", "evidence", "basis"], "check");
     requireCondition(
       known.has(check.criterionId as string),
       `Unknown criterion: ${check.criterionId}`,
@@ -266,11 +311,40 @@ function validateChecks(value: unknown, work: Work, label = "checks"): asserts v
       check.verdict !== "met" || check.evidence.length > 0,
       "A met criterion needs evidence",
     );
+    if (check.basis !== undefined) {
+      fields(check.basis, ["work", "definition", "target", "version", "conditions"], "basis");
+      validateText(check.basis.work, "basis.work");
+      parseRevisionNumber(check.basis.definition, "basis.definition");
+      requireCondition(check.basis.definition > 0, "basis.definition must be positive");
+      validateText(check.basis.target, "basis.target");
+      validateText(check.basis.version, "basis.version");
+      texts(check.basis.conditions, "basis.conditions");
+    }
   }
   ids(
     checks.map(({ criterionId }) => criterionId),
     "reported criterion IDs",
   );
+}
+
+function validateBasisReference(check: Check, id: string, revisions: WorkRevision[]) {
+  const basis = check.basis!;
+  const observed = revisions.find((work) => basis.work === `work:${id}@${work.revision}`);
+  requireCondition(observed, `Unknown observed work ref: ${basis.work}`);
+  requireCondition(
+    basis.definition === observed.definitionRevision,
+    "Check basis definition does not match its observed work ref",
+  );
+}
+
+function requireBasis(checks: Check[], preserved: Check[] = []) {
+  for (const check of checks)
+    requireCondition(
+      check.verdict !== "met" ||
+        check.basis !== undefined ||
+        preserved.some((previous) => isDeepStrictEqual(previous, check)),
+      "A newly verified criterion needs an observed basis; legacy checks cannot be promoted",
+    );
 }
 
 function validateRelations(works: Map<string, Work>) {
@@ -413,7 +487,6 @@ function applyAction(
       validateText(input.progress, "progress");
       texts(input.next, "next");
       const checks = input.checks ?? [];
-      validateChecks(checks, work);
       if (checks.some(({ verdict }) => verdict === "met"))
         requireCondition(
           work.dependsOn.every((id) => works.get(id)!.status === "complete"),
@@ -535,6 +608,7 @@ function appendRevision(
     actor: input.actor,
     source: input.source,
     requestHash,
+    requestKey: requestHash === null ? undefined : input.requestKey,
   };
   record.revisions.push(revision);
   return revision;
@@ -589,20 +663,38 @@ export function changeWork(
   const input = value as WorkInput;
   parseRecordId(id, "work");
   requireCondition(Object.hasOwn(actions, action), `Unknown work action: ${action}`);
-  fields(input, ["expectedRevision", "actor", "source", ...actions[action]], action);
+  fields(input, ["expectedRevision", "actor", "source", "requestKey", ...actions[action]], action);
+  if (input.requestKey !== undefined) parseRecordId(input.requestKey, "requestKey");
   parseRevisionNumber(input.expectedRevision, "expectedRevision");
   parseRecordId(input.actor, "actor");
   validateRecordSource(input.source);
+  const requestHash = createHash("sha256")
+    .update(
+      JSON.stringify(
+        input.requestKey === undefined ? { action, input } : canonical({ id, action, input }),
+      ),
+    )
+    .digest("hex");
+  const applied =
+    input.requestKey === undefined ? undefined : findRequest(ledger, input.requestKey);
+  if (applied) {
+    requireCondition(
+      applied.requestHash === requestHash,
+      "The work request key was already used with a different payload",
+    );
+    return ledger!;
+  }
   const current = currentWorks(ledger).get(id);
   if (current) assertOwner(current, input.actor);
-  const requestHash = createHash("sha256").update(JSON.stringify({ action, input })).digest("hex");
   if (current?.revision === input.expectedRevision + 1 && current.requestHash === requestHash)
     return ledger!;
   requireCondition(
     (current?.revision ?? 0) === input.expectedRevision,
     `Work revision conflict: current revision is ${current?.revision ?? 0}; show and reconcile before retrying`,
+    "conflict",
   );
-  const nextLedger = structuredClone(ledger ?? { version: 1, works: [] });
+  const nextLedger = structuredClone(ledger ?? { version: 2, works: [] });
+  nextLedger.version = 2;
   const works = new Map<string, Work>(currentWorks(nextLedger));
   const recordedAt = new Date().toISOString();
   let work: Work;
@@ -646,6 +738,26 @@ export function changeWork(
     };
   } else {
     requireCondition(current, `Unknown work: ${id}`);
+    if (input.requestKey !== undefined && ["submit", "complete", "accept"].includes(action))
+      requireBasis(current.checks);
+    if (action === "report") {
+      validateChecks(input.checks ?? [], current);
+      if (input.requestKey !== undefined) requireBasis(input.checks ?? []);
+      for (const check of input.checks ?? []) {
+        if (check.basis) {
+          validateBasisReference(
+            check,
+            id,
+            ledger!.works.find((record) => record.id === id)!.revisions,
+          );
+          requireCondition(
+            check.basis.definition === current.definitionRevision,
+            "Check basis definition is stale; read the current work and verify its definition",
+            "conflict",
+          );
+        }
+      }
+    }
     work = structuredClone(current);
     applyAction(work, works, action, input, current.revision + 1);
   }

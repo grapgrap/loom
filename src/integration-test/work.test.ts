@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { fixture, invoke, run, concurrentRequest } from "./testing.ts";
+import { readWorkResult } from "../context/work/store.ts";
+import { resolveProjectLocation } from "../context/storage/store.ts";
 
 const source = { type: "agent", reference: "User request and observed test artifacts" };
 const criterion = {
@@ -408,6 +410,7 @@ test("tidy can ground memories in work history but cannot overwrite managed work
   const batch = run(project, ["tidy", "prepare"]);
   expect(batch.records.some(({ ref }: { ref: string }) => ref === created.ref)).toBe(true);
   const forged = invoke(project, ["tidy", "apply"], {
+    legacy: true,
     snapshot: batch.snapshot,
     works: [
       {
@@ -535,6 +538,114 @@ test("binding a host execution ID preserves an already submitted result", (t) =>
   });
   expect(bound.submission.ref).toBe(submitted.submission.ref);
   expect(bound.status).toBe("submitted");
+});
+
+test("persisted request keys return the original applied ref after unrelated and later writes", async (t) => {
+  const project = fixture(t);
+  const work = create(project, "keyed", { requestKey: "create-keyed" });
+  const basis = {
+    work: work.ref,
+    definition: work.definitionRevision,
+    target: "/checkout/src/result.ts",
+    version: "commit:verified-result",
+    conditions: ["Node 24; public result path"],
+  };
+  const input = inputFor(project, "keyed", {
+    requestKey: "verify-keyed",
+    progress: "Observed the target version",
+    next: [],
+    checks: [
+      {
+        criterionId: "c1",
+        verdict: "met",
+        observation: "The selected target version passed",
+        evidence: ["test artifact"],
+        basis,
+      },
+    ],
+  });
+  const observed = run(project, ["work", "report", "--work", "keyed"], input);
+  expect(observed).toMatchObject({ outcome: "applied", replayed: false });
+  change(project, "report", "keyed", { progress: "Preparing handoff", next: ["Deliver"] });
+  create(project, "unrelated");
+  const path = join(run(project, ["location"]).projectDirectory, "work-state.json");
+  const before = readFileSync(path, "utf8");
+  const replay = run(project, ["work", "report", "--work", "keyed"], input);
+  expect(replay).toMatchObject({
+    id: "keyed",
+    ref: observed.ref,
+    outcome: "applied",
+    replayed: true,
+    checks: [{ basis }],
+  });
+  expect(show(project, "keyed").work.revision).toBe(observed.revision + 1);
+  expect(readFileSync(path, "utf8")).toBe(before);
+  const location = await resolveProjectLocation({
+    cwd: project.repo,
+    directory: project.directory,
+  });
+  expect(await readWorkResult(location, "verify-keyed")).toMatchObject({
+    ref: observed.ref,
+    outcome: "applied",
+    replayed: true,
+  });
+  expect(await readWorkResult(location, "unapplied-key")).toBeNull();
+  const reused = invoke(project, ["work", "create", "--work", "another"], {
+    expectedRevision: 0,
+    actor: "main",
+    source,
+    requestKey: "create-keyed",
+    goal: "Deliver another",
+    scope: "A distinct work",
+    criteria: [criterion],
+  });
+  expect(reused.status).toBe(1);
+  expect(reused.stderr).toMatch(/request key.*different|different.*request key/i);
+  expect(readFileSync(path, "utf8")).toBe(before);
+});
+
+test("a target basis can outlive progress updates but cannot outlive its work definition", (t) => {
+  const project = fixture(t);
+  const work = create(project, "observed");
+  const basis = {
+    work: work.ref,
+    definition: work.definitionRevision,
+    target: "/checkout/src/result.ts",
+    version: "commit:old-result",
+    conditions: ["Node 24"],
+  };
+  change(project, "report", "observed", {
+    progress: "Verification running",
+    next: ["Read result"],
+  });
+  const checks = [
+    { criterionId: "c1", verdict: "met", observation: "Passed", evidence: ["artifact"], basis },
+  ];
+  const current = change(project, "report", "observed", {
+    progress: "Verification finished",
+    next: [],
+    requestKey: "late-result",
+    checks,
+  });
+  expect(current.checks).toStrictEqual(checks);
+  const revised = change(project, "revise", "observed", {
+    reason: "The target behavior changed",
+    scope: "Updated implementation scope",
+  });
+  const stale = invoke(
+    project,
+    ["work", "report", "--work", "observed"],
+    inputFor(project, "observed", {
+      progress: "Reusing the old verification",
+      next: [],
+      requestKey: "obsolete-result",
+      checks,
+    }),
+  );
+  expect(stale.status).toBe(1);
+  expect(stale.stderr).toMatch(/definition.*stale|stale.*definition/i);
+  expect(show(project, "observed").work.ref).toBe(revised.ref);
+  expect(show(project, "observed").work.checks).toStrictEqual([]);
 });
 
 test("concurrent parent completion and child reopening never leave an accepted parent over unfinished work", async (t) => {

@@ -23,6 +23,7 @@ function consolidate(project: Fixture, state: WorkProgress & { id: string; revis
   const batch = run(project, ["tidy", "prepare"]);
   run(project, ["tidy", "apply"], {
     snapshot: batch.snapshot,
+    legacy: true,
     works: [
       {
         id: state.id,
@@ -123,7 +124,7 @@ test("reviewing checkpoint originals without rewriting work does not restore an 
     next: [],
   });
   const batch = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], { snapshot: batch.snapshot });
+  run(project, ["tidy", "apply"], { snapshot: batch.snapshot, legacy: true });
   const recalled = run(project, ["recall", "--work", "feature"]);
   expect(recalled.work.status).toBe("complete");
   expect(recalled.work.checkpointRevision).toBe(2);
@@ -149,6 +150,7 @@ test("a later explicit decision is not reversed when an older checkpoint is proc
   expect(batch.records[0].kind).toBe("memory");
   run(project, ["tidy", "apply"], {
     snapshot: batch.snapshot,
+    legacy: true,
     works: [
       {
         id: "feature",
@@ -165,7 +167,7 @@ test("a later explicit decision is not reversed when an older checkpoint is proc
   expect(recalled.work.status).toBe("complete");
   expect(recalled.unreviewedWorks).toStrictEqual([]);
   const remaining = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], { snapshot: remaining.snapshot });
+  run(project, ["tidy", "apply"], { snapshot: remaining.snapshot, legacy: true });
   expect(run(project, ["recall", "--work", "feature"]).work.status).toBe("complete");
 });
 

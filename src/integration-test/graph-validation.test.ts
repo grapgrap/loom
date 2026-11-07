@@ -38,6 +38,7 @@ for (const [name, overrides, field] of [
     const batch = run(project, ["tidy", "prepare"]);
     const result = invoke(project, ["tidy", "apply"], {
       snapshot: batch.snapshot,
+      legacy: true,
       graph: { entities: [entity(note.ref)], statements: [statement(note.ref, overrides)] },
     });
     expect(result.status).toBe(1);
@@ -59,7 +60,11 @@ test("tidy rejects malformed graph collections without consuming pending and per
   );
   const batch = run(project, ["tidy", "prepare"]);
   for (const graph of [null, [], { entities: null }, { statements: {} }, { retire: false }]) {
-    const result = invoke(project, ["tidy", "apply"], { snapshot: batch.snapshot, graph });
+    const result = invoke(project, ["tidy", "apply"], {
+      snapshot: batch.snapshot,
+      legacy: true,
+      graph,
+    });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("graph");
   }
@@ -68,6 +73,7 @@ test("tidy rejects malformed graph collections without consuming pending and per
   ).toStrictEqual([note.ref]);
   run(project, ["tidy", "apply"], {
     snapshot: batch.snapshot,
+    legacy: true,
     graph: { entities: [entity(note.ref)], statements: [statement(note.ref)] },
   });
   expect(run(project, ["recall", "--work", "graph"]).pending).toStrictEqual([]);
@@ -83,6 +89,7 @@ test("restored graph rejects missing required fields at the file boundary withou
   const batch = run(project, ["tidy", "prepare"]);
   run(project, ["tidy", "apply"], {
     snapshot: batch.snapshot,
+    legacy: true,
     graph: { entities: [entity(note.ref)], statements: [statement(note.ref)] },
   });
   const path = join(run(project, ["location"]).projectDirectory, "tidy.json");
@@ -113,6 +120,7 @@ test("valid literals, metadata projection and all generated historical states su
   const batch = run(project, ["tidy", "prepare"]);
   run(project, ["tidy", "apply"], {
     snapshot: batch.snapshot,
+    legacy: true,
     graph: {
       metadata: "caller only",
       entities: [{ ...entity(first.ref), metadata: "caller only" }],
@@ -139,6 +147,7 @@ test("valid literals, metadata projection and all generated historical states su
   const second = run(project, ["tidy", "prepare"]);
   const changes = {
     snapshot: second.snapshot,
+    legacy: true,
     graph: {
       statements: [statement(next.ref, { id: "replacement", supersedes: ["nullable"] })],
       retire: [{ id: "current", reason: "No longer applies.", sources: [next.ref] }],

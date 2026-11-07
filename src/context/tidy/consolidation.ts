@@ -55,13 +55,15 @@ function validateRevisionCursor(cursor: Cursor) {
       parseRevisionNumber(revision);
     }
   }
-  if (cursor.work !== undefined) {
-    validateObject(cursor.work, "cursor.work");
-    for (const [id, revision] of Object.entries(cursor.work)) {
+  for (const kind of ["work", "evidence"] as const) {
+    if (cursor[kind] === undefined) continue;
+    validateObject(cursor[kind], `cursor.${kind}`);
+    for (const [id, revision] of Object.entries(cursor[kind])) {
       parseRecordId(id);
       parseRevisionNumber(revision);
     }
   }
+  if (cursor.reviewed !== undefined) validateSourceReferences(cursor.reviewed, "cursor.reviewed");
 }
 
 function validateConsolidatedMemoryFields(memory: Memory) {
@@ -113,12 +115,26 @@ function validateMemoryRetirement(retirement: Retirement & { id: string }) {
 export function parseTidySnapshot(input: unknown): TidySnapshot {
   const snapshot = input as TidySnapshot;
   validateObject(snapshot, "snapshot");
-  assertCondition([1, 2].includes(snapshot.version), "Unsupported tidy snapshot version");
+  assertCondition([1, 2, 3].includes(snapshot.version), "Unsupported tidy snapshot version");
   parseRecordId(snapshot.id);
   parseRevisionNumber(snapshot.baseRevision);
   validateRevisionCursor(snapshot.bounds);
   if (snapshot.version === 2 || snapshot.memoryIds !== undefined)
     validateMemoryIds(snapshot.memoryIds, "memoryIds");
+  if (snapshot.version === 3) {
+    validateText(snapshot.purpose, "purpose");
+    validateText(snapshot.input, "input");
+    validateObject(snapshot.memories, "memories");
+    validateArray(snapshot.batch, "batch");
+    snapshot.batch!.forEach((ref) => validateText(ref, "batch target"));
+    assertCondition(
+      new Set(snapshot.batch).size === snapshot.batch!.length,
+      "Duplicate batch target",
+    );
+    validateSourceReferences(snapshot.seeds, "seeds");
+    validateText(snapshot.basis, "basis");
+    validateObject(snapshot.selection, "selection");
+  }
   return snapshot;
 }
 
@@ -126,29 +142,64 @@ export function parseConsolidationHistory(input: unknown): ConsolidationHistory 
   const history = input as ConsolidationHistory;
   validateObject(history, "history");
   validateArray(history.forgotten, "forgotten");
-  assertCondition([1, 2, 3].includes(history.version), "Unsupported tidy store version");
+  assertCondition([1, 2, 3, 4].includes(history.version), "Unsupported tidy store version");
   history.forgotten.forEach((id) => parseRecordId(id));
-  validateRecordRevisions(history.revisions, (revision) => {
-    if (revision.snapshot !== null) parseRecordId(revision.snapshot);
-    validateRevisionCursor(revision.cursor);
-    validateArray(revision.memories, "memories");
-    validateArray(revision.works, "works");
-    revision.memories.forEach(validateConsolidatedMemory);
-    revision.works.forEach(validateConsolidatedWorkState);
-    if (revision.graph) validateGraph(revision.graph);
-  });
+  validateArray(history.revisions, "revisions");
+  if (history.version !== 4 || history.revisions.length > 0)
+    validateRecordRevisions(history.revisions, (revision) => {
+      if (revision.snapshot !== null) parseRecordId(revision.snapshot);
+      validateRevisionCursor(revision.cursor);
+      validateArray(revision.memories, "memories");
+      validateArray(revision.works, "works");
+      revision.memories.forEach(validateConsolidatedMemory);
+      revision.works.forEach(validateConsolidatedWorkState);
+      if (revision.graph) validateGraph(revision.graph);
+    });
+  if (history.cursor !== undefined) validateRevisionCursor(history.cursor);
+  if (history.receipts !== undefined) {
+    validateArray(history.receipts, "receipts");
+    for (const receipt of history.receipts) {
+      validateObject(receipt, "receipt");
+      parseRecordId(receipt.snapshot, "receipt.snapshot");
+      parseRecordId(receipt.key, "receipt.key");
+      for (const field of ["hash", "purpose", "input", "output", "recordedAt"] as const)
+        validateText(receipt[field], `receipt.${field}`);
+      for (const field of ["reviewed", "read"] as const) {
+        validateArray(receipt[field], `receipt.${field}`);
+        receipt[field].forEach((ref) => validateText(ref, `receipt.${field} target`));
+      }
+      validateObject(receipt.result, "receipt.result");
+      validateRevisionCursor(receipt.result.cursor);
+      validateArray(receipt.result.memories, "receipt.result.memories");
+      receipt.result.memories.forEach(validateConsolidatedMemory);
+      validateArray(receipt.result.works, "receipt.result.works");
+      receipt.result.works.forEach(validateConsolidatedWorkState);
+      if (receipt.result.graph) validateGraph(receipt.result.graph);
+    }
+    assertCondition(
+      new Set(history.receipts.map(({ key }) => key)).size === history.receipts.length,
+      "Duplicate tidy request key",
+    );
+    assertCondition(
+      new Set(history.receipts.map(({ snapshot }) => snapshot)).size === history.receipts.length,
+      "Duplicate tidy snapshot receipt",
+    );
+  }
   return history;
 }
 
 export function getLatestConsolidation(history: ConsolidationHistory | null): Consolidation {
-  return (
-    history?.revisions.at(-1) ?? {
-      revision: 0,
-      cursor: createRevisionCursor(),
-      memories: [],
-      works: [],
-    }
-  );
+  const current = history?.revisions.at(-1) ?? {
+    revision: 0,
+    cursor: createRevisionCursor(),
+    memories: [],
+    works: [],
+  };
+  return {
+    ...current,
+    ...(history?.cursor ? { cursor: history.cursor } : {}),
+    ...(history?.receipts?.length ? { reviewedAt: history.receipts.at(-1)!.recordedAt } : {}),
+  };
 }
 
 export function calculateTidyStatus(
@@ -180,6 +231,7 @@ export function calculateTidyStatus(
     revision: consolidation.revision,
     pendingRecords: unprocessedRecords.length,
     lastTidiedAt: consolidation.recordedAt ?? null,
+    lastReviewedAt: consolidation.reviewedAt ?? null,
     reasons: [...dueReasons, ...contextReasons],
     context,
   };
@@ -197,11 +249,7 @@ export function collectMemoryBaseline(
     const latestKnownContent = record.revisions.findLast(
       ({ revision }) => revision <= latestKnownRevision,
     );
-    if (
-      !latestKnownContent ||
-      latestKnownContent.revision <= getCursorRevision(consolidation.cursor, "memory", record.id)
-    )
-      continue;
+    if (!latestKnownContent) continue;
     const { text, reason, revision } = latestKnownContent;
     memoriesById.set(record.id, {
       id: record.id,
@@ -220,12 +268,43 @@ export function parseTidyChanges(value: unknown): TidyChanges {
   const input = value as TidyChanges;
   validateObject(input, "changes");
   parseRecordId(input.snapshot, "snapshot");
+  for (const field of [
+    "work",
+    "workState",
+    "definition",
+    "criteria",
+    "evidence",
+    "corrections",
+    "relations",
+    "standing",
+  ])
+    assertCondition(
+      !(field in input),
+      `Tidy cannot change authoritative ${field}; use its owning command`,
+    );
   const changes: TidyChanges = {
     snapshot: input.snapshot,
     memories: input.memories === undefined ? [] : input.memories,
     works: input.works === undefined ? [] : input.works,
     retire: input.retire === undefined ? [] : input.retire,
   };
+  if (input.legacy !== undefined) {
+    validateChoice(input.legacy, [true, false], "legacy");
+    changes.legacy = input.legacy;
+  }
+  const key = input.key ?? (input as TidyChanges & { requestKey?: string }).requestKey;
+  if (key !== undefined) changes.key = parseRecordId(key, "key");
+  for (const field of ["reviewed", "read", "gaps"] as const) {
+    if (input[field] === undefined) continue;
+    validateArray(input[field], field);
+    input[field]!.forEach((ref) => validateText(ref, field));
+    assertCondition(new Set(input[field]).size === input[field]!.length, `Duplicate ${field}`);
+    changes[field] = input[field];
+  }
+  if (input.reason !== undefined) {
+    validateText(input.reason, "reason");
+    changes.reason = input.reason;
+  }
   if (input.graph !== undefined) changes.graph = parseGraphChanges(input.graph);
   for (const field of ["memories", "works", "retire"] as const)
     validateArray(changes[field], field);
@@ -301,8 +380,8 @@ function sortObjectKeys(value: unknown): unknown {
   return value;
 }
 
-export function hashOriginalSource(source: { latest?: boolean }) {
-  const { latest, ...content } = source;
+export function hashOriginalSource(source: object) {
+  const { latest, ...content } = source as { latest?: boolean };
   return createHash("sha256")
     .update(JSON.stringify(sortObjectKeys(content)))
     .digest("hex");
@@ -432,7 +511,7 @@ export function eraseFromConsolidationHistory(
     memoryId === undefined
       ? (ref: string) => ref === erasedSourceRef
       : (ref: string) => ref.startsWith(`memory:${memoryId}@`);
-  const sanitizedRevisions = history.revisions.map((revision) => {
+  const sanitize = <T extends Consolidation>(revision: T): T => {
     const sanitized = {
       ...revision,
       memories: revision.memories
@@ -451,27 +530,58 @@ export function eraseFromConsolidationHistory(
         memoryId,
       );
     return sanitized;
+  };
+  const sanitizedRevisions = history.revisions.map(sanitize);
+  const receipts = history.receipts?.map((receipt) => {
+    const result = sanitize(receipt.result);
+    const affected =
+      receipt.read.some(matchesReference) ||
+      receipt.reviewed.some(matchesReference) ||
+      (memoryId !== undefined && receipt.reviewed.includes(`current:${memoryId}`)) ||
+      !isDeepStrictEqual(result, receipt.result);
+    if (!affected) return receipt;
+    const { reason, gaps, ...remaining } = receipt;
+    return {
+      ...remaining,
+      forgotten: true,
+      read: receipt.read.filter((ref) => !matchesReference(ref)),
+      reviewed: receipt.reviewed.filter(
+        (ref) => !matchesReference(ref) && ref !== `current:${memoryId}`,
+      ),
+      result: {
+        ...result,
+        reviewed: result.reviewed.filter(
+          (ref) => !matchesReference(ref) && ref !== `current:${memoryId}`,
+        ),
+      },
+    };
   });
   const forgottenMemoryIds =
     memoryId === undefined ? history.forgotten : [...new Set([...history.forgotten, memoryId])];
   if (
     isDeepStrictEqual(history.revisions, sanitizedRevisions) &&
-    isDeepStrictEqual(history.forgotten, forgottenMemoryIds)
+    isDeepStrictEqual(history.forgotten, forgottenMemoryIds) &&
+    isDeepStrictEqual(history.receipts, receipts)
   )
     return history;
-  const latestSanitized = sanitizedRevisions.at(-1)!;
+  const latestSanitized = sanitizedRevisions.at(-1);
   return {
-    version: history.version,
+    ...history,
     forgotten: forgottenMemoryIds,
+    ...(receipts ? { receipts } : {}),
     revisions: [
       ...sanitizedRevisions,
-      {
-        ...latestSanitized,
-        revision: consolidation.revision + 1,
-        recordedAt: new Date().toISOString(),
-        snapshot: null,
-        requestHash: null,
-      },
+      ...(latestSanitized && !isDeepStrictEqual(history.revisions, sanitizedRevisions)
+        ? [
+            {
+              ...latestSanitized,
+              revision: consolidation.revision + 1,
+              recordedAt: new Date().toISOString(),
+              snapshot: null,
+              requestHash: null,
+            },
+          ]
+        : []),
     ],
   };
 }
@@ -534,6 +644,11 @@ export function buildConsolidation(
 ): ConsolidationHistory {
   const current = getLatestConsolidation(history);
   const knownWorkIds = collectKnownWorkIds(archive);
+  const legacy = snapshot.version < 3 || changes.legacy === true;
+  assertCondition(
+    legacy || (!changes.works.length && !changes.graph && !(changes.absorb ?? []).length),
+    "Legacy work, graph and absorption changes require legacy: true",
+  );
   for (const work of changes.works) {
     assertCondition(knownWorkIds.has(work.id), `Unknown work: ${work.id}`);
     assertCondition(
@@ -541,7 +656,16 @@ export function buildConsolidation(
       `Managed work ${work.id} must be changed with a work command, not tidy`,
     );
   }
-  const existingMemories = collectMemoryBaseline(archive, current, snapshot.bounds);
+  const baseline = collectMemoryBaseline(archive, current, snapshot.bounds);
+  const retiredIds = new Set(changes.retire.map(({ id }) => id));
+  const existingMemories = legacy
+    ? baseline
+    : [
+        ...current.memories,
+        ...baseline.filter(
+          ({ id }) => retiredIds.has(id) && !current.memories.some((memory) => memory.id === id),
+        ),
+      ];
   const memories = applyMemoryChanges(
     {
       existingMemories,
@@ -553,7 +677,7 @@ export function buildConsolidation(
   );
   const works = new Map(current.works.map((work) => [work.id, work]));
   const checkpoints = new Map<string, Extract<OriginalSource, { kind: "checkpoint" }>>();
-  for (const source of prepared) {
+  for (const source of legacy ? prepared : []) {
     if (source.kind !== "checkpoint" || source.forgotten) continue;
     const acceptedRevision = Math.max(
       getCursorRevision(current.cursor, "checkpoint", source.id),
@@ -602,8 +726,11 @@ export function buildConsolidation(
     findUnprocessedSources(archive, revision.cursor).length,
   );
   return {
-    version: Math.max(history?.version ?? 2, changes.absorb?.length ? 3 : 2),
+    ...history,
+    version:
+      snapshot.version === 3 ? 4 : Math.max(history?.version ?? 2, changes.absorb?.length ? 3 : 2),
     forgotten: history?.forgotten ?? [],
+    ...(snapshot.version === 3 || history?.cursor ? { cursor: revision.cursor } : {}),
     revisions: [...(history?.revisions ?? []), revision],
   };
 }

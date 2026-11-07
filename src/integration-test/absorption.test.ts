@@ -22,6 +22,7 @@ function seed(project: Fixture) {
   );
   const prepared = run(project, ["tidy", "prepare"]);
   run(project, ["tidy", "apply"], {
+    legacy: true,
     snapshot: prepared.snapshot,
     memories: [
       memory("app-retry", first.text, [first.ref]),
@@ -41,6 +42,7 @@ test("revisit prepares existing memories without new records and preserves the s
   );
   const prepared = run(project, ["tidy", "prepare"]);
   run(project, ["tidy", "apply"], {
+    legacy: true,
     snapshot: prepared.snapshot,
     memories: [
       memory("storage-local", "Storage retry boundary.", [first.ref], {
@@ -50,11 +52,13 @@ test("revisit prepares existing memories without new records and preserves the s
       memory("other-local", note.text, [note.ref], { type: "work", id: "other" }),
     ],
   });
-  expect(run(project, ["tidy", "prepare"]).snapshot).toBeTypeOf("string");
+  expect(run(project, ["tidy", "prepare"])).toMatchObject({ snapshot: null, reviewed: true });
   const revisit = run(project, [
     "tidy",
     "prepare",
     "--revisit",
+    "--purpose",
+    "consolidation",
     "--work",
     "storage",
     "--query",
@@ -71,7 +75,7 @@ test("revisit prepares existing memories without new records and preserves the s
       "utf8",
     ),
   );
-  expect(snapshot.version).toBe(2);
+  expect(snapshot.version).toBe(3);
   expect(revisit.current.memories.map(({ id }: { id: string }) => id)).toStrictEqual([
     "app-retry",
     "sdk-retry",
@@ -81,6 +85,8 @@ test("revisit prepares existing memories without new records and preserves the s
     "tidy",
     "prepare",
     "--revisit",
+    "--purpose",
+    "consolidation",
     "--work",
     "storage",
     "--query",
@@ -99,13 +105,22 @@ test("revisit prepares existing memories without new records and preserves the s
 test("absorption replaces separate experiences with a pattern and a precise remaining contract", (t) => {
   const project = fixture(t);
   const { first, second } = seed(project);
-  const prepared = run(project, ["tidy", "prepare", "--revisit", "--query", "retry"]);
+  const prepared = run(project, [
+    "tidy",
+    "prepare",
+    "--revisit",
+    "--purpose",
+    "consolidation",
+    "--query",
+    "retry",
+  ]);
   const arrived = run(
     project,
     ["record", "--work", "storage", "--source", "Later arrival"],
     "A new storage boundary still needs review.",
   );
   const changes = {
+    legacy: true,
     snapshot: prepared.snapshot,
     memories: [
       memory("retry-boundary", "Distinguish application and SDK retry ownership.", [
@@ -145,9 +160,9 @@ test("absorption replaces separate experiences with a pattern and a precise rema
   expect(consumed).not.toHaveProperty("text");
   expect(consumed.absorption.into).toStrictEqual(["retry-boundary", "sdk-contract"]);
   const next = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], { snapshot: next.snapshot });
+  run(project, ["tidy", "apply"], { legacy: true, snapshot: next.snapshot });
   const following = JSON.parse(readFileSync(join(location.projectDirectory, "tidy.json"), "utf8"));
-  expect(following.version).toBe(3);
+  expect(following.version).toBe(4);
   expect(JSON.stringify(following.revisions.at(-1))).not.toContain(first.text);
 });
 
@@ -191,6 +206,7 @@ for (const [name, absorption, overrides, message] of [
     const path = join(location.projectDirectory, "tidy.json");
     const before = readFileSync(path, "utf8");
     const rejected = invoke(project, ["tidy", "apply"], {
+      legacy: true,
       snapshot: prepared.snapshot,
       memories: [
         { ...memory("pattern", "Retries have explicit owners.", [first.ref]), ...overrides },
@@ -206,7 +222,7 @@ for (const [name, absorption, overrides, message] of [
 test("revisit rejects a stale memory selection after another tidy commits", (t) => {
   const project = fixture(t);
   const { first } = seed(project);
-  const stale = run(project, ["tidy", "prepare", "--revisit"]);
+  const stale = run(project, ["tidy", "prepare", "--revisit", "--purpose", "consolidation"]);
   const arrived = run(
     project,
     ["record", "--work", "other", "--source", "Concurrent decision"],
@@ -214,10 +230,12 @@ test("revisit rejects a stale memory selection after another tidy commits", (t) 
   );
   const current = run(project, ["tidy", "prepare"]);
   run(project, ["tidy", "apply"], {
+    legacy: true,
     snapshot: current.snapshot,
     memories: [memory("other", arrived.text, [arrived.ref])],
   });
   const rejected = invoke(project, ["tidy", "apply"], {
+    legacy: true,
     snapshot: stale.snapshot,
     memories: [memory("pattern", "Retries have explicit owners.", [first.ref])],
     absorb: [{ from: ["app-retry"], into: ["pattern"], reason: "Cover the experience." }],
@@ -244,9 +262,10 @@ test("absorbed legacy memories stay consumed and original erasure still removes 
     "Keep SDK retry defaults.",
   );
   const first = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], { snapshot: first.snapshot });
-  const revisit = run(project, ["tidy", "prepare", "--revisit"]);
+  run(project, ["tidy", "apply"], { legacy: true, snapshot: first.snapshot });
+  const revisit = run(project, ["tidy", "prepare", "--revisit", "--purpose", "consolidation"]);
   run(project, ["tidy", "apply"], {
+    legacy: true,
     snapshot: revisit.snapshot,
     memories: [
       memory("pattern", "Separate app and SDK retry responsibilities.", [
@@ -267,15 +286,16 @@ test("absorbed legacy memories stay consumed and original erasure still removes 
     "pattern",
     "sdk-contract",
   ]);
-  const later = run(project, ["tidy", "prepare", "--revisit"]);
-  run(project, ["tidy", "apply"], { snapshot: later.snapshot });
+  const later = run(project, ["tidy", "prepare", "--revisit", "--purpose", "maintenance"]);
+  run(project, ["tidy", "apply"], { legacy: true, snapshot: later.snapshot });
   expect(run(project, ["recall"]).memories.map(({ id }: { id: string }) => id)).toStrictEqual([
     "pattern",
     "sdk-contract",
   ]);
-  const restoring = run(project, ["tidy", "prepare", "--revisit"]);
+  const restoring = run(project, ["tidy", "prepare", "--revisit", "--purpose", "restore"]);
   expect(
     invoke(project, ["tidy", "apply"], {
+      legacy: true,
       snapshot: restoring.snapshot,
       memories: [memory("legacy", "Reintroduced detail.", [sdk.ref])],
     }).stderr,
@@ -304,8 +324,9 @@ test("absorption does not complete or rewrite the work that produced an experien
     source: { type: "user", reference: "Runtime request" },
     next: ["Wire the actual runtime."],
   });
-  const prepared = run(project, ["tidy", "prepare", "--revisit"]);
+  const prepared = run(project, ["tidy", "prepare", "--revisit", "--purpose", "consolidation"]);
   run(project, ["tidy", "apply"], {
+    legacy: true,
     snapshot: prepared.snapshot,
     memories: [memory("pattern", "Retries have distinct owners.", [first.ref, second.ref])],
     absorb: [
@@ -316,5 +337,6 @@ test("absorption does not complete or rewrite the work that produced an experien
       },
     ],
   });
-  expect(run(project, ["work", "show", "--work", "runtime"]).work).toStrictEqual(work);
+  const { outcome, replayed, ...state } = work;
+  expect(run(project, ["work", "show", "--work", "runtime"]).work).toStrictEqual(state);
 });

@@ -162,9 +162,52 @@ async function acquireRecordLock(lockPath: string) {
   }
 }
 
+// Correction writes and derived commits must observe the same dependency boundary.
+// Callers may acquire file locks inside this lock, never the reverse.
+async function prepareLock(path: string) {
+  try {
+    await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+    return await acquireRecordLock(path);
+  } catch (error) {
+    throw Object.assign(error as Error, { outcome: "failed" });
+  }
+}
+
+export async function withProjectLock<T>(
+  location: Pick<ProjectLocation, "projectDirectory">,
+  action: () => Promise<T>,
+): Promise<T> {
+  const path = join(location.projectDirectory, ".context.lock");
+  const lock = await prepareLock(path);
+  let failed = false;
+  let failure: unknown;
+  let value: T;
+  try {
+    value = await action();
+  } catch (error) {
+    failed = true;
+    failure = error;
+  }
+  try {
+    try {
+      await lock.close();
+    } finally {
+      await unlink(path);
+    }
+  } catch (error) {
+    if (!failed) {
+      failed = true;
+      failure = Object.assign(error as Error, { outcome: "outcome-unknown" });
+    }
+  }
+  if (failed) throw failure;
+  return value!;
+}
+
 async function writeRecordAtomically(path: string, record: unknown) {
   const temporaryPath = `${path}.${randomUUID()}.tmp`;
   const file = await open(temporaryPath, "wx", 0o600);
+  let committed = false;
   try {
     try {
       await file.writeFile(`${JSON.stringify(record, null, 2)}\n`);
@@ -173,9 +216,11 @@ async function writeRecordAtomically(path: string, record: unknown) {
       await file.close();
     }
     await rename(temporaryPath, path);
+    committed = true;
   } finally {
     await unlink(temporaryPath).catch((error) => {
-      if (error.code !== "ENOENT") throw error;
+      if (error.code !== "ENOENT")
+        throw Object.assign(error, { outcome: committed ? "outcome-unknown" : "failed" });
     });
   }
 }
@@ -194,16 +239,39 @@ export async function updateStoredRecord<T>({
   parse,
   update,
 }: RecordUpdate<T, T | null>): Promise<T | null> {
-  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const lockPath = `${path}.lock`;
-  const lock = await acquireRecordLock(lockPath);
+  const lock = await prepareLock(lockPath);
+  let committed = false;
+  let failed = false;
+  let failure: unknown;
+  let next: T | null;
   try {
     const current = await readStoredRecord(path, parse);
-    const next = await update(current);
-    if (next !== current) await writeRecordAtomically(path, next);
-    return next;
-  } finally {
-    await lock.close();
-    await unlink(lockPath);
+    next = await update(current);
+    if (next !== current) {
+      await writeRecordAtomically(path, next);
+      committed = true;
+    }
+  } catch (caught) {
+    failed = true;
+    const error = caught as Error & { outcome?: string };
+    error.outcome ??= committed ? "outcome-unknown" : "failed";
+    failure = error;
   }
+  try {
+    try {
+      await lock.close();
+    } finally {
+      await unlink(lockPath);
+    }
+  } catch (caught) {
+    if (!failed) {
+      failed = true;
+      failure = Object.assign(caught as Error, {
+        outcome: committed ? "outcome-unknown" : "failed",
+      });
+    }
+  }
+  if (failed) throw failure;
+  return next!;
 }

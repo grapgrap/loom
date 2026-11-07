@@ -8,11 +8,14 @@ import type {
   WorkJournal,
 } from "../records/model.ts";
 import type { WorkRevision, WorkLedger } from "../work/model.ts";
+import type { Original } from "../evidence/model.ts";
 
-export type SourceKind = "memory" | "checkpoint" | "note" | "work";
+export type SourceKind = "memory" | "checkpoint" | "note" | "work" | "evidence";
 
-export type Cursor = Record<Exclude<SourceKind, "work">, Record<string, number>> & {
+export type Cursor = Record<Exclude<SourceKind, "work" | "evidence">, Record<string, number>> & {
   work?: Record<string, number>;
+  evidence?: Record<string, number>;
+  reviewed?: string[];
 };
 
 type SourceIdentity = Revision & { id: string; ref: string; latest?: boolean };
@@ -26,6 +29,7 @@ export type OriginalSource = SourceIdentity &
         WorkRevision,
         "scope"
       >)
+    | (Original & { forgotten?: false })
     | { kind: SourceKind; forgotten: true; scope?: Scope }
   );
 

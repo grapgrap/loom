@@ -4,8 +4,14 @@ import { expect, test } from "vitest";
 import { calculateTidyStatus } from "../context/tidy/consolidation.ts";
 import { fixture, run } from "./testing.ts";
 
-function saveMemory(project: Fixture, text: string, sources: string[], id = "current-context") {
-  const batch = run(project, ["tidy", "prepare", "--work", "storage"]);
+function saveMemory(
+  project: Fixture,
+  text: string,
+  sources: string[],
+  purpose = "capture",
+  id = "current-context",
+) {
+  const batch = run(project, ["tidy", "prepare", "--work", "storage", "--purpose", purpose]);
   return run(project, ["tidy", "apply"], {
     snapshot: batch.snapshot,
     memories: [
@@ -83,13 +89,13 @@ test("processed context growth still triggers compaction and a shorter rewrite r
   const project = fixture(t);
   const note = record(project, "storage", "Accepted storage contract; retry remains open.");
   saveMemory(project, note.text, [note.ref]);
-  saveMemory(project, note.text + " More historical detail.".repeat(500), [note.ref]);
+  saveMemory(project, note.text + " More historical detail.".repeat(500), [note.ref], "expand");
   const grown = run(project, ["tidy", "status", "--work", "storage"]);
   expect(grown.pendingRecords).toBe(0);
   expect(grown.reasons).toContain("context-growth");
   expect(grown.context.growthBytes).toBeGreaterThan(8000);
   expect(run(project, ["tidy", "status", "--work", "other"]).due).toBe(false);
-  saveMemory(project, note.text, [note.ref]);
+  saveMemory(project, note.text, [note.ref], "compact");
   const compacted = run(project, ["tidy", "status", "--work", "storage"]);
   expect(compacted.due).toBe(false);
   expect(compacted.context.growthBytes).toBe(0);
@@ -119,6 +125,12 @@ test("apply acknowledges changes once and full retry exposes the unchanged detai
     { kind: "memory", id: "boundary", action: "added" },
   ]);
   const full = run(project, ["tidy", "apply", "--full"], input);
+  expect(compact).toMatchObject({
+    outcome: "applied",
+    effect: "changed",
+    snapshot: batch.snapshot,
+    reviewed: batch.batch,
+  });
   expect(full.revision).toBe(compact.revision);
   expect(full.report.changes[0].after.text).toBe(note.text);
 });
@@ -160,7 +172,12 @@ test("large context without pending records requests review, but an unchanged re
   const large = run(project, ["tidy", "status", "--work", "storage"]);
   expect(large.pendingRecords).toBe(0);
   expect(large.reasons).toContain("context-size");
-  saveMemory(project, "유효한 조건과 미해결 질문. ".repeat(800), [source.ref]);
+  const review = run(project, ["tidy", "prepare", "--work", "storage"]);
+  run(project, ["tidy", "apply"], { snapshot: review.snapshot });
+  const reviewed = run(project, ["tidy", "status", "--work", "storage"]);
+  expect(reviewed).toMatchObject({ due: false, needed: false, reviewed: true });
+  expect(run(project, ["recall", "--work", "storage"]).tidy).toStrictEqual(reviewed);
+  saveMemory(project, "유효한 조건과 미해결 질문. ".repeat(800), [source.ref], "compact");
   const reduced = run(project, ["tidy", "status", "--work", "storage"]);
   expect(reduced.context.totalBytes).toBeGreaterThan(24000);
   expect(reduced.due).toBe(false);
@@ -184,12 +201,12 @@ test("topic selection excludes unrelated pending records from preparation and si
 test("an earlier reduction does not hide a new large memory in the same scope", (t) => {
   const project = fixture(t);
   const source = record(project, "storage", "Accepted constraint; next decision remains open.");
-  saveMemory(project, source.text.repeat(20), [source.ref], "old-context");
-  saveMemory(project, source.text, [source.ref], "old-context");
-  saveMemory(project, source.text.repeat(600), [source.ref], "new-context");
+  saveMemory(project, source.text.repeat(20), [source.ref], "capture", "old-context");
+  saveMemory(project, source.text, [source.ref], "compact-old", "old-context");
+  saveMemory(project, source.text.repeat(600), [source.ref], "capture-new", "new-context");
   const status = run(project, ["tidy", "status", "--work", "storage"]);
   expect(status.pendingRecords).toBe(0);
   expect(status.reasons).toContain("context-size");
-  saveMemory(project, source.text, [source.ref], "new-context");
+  saveMemory(project, source.text, [source.ref], "compact-new", "new-context");
   expect(run(project, ["tidy", "status", "--work", "storage"]).due).toBe(false);
 });

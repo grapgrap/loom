@@ -20,6 +20,7 @@ test("default recall keeps resumable context while full recall adds work discove
   const batch = run(project, ["tidy", "prepare"]);
   run(project, ["tidy", "apply"], {
     snapshot: batch.snapshot,
+    legacy: true,
     memories: [
       {
         id: "storage-policy",

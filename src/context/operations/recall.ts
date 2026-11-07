@@ -50,7 +50,8 @@ import {
   readSourceArchive,
   matchesContextScope,
 } from "../sources/sources.ts";
-import { readConsolidationHistory } from "../tidy/tidy.ts";
+import { readLedger } from "../evidence/evidence.ts";
+import { readConsolidationHistory, reviewStatus } from "../tidy/tidy.ts";
 import { getLatestConsolidation, calculateTidyStatus } from "../tidy/consolidation.ts";
 import { queryGraph } from "../graph/query.ts";
 import { presentWork } from "../work/work.ts";
@@ -111,7 +112,8 @@ function restoreMemories(
     if (
       !memory.forgotten &&
       !consolidatedIds.has(memory.id) &&
-      memory.revisions.at(-1)!.revision > getCursorRevision(current.cursor, "memory", memory.id)
+      (history.version === 4 ||
+        memory.revisions.at(-1)!.revision > getCursorRevision(current.cursor, "memory", memory.id))
     ) {
       memories.push({
         ...presentLatestRevision(memory, presentation.includeHistory)!,
@@ -285,9 +287,14 @@ export function buildRecall(
 }
 
 export async function recallContext(location: ProjectLocation, options: QueryOptions) {
-  const [archive, history] = await Promise.all([
+  const [archive, history, ledger] = await Promise.all([
     readSourceArchive(location),
     readConsolidationHistory(location),
+    readLedger(location),
   ]);
-  return { ...location, ...buildRecall(archive, history, options) };
+  return {
+    ...location,
+    ...buildRecall(archive, history, options),
+    tidy: reviewStatus(archive, history, ledger, options),
+  };
 }

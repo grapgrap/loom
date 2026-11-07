@@ -5,6 +5,7 @@ import type {
   Memory,
   ConsolidatedWork,
   Consolidation,
+  TidyResult,
 } from "./model.ts";
 import type { Statement, Graph } from "../graph/model.ts";
 import { isDeepStrictEqual } from "node:util";
@@ -122,10 +123,17 @@ export function eraseFromTidyReport(
   };
 }
 
-export function summarizeTidyResult(result: Consolidation) {
+export function summarizeTidyResult(result: TidyResult) {
   return {
     revision: result.revision,
     recordedAt: result.recordedAt,
+    outcome: result.outcome,
+    effect: result.effect,
+    key: result.key,
+    reviewed: result.reviewed,
+    reviewedAt: result.reviewedAt,
+    remaining: result.remaining,
+    snapshot: result.snapshot,
     report: {
       processed: result.report!.processed,
       remaining: result.report!.remaining,

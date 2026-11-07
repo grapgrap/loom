@@ -1,5 +1,6 @@
 import type { Scope, RecordSource } from "../model.ts";
 import type { Criterion, Check, Submission } from "../work/model.ts";
+import type { Applies, Locator } from "../evidence/model.ts";
 export type SearchContent = {
   kind?: string;
   text?: string;
@@ -13,6 +14,8 @@ export type SearchContent = {
   evidence?: string[];
   next?: string[];
   source?: RecordSource;
+  applies?: Applies;
+  locator?: Locator;
 };
 // Use Lucene's positive IDF so terms shared by most records remain searchable.
 // https://lucene.apache.org/core/9_12_1/core/org/apache/lucene/search/similarities/BM25Similarity.html
@@ -38,11 +41,24 @@ export function extractSearchText(source: SearchContent) {
     source.goal,
     source.progress,
     source.workScope,
+    source.applies?.target,
+    source.applies?.targetVersion,
+    ...(source.applies?.conditions ?? []),
+    source.applies?.lifetime,
+    source.locator?.reference,
+    source.locator?.version,
+    source.locator?.extent,
     ...(source.criteria ?? []).flatMap(({ description, verification }) => [
       description,
       verification,
     ]),
-    ...(source.checks ?? []).flatMap(({ observation, evidence }) => [observation, ...evidence]),
+    ...(source.checks ?? []).flatMap(({ observation, evidence, basis }) => [
+      observation,
+      ...evidence,
+      basis?.target,
+      basis?.version,
+      ...(basis?.conditions ?? []),
+    ]),
     source.submission?.summary,
     source.submission?.review?.reason,
     ...(source.evidence ?? []),

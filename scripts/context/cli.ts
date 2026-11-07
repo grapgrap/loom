@@ -18,31 +18,42 @@ import {
   applyTidyChanges,
   prepareTidyBatch,
   readConsolidationHistory,
+  result as readTidyResult,
+  status as readTidyStatus,
 } from "../../src/context/tidy/tidy.ts";
-import {
-  getLatestConsolidation,
-  calculateTidyStatus,
-} from "../../src/context/tidy/consolidation.ts";
+import { getLatestConsolidation } from "../../src/context/tidy/consolidation.ts";
 import { resolveProjectLocation } from "../../src/context/storage/store.ts";
 import { queryGraph } from "../../src/context/graph/query.ts";
-import { runWorkCommand } from "../../src/context/work/store.ts";
+import { runWorkCommand, readWorkResult } from "../../src/context/work/store.ts";
+import * as evidence from "../../src/context/evidence/evidence.ts";
+import { checkChanges } from "../../src/context/evidence/query.ts";
+import { discover } from "../../src/context/operations/discover.ts";
+import { prepare as prepareContext } from "../../src/context/operations/context.ts";
+import { withProjectLock } from "../../src/context/storage/store.ts";
 import { summarizeTidyResult } from "../../src/context/tidy/report.ts";
 
 const usage = `Usage: node <plugin>/scripts/context/cli.ts <command> [options]
 
 Commands:
+  evidence append/correct  Write structured evidence through JSON stdin.
+  evidence read/check      Read an exact ref or check connected corrections (JSON stdin).
+  evidence result          Recover a write result: --key <requestKey>.
+  discover                 Find originals and derived vocabulary: --query <text> [--cursor <page>].
+  context prepare          Gather work, discovery and correction bases for agent judgment (JSON stdin).
   work create/revise/assign/report/submit/accept/request-changes/complete/cancel/reopen
               Change structured work through JSON stdin: --work <id>.
   work show   Read structured work, readiness and review gaps: --work <id> [--tree].
+  work result Recover an original write result by --key, even after later changes.
   location    Show the resolved project and storage paths without creating files.
   recall      Read memories, selected work, pending originals and unfinished/review candidates.
   record      Append daily plain text from stdin: --work <id> --source <reference>.
   search      Rank original records with BM25: --query <text>.
   read        Read an exact original record: --ref <kind:id@revision>.
   graph       Read statements and their evidence paths: --entity <id> or --query <text>.
-  tidy prepare  Prepare accumulated context and new records for compaction.
+  tidy prepare  Freeze exact originals and current representations for review.
   tidy apply    Apply grounded changes from JSON stdin using the prepared snapshot.
-  tidy status   Show scoped pending records, context size and growth signals.
+  tidy status   Show scoped review needs, pending records, context size and growth signals.
+  tidy result   Recover a committed review by --key.
   forget      Erase a memory: --id <id> --revision <n>; or a daily original: --ref note:work@n.
 
 Options:
@@ -58,10 +69,12 @@ Options:
   --depth <n>        Graph traversal depth, 1-5 (default: 2).
   --source <text>    Actual source of a daily record.
   --by <user|agent>  Source type for record (default: agent).
-  --key <id>         Reuse a daily record's returned requestKey only when retrying it.
+  --key <id>         Exact request key for record retry or result recovery.
   --ref <reference>  Exact original reference returned by record, search or tidy.
   --limit <n>        Per-list/batch limit, 1-200 (search: 10; recall/prepare: 50).
   --offset <n>       Skip entries in recall lists or tidy prepare current-state lists.
+  --cursor <text>    Continue the same discovery snapshot.
+  --purpose <text>   Purpose of a tidy review (default: resume).
   --input <path>    Read write-command JSON from a file instead of stdin.
   --help            Show usage.
 
@@ -99,12 +112,14 @@ function parseCommandLine() {
       entity: { type: "string" },
       depth: { type: "string" },
       tree: { type: "boolean" },
+      cursor: { type: "string" },
+      purpose: { type: "string" },
     },
   });
   const names = tokens.filter((token) => token.kind === "option").map(({ name }) => name);
   if (new Set(names).size !== names.length) throw new Error("Options cannot be repeated");
   if (options.help) return { help: true as const };
-  const grouped = ["tidy", "work"].includes(words[0]);
+  const grouped = ["tidy", "work", "evidence", "context"].includes(words[0]);
   const command = grouped ? `${words[0]}:${words[1]}` : words[0];
   if (words.length !== (grouped ? 2 : 1)) throw new Error(usage);
   const optionsByCommand: Record<string, string[]> = {
@@ -115,12 +130,21 @@ function parseCommandLine() {
     forget: ["id", "revision", "ref"],
     record: ["work", "source", "by", "key"],
     search: ["query", "work", "limit"],
+    discover: ["query", "work", "limit", "cursor"],
+    "context:prepare": ["input"],
+    "evidence:append": ["input"],
+    "evidence:correct": ["input"],
+    "evidence:read": ["ref"],
+    "evidence:check": ["input"],
+    "evidence:result": ["key"],
     read: ["ref"],
     graph: ["work", "query", "history", "limit", "entity", "depth"],
-    "tidy:prepare": ["limit", "offset", "revisit", "work", "query", "full"],
+    "tidy:prepare": ["limit", "offset", "revisit", "work", "query", "purpose", "full"],
     "tidy:apply": ["input", "full"],
-    "tidy:status": ["work", "query"],
+    "tidy:status": ["work", "query", "purpose"],
+    "tidy:result": ["key"],
     "work:show": ["work", "tree", "history"],
+    "work:result": ["key"],
   };
   for (const action of [
     "create",
@@ -150,7 +174,7 @@ function parseCommandLine() {
     parseRecordId(options.id);
   if (
     ["checkpoint", "record"].includes(command) ||
-    command.startsWith("work:") ||
+    (command.startsWith("work:") && command !== "work:result") ||
     options.work !== undefined
   )
     parseRecordId(options.work);
@@ -161,7 +185,11 @@ function parseCommandLine() {
     throw new Error("--limit must be an integer from 1 to 200");
   }
   const limit =
-    options.limit === undefined ? (command === "search" ? 10 : 50) : Number(options.limit);
+    options.limit === undefined
+      ? ["search", "discover"].includes(command)
+        ? 10
+        : 50
+      : Number(options.limit);
   if (
     options.offset !== undefined &&
     (!/^\d+$/.test(options.offset) || !Number.isSafeInteger(Number(options.offset)))
@@ -175,9 +203,11 @@ function parseCommandLine() {
   if (options.depth !== undefined && !/^[1-5]$/.test(options.depth))
     throw new Error("--depth must be an integer from 1 to 5");
   const depth = Number(options.depth ?? 2);
-  if (command === "search" && !options.query?.trim())
+  if (["search", "discover"].includes(command) && !options.query?.trim())
     throw new Error("search requires --query <text>");
-  if (command === "read" && !options.ref) throw new Error("read requires --ref <kind:id@revision>");
+  if (["read", "evidence:read"].includes(command) && !options.ref)
+    throw new Error("read requires --ref <kind:id@revision>");
+  if (command.endsWith(":result") && !options.key) throw new Error("result requires --key");
   let erasureRequest: ErasureRequest | undefined;
   if (command === "forget") {
     if (options.ref !== undefined) {
@@ -235,15 +265,23 @@ async function runCli() {
   const { command, options } = parsed;
   let writeInput;
   if (
-    ["remember", "checkpoint", "tidy:apply"].includes(command) ||
-    (command.startsWith("work:") && command !== "work:show")
+    [
+      "remember",
+      "checkpoint",
+      "tidy:apply",
+      "context:prepare",
+      "evidence:append",
+      "evidence:correct",
+      "evidence:check",
+    ].includes(command) ||
+    (command.startsWith("work:") && !["work:show", "work:result"].includes(command))
   )
     writeInput = await readJsonInput(options.input);
   const location = await resolveProjectLocation({
     cwd: options.cwd,
     directory: options["data-dir"],
   });
-  if (command.startsWith("work:")) {
+  if (command.startsWith("work:") && command !== "work:result") {
     const result = await runWorkCommand(
       location,
       command.slice(5),
@@ -256,6 +294,38 @@ async function runCli() {
   }
   let result;
   switch (command) {
+    case "work:result":
+      result = await readWorkResult(location, options.key!);
+      break;
+    case "evidence:append":
+      result = await evidence.append(location, writeInput as Parameters<typeof evidence.append>[1]);
+      break;
+    case "evidence:correct":
+      result = await evidence.correct(
+        location,
+        writeInput as Parameters<typeof evidence.correct>[1],
+      );
+      break;
+    case "evidence:read":
+      result = await evidence.read(location, options.ref!);
+      break;
+    case "evidence:check":
+      result = await checkChanges(location, writeInput as Parameters<typeof checkChanges>[1]);
+      break;
+    case "evidence:result":
+      result = await evidence.readResult(location, options.key!);
+      break;
+    case "discover":
+      result = await discover(location, {
+        query: options.query!,
+        work: options.work,
+        limit: options.limit,
+        cursor: options.cursor,
+      });
+      break;
+    case "context:prepare":
+      result = await prepareContext(location, writeInput);
+      break;
     case "location":
       result = location;
       break;
@@ -301,18 +371,12 @@ async function runCli() {
       if (!options.full) result = summarizeTidyResult(result);
       break;
     case "tidy:status": {
-      const [sourceArchive, consolidationHistory] = await Promise.all([
-        readSourceArchive(location),
-        readConsolidationHistory(location),
-      ]);
-      result = calculateTidyStatus(
-        sourceArchive,
-        getLatestConsolidation(consolidationHistory),
-        Date.now(),
-        { ...options, history: consolidationHistory },
-      );
+      result = await readTidyStatus(location, options);
       break;
     }
+    case "tidy:result":
+      result = await readTidyResult(location, { key: options.key! });
+      break;
     case "remember":
       result = await remember(location, options.id!, writeInput);
       break;
@@ -320,7 +384,9 @@ async function runCli() {
       result = await checkpoint(location, options.work!, writeInput);
       break;
     case "forget":
-      result = await eraseContext(location, options.erasureRequest!);
+      result = await withProjectLock(location, () =>
+        eraseContext(location, options.erasureRequest!),
+      );
       break;
   }
   console.log(JSON.stringify(result, null, 2));
@@ -329,8 +395,12 @@ async function runCli() {
 try {
   await runCli();
 } catch (caught) {
-  const error = caught as NodeJS.ErrnoException;
+  const error = caught as NodeJS.ErrnoException & { outcome?: string };
   console.error(`Loom context: ${error.code ? `[${error.code}] ` : ""}${error.message}`);
+  if (error.outcome)
+    console.error(
+      JSON.stringify({ outcome: error.outcome, code: error.code, reason: error.message }),
+    );
   process.exitCode = ["LOOM_NODE_UNSUPPORTED", "LOOM_GIT_MISSING", "LOOM_GIT_UNUSABLE"].includes(
     error.code ?? "",
   )

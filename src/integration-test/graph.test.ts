@@ -29,7 +29,7 @@ function statement(id: string, subject: string, object: string, source: string, 
 
 function publish(project: Fixture, graph: unknown, extra = {}) {
   const batch = run(project, ["tidy", "prepare"]);
-  const input = { snapshot: batch.snapshot, graph, ...extra };
+  const input = { snapshot: batch.snapshot, legacy: true, graph, ...extra };
   return { input, result: run(project, ["tidy", "apply", "--full"], input) };
 }
 
@@ -175,6 +175,7 @@ test("bad graph references and conflicting replacements leave the graph and proc
   const batch = run(project, ["tidy", "prepare"]);
   const bad = {
     snapshot: batch.snapshot,
+    legacy: true,
     graph: {
       entities: [entity("a", source.ref)],
       statements: [statement("broken", "a", "missing", source.ref)],
@@ -186,12 +187,14 @@ test("bad graph references and conflicting replacements leave the graph and proc
   assert.equal(
     invoke(project, ["tidy", "apply", "--full"], {
       snapshot: batch.snapshot,
+      legacy: true,
       graph: { entities: [entity("future", later.ref)] },
     }).status,
     1,
   );
   run(project, ["tidy", "apply", "--full"], {
     snapshot: batch.snapshot,
+    legacy: true,
     graph: {
       entities: [entity("a", source.ref), entity("b", source.ref)],
       statements: [statement("initial", "a", "b", source.ref)],
@@ -205,6 +208,7 @@ test("bad graph references and conflicting replacements leave the graph and proc
   assert.match(
     invoke(project, ["tidy", "apply", "--full"], {
       snapshot: next.snapshot,
+      legacy: true,
       graph: { statements: [replacement] },
     }).stderr,
     /scope/,
@@ -284,12 +288,14 @@ test("premise cycles and attempts to change a statement in place are rejected", 
   assert.match(
     invoke(project, ["tidy", "apply", "--full"], {
       snapshot: batch.snapshot,
+      legacy: true,
       graph: { entities, statements: [one, two] },
     }).stderr,
     /cycle/i,
   );
   run(project, ["tidy", "apply", "--full"], {
     snapshot: batch.snapshot,
+    legacy: true,
     graph: { entities, statements: [statement("one", "a", "b", source.ref)] },
   });
   note(project, "A different interpretation.");
@@ -297,6 +303,7 @@ test("premise cycles and attempts to change a statement in place are rejected", 
   assert.match(
     invoke(project, ["tidy", "apply", "--full"], {
       snapshot: next.snapshot,
+      legacy: true,
       graph: { statements: [statement("one", "b", "a", source.ref)] },
     }).stderr,
     /immutable/,
@@ -451,10 +458,10 @@ test("a version-one consolidation is readable and upgrades without losing existi
   assert.deepEqual(run(project, ["graph"]).statements, []);
   const next = note(project, "A new graph observation.");
   publish(project, { entities: [entity("new-entity", next.ref)] });
-  assert.equal(JSON.parse(readFileSync(path, "utf8")).version, 2);
+  assert.equal(JSON.parse(readFileSync(path, "utf8")).version, 4);
   assert.equal(run(project, ["recall"]).memories[0].text, source.text);
   run(project, ["forget", "--ref", next.ref]);
-  assert.equal(JSON.parse(readFileSync(path, "utf8")).version, 2);
+  assert.equal(JSON.parse(readFileSync(path, "utf8")).version, 4);
 });
 
 test("replacement eligibility follows its explicit status while premise changes keep their evidence role", (t) => {
@@ -500,6 +507,7 @@ test("replacement eligibility follows its explicit status while premise changes 
     };
     const rejected = invoke(project, ["tidy", "apply", "--full"], {
       snapshot: batch.snapshot,
+      legacy: true,
       graph,
     });
     assert.equal(rejected.status, 1, scenario.name);
@@ -511,7 +519,11 @@ test("replacement eligibility follows its explicit status while premise changes 
     );
 
     graph.statements[0] = { ...replacement, status: "active" };
-    const accepted = run(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot, graph });
+    const accepted = run(project, ["tidy", "apply", "--full"], {
+      snapshot: batch.snapshot,
+      legacy: true,
+      graph,
+    });
     assert.equal(
       accepted.graph.statements.find(({ id }: { id: string }) => id === "accepted").status,
       "superseded",
@@ -577,12 +589,14 @@ test("a work-scoped legacy memory establishes the work for graph statements and 
     ],
   };
   assert.match(
-    invoke(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot, graph }).stderr,
+    invoke(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot, legacy: true, graph })
+      .stderr,
     /Unknown work: unknown/,
   );
   graph.statements[0].scope = scope;
   const result = run(project, ["tidy", "apply", "--full"], {
     snapshot: batch.snapshot,
+    legacy: true,
     graph,
     works: [
       {

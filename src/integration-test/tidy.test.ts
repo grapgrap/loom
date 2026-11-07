@@ -63,7 +63,8 @@ test("tidy publishes grounded changes while preserving raw records, other work, 
   const project = fixture(t);
   const old = record(project, "storage", "Use a temporary JSON input file.", "Experiment A");
   const first = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: first.snapshot,
     memories: [memory("input-method", old.text, [old.ref])],
     works: [
@@ -98,6 +99,7 @@ test("tidy publishes grounded changes while preserving raw records, other work, 
     "Verification boundary",
   );
   const submission = {
+    legacy: true,
     snapshot: second.snapshot,
     memories: [
       memory("input-method", "Send daily records through stdin.", [next.ref], {
@@ -116,9 +118,9 @@ test("tidy publishes grounded changes while preserving raw records, other work, 
       },
     ],
   };
-  const published = run(project, ["tidy", "apply"], submission);
+  const published = run(project, ["tidy", "apply", "--full"], submission);
   expect(published.revision).toBe(2);
-  expect(run(project, ["tidy", "apply"], submission).revision).toBe(2);
+  expect(run(project, ["tidy", "apply", "--full"], submission).revision).toBe(2);
   const resumed = run(project, ["recall", "--work", "storage"]);
   expect(resumed.memories[0].text).toBe("Send daily records through stdin.");
   expect(resumed.memories[0].supersedes).toStrictEqual([old.ref]);
@@ -134,18 +136,21 @@ test("invalid provenance and stale tidy snapshots do not advance the processed r
   const note = record(project, "storage", "Store outside the checkout.");
   const first = run(project, ["tidy", "prepare"]);
   const second = run(project, ["tidy", "prepare"]);
-  const invalid = invoke(project, ["tidy", "apply"], {
+  const invalid = invoke(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: first.snapshot,
     memories: [memory("location", "Invented fact.", ["note:storage@99"])],
   });
   expect(invalid.status).toBe(1);
   expect(invalid.stderr).toMatch(/source|reference|snapshot/i);
   expect(run(project, ["recall", "--work", "storage"]).pending.length).toBe(1);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: first.snapshot,
     memories: [memory("location", note.text, [note.ref])],
   });
-  const stale = invoke(project, ["tidy", "apply"], {
+  const stale = invoke(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: second.snapshot,
     memories: [memory("location", "A stale replacement.", [note.ref])],
   });
@@ -158,7 +163,8 @@ test("tidy projects its changes without carrying unrelated input metadata into r
   const project = fixture(t);
   const note = record(project, "storage", "A verified observation.");
   const batch = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: batch.snapshot,
     metadata: "Caller-only metadata.",
     memories: [memory("location", note.text, [note.ref], { metadata: "Caller-only metadata." })],
@@ -195,7 +201,8 @@ test("bounded tidy batches never skip remaining records or convert uncertainty i
     notes.slice(0, 2).map(({ ref }: { ref: string }) => ref),
   );
   expect(first.remaining).toBe(1);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: first.snapshot,
     memories: [
       memory("open-choice", "The choice remains unresolved.", [notes[0].ref, notes[1].ref], {
@@ -217,7 +224,7 @@ test("snapshot hashes define the processed batch without a duplicate cursor or r
   const project = fixture(t);
   record(project, "earlier", "Keep the processed range from earlier work.");
   const initial = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply", "--full"], { snapshot: initial.snapshot });
+  run(project, ["tidy", "apply", "--full"], { legacy: true, snapshot: initial.snapshot });
   const prepared = [
     record(project, "storage", "First observation."),
     record(project, "storage", "Second observation."),
@@ -235,7 +242,10 @@ test("snapshot hashes define the processed batch without a duplicate cursor or r
   snapshot.hashes = Object.fromEntries(Object.entries(snapshot.hashes).reverse());
   writeFileSync(snapshotPath, JSON.stringify(snapshot));
   const arrived = record(project, "storage", "Arrived after preparation.");
-  const applied = run(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot });
+  const applied = run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
+    snapshot: batch.snapshot,
+  });
   expect(applied.cursor).toStrictEqual({
     memory: {},
     checkpoint: {},
@@ -244,9 +254,9 @@ test("snapshot hashes define the processed batch without a duplicate cursor or r
   expect(
     run(project, ["recall", "--work", "storage"]).pending.map(({ ref }: { ref: string }) => ref),
   ).toStrictEqual([prepared[2].ref, arrived.ref]);
-  expect(run(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot }).revision).toBe(
-    applied.revision,
-  );
+  expect(
+    run(project, ["tidy", "apply", "--full"], { legacy: true, snapshot: batch.snapshot }).revision,
+  ).toBe(applied.revision);
 });
 
 test("legacy snapshot fields remain readable and hashless snapshots allow only an applied retry", (t) => {
@@ -261,18 +271,24 @@ test("legacy snapshot fields remain readable and hashless snapshots allow only a
   snapshot.refs = [note.ref];
   delete snapshot.hashes;
   writeFileSync(snapshotPath, JSON.stringify(snapshot));
-  const rejected = invoke(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot });
+  const rejected = invoke(project, ["tidy", "apply", "--full"], {
+    legacy: true,
+    snapshot: batch.snapshot,
+  });
   expect(rejected.status).toBe(1);
   expect(run(project, ["tidy", "status"]).revision).toBe(0);
   snapshot.hashes = hashes;
   writeFileSync(snapshotPath, JSON.stringify(snapshot));
-  const applied = run(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot });
+  const applied = run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
+    snapshot: batch.snapshot,
+  });
   expect(applied.cursor).toStrictEqual(snapshot.cursor);
   delete snapshot.hashes;
   writeFileSync(snapshotPath, JSON.stringify(snapshot));
-  expect(run(project, ["tidy", "apply", "--full"], { snapshot: batch.snapshot }).revision).toBe(
-    applied.revision,
-  );
+  expect(
+    run(project, ["tidy", "apply", "--full"], { legacy: true, snapshot: batch.snapshot }).revision,
+  ).toBe(applied.revision);
   expect(run(project, ["recall", "--work", "storage"]).pending).toStrictEqual([]);
 });
 
@@ -294,7 +310,7 @@ test("legacy revisions remain readable and searchable during incremental adoptio
   });
   const batch = run(project, ["tidy", "prepare", "--limit", "1"]);
   expect(batch.records[0].ref).toBe("memory:location@1");
-  run(project, ["tidy", "apply"], { snapshot: batch.snapshot });
+  run(project, ["tidy", "apply", "--full"], { legacy: true, snapshot: batch.snapshot });
   expect(run(project, ["tidy", "prepare"]).records[0].ref).toBe("memory:location@2");
   expect(run(project, ["read", "--ref", "memory:location@1"]).text).toBe(legacy.text);
   const results = run(project, ["search", "--query", "기억 저장", "--limit", "5"]).results;
@@ -320,7 +336,8 @@ test("a partial tidy preserves existing agreements and leaves unreviewed origina
     text: "Another constraint must remain visible.",
   });
   const batch = run(project, ["tidy", "prepare", "--limit", "1"]);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: batch.snapshot,
     memories: [memory("first", "First constraint.", [batch.records[0].ref])],
   });
@@ -345,7 +362,7 @@ test("a tidy with no changes preserves existing memories and exposes their origi
   const batch = run(project, ["tidy", "prepare"]);
   expect(batch.current.memories[0]?.id).toBe("current-rule");
   expect(batch.current.memories[0].sources).toStrictEqual(["memory:current-rule@1"]);
-  run(project, ["tidy", "apply"], { snapshot: batch.snapshot });
+  run(project, ["tidy", "apply", "--full"], { legacy: true, snapshot: batch.snapshot });
   const recalled = run(project, ["recall"]);
   expect(recalled.memories[0]?.text).toBe(original.text);
   expect(recalled.pending).toStrictEqual([]);
@@ -374,7 +391,7 @@ test("legacy adoption preserves the latest value known to prepare and leaves lat
     expectedRevision: 2,
     text: "Later agreement.",
   });
-  run(project, ["tidy", "apply"], { snapshot: batch.snapshot });
+  run(project, ["tidy", "apply", "--full"], { legacy: true, snapshot: batch.snapshot });
   const recalled = run(project, ["recall"]);
   expect(recalled.memories[0]?.text).toBe("Current agreement.");
   expect(recalled.memories[0].sources).toStrictEqual(["memory:current-rule@2"]);
@@ -395,7 +412,8 @@ test("a legacy memory can be explicitly retired during the first tidy", (t) => {
   });
   const note = record(project, "storage", "The previous constraint no longer applies.");
   const batch = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: batch.snapshot,
     retire: [{ id: "old-rule", reason: note.text, sources: [note.ref] }],
   });
@@ -419,13 +437,15 @@ test("tidy cannot cite new arrivals or mark unsupported completion, and scope st
   const batch = run(project, ["tidy", "prepare"]);
   const later = record(project, "first", "A later result.");
   expect(
-    invoke(project, ["tidy", "apply"], {
+    invoke(project, ["tidy", "apply", "--full"], {
+      legacy: true,
       snapshot: batch.snapshot,
       memories: [memory("claim", "A premature claim.", [later.ref])],
     }).status,
   ).toBe(1);
   expect(
-    invoke(project, ["tidy", "apply"], {
+    invoke(project, ["tidy", "apply", "--full"], {
+      legacy: true,
       snapshot: batch.snapshot,
       works: [
         {
@@ -440,13 +460,15 @@ test("tidy cannot cite new arrivals or mark unsupported completion, and scope st
       ],
     }).status,
   ).toBe(1);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: batch.snapshot,
     memories: [memory("claim", first.text, [first.ref], { scope: { type: "work", id: "first" } })],
   });
   const next = run(project, ["tidy", "prepare"]);
   expect(
-    invoke(project, ["tidy", "apply"], {
+    invoke(project, ["tidy", "apply", "--full"], {
+      legacy: true,
       snapshot: next.snapshot,
       memories: [memory("claim", "Promoted by changing scope.", [later.ref])],
     }).status,
@@ -458,13 +480,15 @@ test("retiring a derived memory preserves its original source and unrelated memo
   const project = fixture(t);
   const note = record(project, "storage", "A shared constraint.");
   const first = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: first.snapshot,
     memories: [memory("first", note.text, [note.ref]), memory("duplicate", note.text, [note.ref])],
   });
   const merge = record(project, "storage", "The two entries express one constraint.");
   const next = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: next.snapshot,
     retire: [{ id: "duplicate", reason: "Merged into first.", sources: [merge.ref] }],
   });
@@ -484,7 +508,8 @@ test("forget removes dependent derived memories from every tidy revision and rej
     source: { type: "user", reference: "User message" },
   });
   const first = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: first.snapshot,
     memories: [memory("derived-secret", "A value to forget.", ["memory:secret@1"])],
   });
@@ -495,7 +520,8 @@ test("forget removes dependent derived memories from every tidy revision and rej
   expect(run(project, ["recall"]).memories).toStrictEqual([]);
   const stored = readFileSync(join(location.projectDirectory, "tidy.json"), "utf8");
   expect(stored.includes("A value to forget.")).toBe(false);
-  const stale = invoke(project, ["tidy", "apply"], {
+  const stale = invoke(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: later.snapshot,
     memories: [memory("derived-secret", "A value to forget.", ["memory:secret@1"])],
   });
@@ -511,7 +537,8 @@ test("forgetting a daily original erases its content and dependent summaries and
     "Private source to erase.",
   );
   const batch = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: batch.snapshot,
     memories: [memory("derived", note.text, [note.ref])],
   });
@@ -538,13 +565,15 @@ test("erasing a superseded source preserves the current memory and removes only 
   const project = fixture(t);
   const old = record(project, "storage", "Use method A.");
   const first = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: first.snapshot,
     memories: [memory("current-method", old.text, [old.ref])],
   });
   const replacement = record(project, "storage", "Use method B.");
   const next = run(project, ["tidy", "prepare"]);
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: next.snapshot,
     memories: [
       memory("current-method", replacement.text, [replacement.ref], { supersedes: [old.ref] }),
@@ -586,7 +615,8 @@ test(
       rmSync(lockPath);
     }
     run(project, ["forget", "--ref", note.ref]);
-    const applied = invoke(project, ["tidy", "apply"], {
+    const applied = invoke(project, ["tidy", "apply", "--full"], {
+      legacy: true,
       snapshot: batch.snapshot,
       memories: [memory("erased", note.text, [note.ref])],
     });
@@ -600,7 +630,10 @@ test("erasing a prepared original invalidates the draft before the first consoli
   const note = record(project, "storage", "An observation later erased.");
   const batch = run(project, ["tidy", "prepare"]);
   run(project, ["forget", "--ref", note.ref]);
-  const applied = invoke(project, ["tidy", "apply"], { snapshot: batch.snapshot });
+  const applied = invoke(project, ["tidy", "apply", "--full"], {
+    legacy: true,
+    snapshot: batch.snapshot,
+  });
   expect(applied.status).toBe(1);
   expect(applied.stderr).toMatch(/changed|forgotten/i);
   expect(run(project, ["tidy", "status"]).revision).toBe(0);
@@ -622,7 +655,8 @@ test("a new legacy revision does not invalidate an unchanged original in an in-f
     expectedRevision: 1,
     text: "Later value.",
   });
-  run(project, ["tidy", "apply"], {
+  run(project, ["tidy", "apply", "--full"], {
+    legacy: true,
     snapshot: batch.snapshot,
     memories: [memory("value", original.text, ["memory:value@1"])],
   });
@@ -672,7 +706,8 @@ test("concurrent tidy writers have one winner instead of overwriting each other'
   const second = run(project, ["tidy", "prepare"]);
   const writes = await Promise.all(
     [first, second].map((batch, i) =>
-      concurrentRequest(project, ["tidy", "apply"], {
+      concurrentRequest(project, ["tidy", "apply", "--full"], {
+        legacy: true,
         snapshot: batch.snapshot,
         memories: [memory("observation", `Interpretation ${i}`, [note.ref])],
       }),

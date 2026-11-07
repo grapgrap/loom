@@ -56,7 +56,7 @@ function publish(project: Fixture, graph: unknown, extra = {}, cwd = project.rep
   const result = run(
     project,
     ["tidy", "apply"],
-    { snapshot: batch.snapshot, graph, ...extra },
+    { snapshot: batch.snapshot, legacy: true, graph, ...extra },
     cwd,
   );
   return { batch, result };
@@ -249,6 +249,7 @@ test("a new decision remains pending until tidy replaces the adopted statement a
   );
   run(project, ["tidy", "apply"], {
     snapshot: batch.snapshot,
+    legacy: true,
     graph: {
       entities: [graphEntity("append-only-ledger", newDecision.ref)],
       statements: [newStatement],

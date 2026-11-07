@@ -28,6 +28,7 @@ import { workJournalPath, parseWorkJournal } from "../records/journal.ts";
 import { readDirectoryEntries, readStoredRecord } from "../storage/store.ts";
 import { readWorkLedger } from "../work/store.ts";
 import { presentWork } from "../work/work.ts";
+import { all as allEvidence, read as readEvidence } from "../evidence/evidence.ts";
 
 export function memoryRecordPath(location: ProjectLocation, memoryId: string) {
   return join(location.projectDirectory, "context", `${memoryId}.json`);
@@ -39,7 +40,9 @@ export function checkpointRecordPath(location: ProjectLocation, workId: string) 
 
 export function parseSourceReference(reference: string): SourceReference {
   validateText(reference, "source reference");
-  const referenceParts = /^(memory|checkpoint|note|work):([^@]+)@([1-9][0-9]*)$/.exec(reference);
+  const referenceParts = /^(memory|checkpoint|note|work|evidence):([^@]+)@([1-9][0-9]*)$/.exec(
+    reference,
+  );
   if (!referenceParts) throw new Error(`Invalid source reference: ${reference}`);
   const [, kind, recordId, revisionText] = referenceParts;
   return {
@@ -71,11 +74,15 @@ export function collectKnownWorkIds(archive: SourceArchive) {
     if (memory.forgotten || memory.scope.type !== "work") continue;
     workIds.push(memory.scope.id);
   }
+  for (const source of archive.sources) {
+    if (source.kind === "evidence" && source.scope?.type === "work") workIds.push(source.scope.id);
+  }
   return new Set(workIds);
 }
 
 export async function readSource(location: ProjectLocation, reference: string) {
   const { kind, id, revision } = parseSourceReference(reference);
+  if (kind === "evidence") return readEvidence(location, reference);
   if (kind === "work") {
     const ledger = await readWorkLedger(location);
     const record = ledger?.works.find((work) => work.id === id);
@@ -141,11 +148,35 @@ export function advanceRevisionCursor(
   sources: { kind: SourceKind; id: string; revision: number }[],
 ) {
   const advancedCursor = structuredClone(revisionCursor);
+  const reviewed = new Set(advancedCursor.reviewed ?? []);
   for (const { kind, id, revision } of sources) {
-    advancedCursor[kind] ??= {};
-    advancedCursor[kind][id] = Math.max(getCursorRevision(advancedCursor, kind, id), revision);
+    if (revision > getCursorRevision(advancedCursor, kind, id))
+      reviewed.add(`${kind}:${id}@${revision}`);
   }
+  for (const ref of reviewed) {
+    const { kind, id } = parseSourceReference(ref);
+    let revision = getCursorRevision(advancedCursor, kind, id);
+    while (reviewed.has(`${kind}:${id}@${revision + 1}`)) {
+      reviewed.delete(`${kind}:${id}@${++revision}`);
+    }
+    if (revision > getCursorRevision(advancedCursor, kind, id)) {
+      advancedCursor[kind] ??= {};
+      advancedCursor[kind][id] = revision;
+    }
+  }
+  if (reviewed.size) advancedCursor.reviewed = [...reviewed].sort();
+  else delete advancedCursor.reviewed;
   return advancedCursor;
+}
+
+export function hasReviewedSource(
+  cursor: Cursor,
+  source: { kind: SourceKind; id: string; revision: number },
+) {
+  return (
+    source.revision <= getCursorRevision(cursor, source.kind, source.id) ||
+    (cursor.reviewed ?? []).includes(`${source.kind}:${source.id}@${source.revision}`)
+  );
 }
 
 export async function readSourceArchive(location: ProjectLocation): Promise<SourceArchive> {
@@ -222,22 +253,25 @@ export async function readSourceArchive(location: ProjectLocation): Promise<Sour
       }
     }
   }
+  sources.push(...(await allEvidence(location)));
   return {
     memories: memoryRecords,
     checkpoints: checkpointRecords,
     journals: workJournals,
     works: workLedger?.works ?? [],
     sources,
-    bounds: advanceRevisionCursor(createRevisionCursor(), sources),
+    bounds: sources.reduce((bounds, { kind, id, revision }) => {
+      bounds[kind] ??= {};
+      bounds[kind][id] = Math.max(getCursorRevision(bounds, kind, id), revision);
+      return bounds;
+    }, createRevisionCursor()),
   };
 }
 
 export function findUnprocessedSources<
   T extends { kind: SourceKind; id: string; revision: number },
 >(archive: { sources: T[] }, processedCursor = createRevisionCursor()) {
-  return archive.sources.filter(
-    ({ kind, id, revision }) => revision > getCursorRevision(processedCursor, kind, id),
-  );
+  return archive.sources.filter((source) => !hasReviewedSource(processedCursor, source));
 }
 
 export function requireSourceByReference(archive: SourceArchive, reference: string) {

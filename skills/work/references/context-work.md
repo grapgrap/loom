@@ -8,6 +8,7 @@
 
 ```json
 {
+  "requestKey": "create-expired-session-1",
   "expectedRevision": 0,
   "actor": "main",
   "source": { "type": "agent", "reference": "현재 사용자 요청" },
@@ -32,9 +33,9 @@ create의 actor가 계획과 완료 판단을 맡는 owner가 된다. `goal`은 
 
 ## 공통 변경 입력과 리비전
 
-모든 변경 명령은 stdin JSON의 `expectedRevision`, `actor`, `source`를 요구한다. create는 expectedRevision 0, 이후 변경은 work show의 `work.revision`을 사용한다. actor는 소문자·숫자·하이픈으로 된 에이전트 식별자다. 호스트 실행 ID는 별도의 executionId에 보존한다. actor는 조율에서 합의한 담당자를 식별하는 값이며 인증 수단은 아니다.
+새 변경은 stdin JSON에 `requestKey`, `expectedRevision`, `actor`, `source`를 전달한다. 요청키 없는 호출은 기존 호환 경로다. create는 expectedRevision 0, 이후 변경은 work show의 `work.revision`을 사용한다. actor는 소문자·숫자·하이픈으로 된 에이전트 식별자다. 호스트 실행 ID는 별도의 executionId에 보존한다. actor는 조율에서 합의한 담당자를 식별하는 값이며 인증 수단은 아니다.
 
-각 변경은 새 업무 리비전과 `work:<id>@<revision>` ref를 반환한다. 이 ref는 read·search·graph·tidy의 근거로 사용할 수 있다. 같은 JSON 요청을 직후 재시도하면 리비전을 중복 추가하지 않는다. 충돌하면 현재 업무와 바뀐 정의·조건·보고를 읽고 조정한다. 예전 입력의 리비전 번호만 바꿔 재시도하지 않는다.
+각 변경은 새 업무 리비전과 `work:<id>@<revision>` ref를 반환한다. 이 ref는 read·search·graph·tidy의 근거로 사용할 수 있다. 같은 requestKey와 입력은 후속 변경이 있어도 최초 결과의 ref를 반환하며 replayed: true를 표시한다. 같은 키에 다른 입력은 거부한다. `work result --key <requestKey>`로 응답을 회수하고 최신 상태는 별도로 show한다. 키는 프로젝트의 업무 컴포넌트에서 유일해야 한다. 충돌하면 현재 업무와 바뀐 정의·조건·보고를 읽고 조정한다. 예전 입력의 리비전 번호만 바꿔 재시도하지 않는다.
 
 프로젝트의 업무와 관계는 하나의 잠금과 원자적 파일 교체로 갱신한다. 부모 완료 판정과 자식 변경도 이 저장 단위 안에서 처리한다. 파일 크기나 작업 수가 이 저장 방식의 실제 제약이 되면 저장 구현을 교체하되 업무 계약은 유지한다.
 
@@ -44,6 +45,7 @@ create의 actor가 계획과 완료 판단을 맡는 owner가 된다. `goal`은 
 
 ```json
 {
+  "requestKey": "verify-expired-session-1",
   "expectedRevision": 1,
   "actor": "main",
   "source": { "type": "agent", "reference": "실제 실행 명령과 화면 관찰" },
@@ -54,13 +56,20 @@ create의 actor가 계획과 완료 판단을 맡는 owner가 된다. `goal`은 
       "criterionId": "expired-session",
       "verdict": "met",
       "observation": "로그인 화면으로 이동했고 보호 데이터가 노출되지 않았다.",
-      "evidence": ["실제 명령 출력·화면 캡처·검증 기록의 위치"]
+      "evidence": ["실제 명령 출력·화면 캡처·검증 기록의 위치"],
+      "basis": {
+        "work": "work:expired-session@1",
+        "definition": 1,
+        "target": "src/session.ts",
+        "version": "검증한 커밋 또는 산출물 해시",
+        "conditions": ["Node 24", "만료된 세션"]
+      }
     }
   ]
 }
 ```
 
-verdict는 `met`·`unmet`·`unknown`이다. met에는 하나 이상의 증거가 필요하다. CLI는 증거의 문자열·조건 연결과 상태 일관성을 확인하며, 증거 내용이 기대 결과를 입증하는지는 에이전트가 판단한다. 선행 업무가 완료되지 않았으면 met 보고는 거부한다.
+verdict는 `met`·`unmet`·`unknown`이다. met에는 하나 이상의 증거와, keyed 요청에서는 실제 읽은 명세 ref·definition 세대 및 관찰 대상·버전·실행 조건인 basis가 필요하다. CLI는 basis.work가 실재하고 현재 정의와 연결되는지 검사한다. 진행 보고로 리비전만 바뀌었어도 정의가 같으면 유효한 basis를 재사용할 수 있다. 기존 저장 데이터에 basis를 합성하지 않으며, keyed submit·complete·accept는 basis 없는 met로 완료하지 않는다. CLI는 증거의 문자열·조건 연결과 상태 일관성을 확인하며, 증거 내용이 기대 결과를 입증하는지는 에이전트가 판단한다. 선행 업무가 완료되지 않았으면 met 보고는 거부한다.
 
 checks를 생략하거나 빈 배열로 전달하면 기존 조건 보고를 보존한다. 전달한 조건만 갱신하므로 유효한 다른 검증을 반복하지 않는다. 진행 설명·next만 바뀐 보고는 상위 검증을 무효화하지 않는다. 새로운 조건 보고는 기여하는 상위 조건과 그 결과에 의존하는 업무의 재확인을 요구한다.
 
@@ -88,6 +97,6 @@ submitted는 조율자가 수신 결과를 등록하고 검토를 기다리는 �
 
 조건·담당 변경, 재개, 새로운 검증 보고는 기여하는 상위 조건과 의존 업무의 검증도 무효화한다. 기여 조건을 바꾸면 이전·새 상위 조건을 모두 다시 확인한다. 영향받은 complete·submitted는 active로 돌아가고 새 리비전이 생긴다. 상위의 무관한 조건 보고는 보존한다. blocked·paused·cancelled는 기존 이유와 상태를 유지하며 재확인 이유만 recheckReason에 추가한다. 취소된 업무의 next는 비운 채 유지한다. 이전 제출은 새 조건이나 리비전의 결과로 수락할 수 없다. 상위 조건을 제거하려면 먼저 그 조건을 참조하는 하위 명세를 조정한다.
 
-처리 과정의 판단, 합의와 출처는 단독 수행자나 조율자가 기존 record로 남긴다. 서브 에이전트는 저장 명령을 실행하지 않고 필요한 기록 내용을 호스트로 보고한다. 업무 CLI는 현재 정의, 수행, 검증과 수락 상태를 소유하며, tidy는 그 이력을 근거로 기억과 그래프를 정리한다. tidy나 checkpoint가 managed 업무 상태를 덮어쓰는 요청은 거부한다.
+처리 과정의 판단, 합의와 출처는 단독 수행자나 조율자가 evidence append/correct로 남긴다. 서브 에이전트는 저장 명령을 실행하지 않고 필요한 기록 내용을 호스트로 보고한다. 업무 CLI는 현재 정의, 수행, 검증과 수락 상태를 소유하며, tidy는 그 이력을 근거로 기억과 그래프를 정리한다. tidy나 checkpoint가 managed 업무 상태를 덮어쓰는 요청은 거부한다.
 
 기존 업무는 recall로 원문과 상태를 읽은 뒤 create에 `adopt: true`와 확인 가능한 새 명세를 전달해 전환한다. 기존 checkpoint ref와 기록은 보존한다. 이전 완료 선언을 새 조건의 met 증거로 자동 변환하지 않는다. 기존 업무를 전환하지 않으면 [이전 계약](context-legacy.md)을 계속 사용한다. 같은 프로젝트를 조율하는 에이전트는 이 업무 CLI를 지원하는 같은 버전을 사용한다.

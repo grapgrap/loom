@@ -31,13 +31,13 @@ description: 같은 워크트리에서 메인 에이전트가 공통 업무 CLI�
 
 ## 업무와 조율 기록을 연결한다
 
-조율자의 전체 업무와 각 하위 업무를 [공통 업무 CLI](../work/references/context-work.md)의 work create로 정의한다. 각 하위 업무에는 parent, 기여하는 상위 조건 ID인 contributesTo와 필요한 dependsOn을 연결한다. 목표·범위·완료 조건·순서는 업무 데이터에, 그 판단 이유와 출처는 record에 남긴다. 작은 업무에도 별도의 칸반이나 계획 파일을 만들 필요는 없다.
+조율자의 전체 업무와 각 하위 업무를 [공통 업무 CLI](../work/references/context-work.md)의 work create로 정의한다. 각 하위 업무에는 parent, 기여하는 상위 조건 ID인 contributesTo와 필요한 dependsOn을 연결한다. 목표와 범위, 완료 조건 및 순서는 업무 데이터에 둔다. 재사용할 판단과 출처는 [증거 계약](../work/references/context-evidence.md)의 evidence append에, 채택이나 정정 및 철회는 evidence correct에 남긴다. 작은 업무에도 별도의 칸반이나 계획 파일을 만들 필요는 없다.
 
 할당 전에 work assign으로 worker와 reviewer를 지정하고 reviewer에는 조율자 ID를 사용한다. worker ID는 수행 담당자를 식별하며 CLI 변경 권한을 부여하지 않는다. 호스트에서 실행 ID를 받은 뒤 같은 담당자로 assign을 호출해 executionId를 연결한다. 이 연결은 이미 도착한 보고와 제출을 지우지 않는다. 수정 파일, 다음 점검 시점과 명세의 판단 근거는 조율 기록에 남긴다. 담당이나 명세를 바꾸면 무효화된 검증과 제출 및 영향받는 업무를 확인한다.
 
 전체 진행과 짧은 요청 뒤의 복귀는 `work show --work <전체-id> --tree`로 점검한다. 각 업무의 현재 조건 보고와 ready, blocked, awaitingReview, missingCriteria를 읽고 다음 행동을 정한다. 판단에 필요한 기억은 `recall --work <id>`, 정확한 원본은 `read --ref`로 보충한다. 소속 업무나 중단 뒤 복귀할 업무를 찾지 못할 때는 작업 맥락의 복구 절차로 후보를 확인한다. pending은 정리하지 않은 원본이며 작업 대기열이나 완료 알림이 아니다. ready도 호스트에서 실행 중인 작업을 다시 실행할 권한을 뜻하지 않는다.
 
-공유 기록의 `record`와 `tidy`는 조율자가 맡는다. 작업자는 기록할 판단과 출처, 정리가 필요한 신호를 호스트로 보고한다. 조율자는 실제 보고자와 호스트 보고 및 산출물의 위치를 출처로 연결한다. 기록을 정리한 시점, 작업자가 수행을 마친 시점, 조율자가 전체 완료를 확정한 시점을 구분한다.
+공유 근거의 `evidence append/correct`, 단순 일지의 `record`와 표현 정리의 `tidy`는 조율자가 맡는다. 작업자는 기록할 판단과 출처, 정리가 필요한 신호를 호스트로 보고한다. 조율자는 실제 보고자와 호스트 보고 및 산출물의 위치를 출처로 연결한다. 기록을 정리한 시점, 작업자가 수행을 마친 시점, 조율자가 전체 완료를 확정한 시점을 구분한다.
 
 ## 같은 워크트리의 수정을 조율한다
 

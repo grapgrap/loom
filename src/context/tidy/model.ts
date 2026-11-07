@@ -41,6 +41,13 @@ export type TidySnapshot = {
   bounds: Cursor;
   hashes: Record<string, string>;
   memoryIds?: string[];
+  purpose?: string;
+  input?: string;
+  batch?: string[];
+  memories?: Record<string, string>;
+  selection?: TidyPreparationOptions;
+  seeds?: string[];
+  basis?: string;
 };
 
 export type TidyPreparationOptions = {
@@ -50,6 +57,8 @@ export type TidyPreparationOptions = {
   revisit?: boolean;
   work?: string;
   query?: string;
+  refs?: string[];
+  purpose?: string;
 };
 
 export type TidyChanges = {
@@ -59,6 +68,12 @@ export type TidyChanges = {
   retire: (Retirement & { id: string })[];
   absorb?: { from: string[]; into: string[]; reason: string }[];
   graph?: GraphChanges;
+  legacy?: boolean;
+  key?: string;
+  reviewed?: string[];
+  read?: string[];
+  reason?: string;
+  gaps?: string[];
 };
 
 export type TidyEntries = {
@@ -83,6 +98,7 @@ export type TidyReport = { processed: string[]; remaining: number; changes: Tidy
 export type Consolidation = {
   revision: number;
   recordedAt?: string;
+  reviewedAt?: string;
   cursor: Cursor;
   memories: Memory[];
   works: ConsolidatedWork[];
@@ -96,4 +112,30 @@ export type ConsolidationHistory = {
   version: number;
   forgotten: string[];
   revisions: Consolidation[];
+  cursor?: Cursor;
+  receipts?: Receipt[];
+};
+
+export type TidyResult = Consolidation & {
+  outcome: "applied";
+  effect: "changed" | "no-change";
+  key: string;
+  reviewed: string[];
+  remaining: number;
+};
+
+export type Receipt = {
+  snapshot: string;
+  key: string;
+  hash: string;
+  purpose: string;
+  input: string;
+  output: string;
+  reviewed: string[];
+  read: string[];
+  recordedAt: string;
+  reason?: string;
+  gaps?: string[];
+  forgotten?: boolean;
+  result: TidyResult;
 };
