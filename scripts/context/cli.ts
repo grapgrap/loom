@@ -1,3 +1,4 @@
+import { commands, help } from "./help.ts";
 import type { ErasureRequest } from "../../src/context/operations/forget.ts";
 import type { RecordSource } from "../../src/context/model.ts";
 import { readFile } from "node:fs/promises";
@@ -32,56 +33,7 @@ import { prepare as prepareContext } from "../../src/context/operations/context.
 import { withProjectLock } from "../../src/context/storage/store.ts";
 import { summarizeTidyResult } from "../../src/context/tidy/report.ts";
 
-const usage = `Usage: node <plugin>/scripts/context/cli.ts <command> [options]
-
-Commands:
-  evidence append/correct  Write structured evidence through JSON stdin.
-  evidence read/check      Read an exact ref or check connected corrections (JSON stdin).
-  evidence result          Recover a write result: --key <requestKey>.
-  discover                 Find originals and derived vocabulary: --query <text> [--cursor <page>].
-  context prepare          Gather work, discovery and correction bases for agent judgment (JSON stdin).
-  work create/revise/assign/report/submit/accept/request-changes/complete/cancel/reopen
-              Change structured work through JSON stdin: --work <id>.
-  work show   Read structured work, readiness and review gaps: --work <id> [--tree].
-  work result Recover an original write result by --key, even after later changes.
-  location    Show the resolved project and storage paths without creating files.
-  recall      Read memories, selected work, pending originals and unfinished/review candidates.
-  record      Append daily plain text from stdin: --work <id> --source <reference>.
-  search      Rank original records with BM25: --query <text>.
-  read        Read an exact original record: --ref <kind:id@revision>.
-  graph       Read statements and their evidence paths: --entity <id> or --query <text>.
-  tidy prepare  Freeze exact originals and current representations for review.
-  tidy apply    Apply grounded changes from JSON stdin using the prepared snapshot.
-  tidy status   Show scoped review needs, pending records, context size and growth signals.
-  tidy result   Recover a committed review by --key.
-  forget      Erase a memory: --id <id> --revision <n>; or a daily original: --ref note:work@n.
-
-Options:
-  --cwd <path>       Git checkout or worktree (default: current directory).
-  --data-dir <path>  Absolute storage override (otherwise LOOM_DATA_DIR or OS default).
-  --work <id>        Select work-scoped memories and current work state in recall.
-  --query <text>     Filter recalled memories by words in current text and reason.
-  --history         Include prior revisions in recall; current revisions are the default.
-  --full            Include detailed work discovery in recall, graph in prepare, or full apply results.
-  --revisit         Compatibility alias; prepare always reconsiders existing memories.
-  --tree            Include descendants in work show.
-  --entity <id>      Start graph traversal at this entity.
-  --depth <n>        Graph traversal depth, 1-5 (default: 2).
-  --source <text>    Actual source of a daily record.
-  --by <user|agent>  Source type for record (default: agent).
-  --key <id>         Exact request key for record retry or result recovery.
-  --ref <reference>  Exact original reference returned by record, search or tidy.
-  --limit <n>        Per-list/batch limit, 1-200 (search: 10; recall/prepare: 50).
-  --offset <n>       Skip entries in recall lists or tidy prepare current-state lists.
-  --cursor <text>    Continue the same discovery snapshot.
-  --purpose <text>   Purpose of a tidy review (default: resume).
-  --input <path>    Read write-command JSON from a file instead of stdin.
-  --help            Show usage.
-
-Requires Node.js 22.18+ in 22.x, 24.x, or 26+, and Git. Use cli.sh (macOS/Linux) or cli.cmd (Windows) to diagnose missing Node.
-Exit code 2 requests dependency setup by the agent; other failures use exit code 1.
-See skills/work/references/context.md for schemas and recording policy.
-Legacy remember/checkpoint writers remain supported; see skills/work/references/context-legacy.md.`;
+const usage = help();
 
 function parseCommandLine() {
   const {
@@ -118,52 +70,17 @@ function parseCommandLine() {
   });
   const names = tokens.filter((token) => token.kind === "option").map(({ name }) => name);
   if (new Set(names).size !== names.length) throw new Error("Options cannot be repeated");
-  if (options.help) return { help: true as const };
+  if (options.help) return { help: true as const, text: help(words) };
   const grouped = ["tidy", "work", "evidence", "context"].includes(words[0]);
   const command = grouped ? `${words[0]}:${words[1]}` : words[0];
   if (words.length !== (grouped ? 2 : 1)) throw new Error(usage);
-  const optionsByCommand: Record<string, string[]> = {
-    location: [],
-    recall: ["work", "query", "history", "full", "limit", "offset", "entity", "depth"],
-    remember: ["id", "input"],
-    checkpoint: ["work", "input"],
-    forget: ["id", "revision", "ref"],
-    record: ["work", "source", "by", "key"],
-    search: ["query", "work", "limit"],
-    discover: ["query", "work", "limit", "cursor"],
-    "context:prepare": ["input"],
-    "evidence:append": ["input"],
-    "evidence:correct": ["input"],
-    "evidence:read": ["ref"],
-    "evidence:check": ["input"],
-    "evidence:result": ["key"],
-    read: ["ref"],
-    graph: ["work", "query", "history", "limit", "entity", "depth"],
-    "tidy:prepare": ["limit", "offset", "revisit", "work", "query", "purpose", "full"],
-    "tidy:apply": ["input", "full"],
-    "tidy:status": ["work", "query", "purpose"],
-    "tidy:result": ["key"],
-    "work:show": ["work", "tree", "history"],
-    "work:result": ["key"],
-  };
-  for (const action of [
-    "create",
-    "revise",
-    "assign",
-    "report",
-    "submit",
-    "accept",
-    "request-changes",
-    "complete",
-    "cancel",
-    "reopen",
-  ])
-    optionsByCommand[`work:${action}`] = ["work", "input"];
-  if (!Object.hasOwn(optionsByCommand, command))
-    throw new Error(`Unknown command: ${command}\n${usage}`);
-  const allowedOptions = ["cwd", "data-dir", ...optionsByCommand[command]];
-  if (names.some((name) => !allowedOptions.includes(name)))
-    throw new Error(`Unsupported option for ${command}`);
+  if (!Object.hasOwn(commands, command)) help(words); // Throws with available operations.
+  const allowedOptions = ["cwd", "data-dir", ...commands[command].options];
+  const unsupported = names.filter((name) => !allowedOptions.includes(name));
+  if (unsupported.length)
+    throw new Error(
+      `Unsupported option for ${words.join(" ")}: ${unsupported.map((name) => `--${name}`).join(", ")}. Allowed: ${allowedOptions.map((name) => `--${name}`).join(", ")}. See ${words.join(" ")} --help.`,
+    );
   if (
     command === "recall" &&
     !options.full &&
@@ -204,9 +121,9 @@ function parseCommandLine() {
     throw new Error("--depth must be an integer from 1 to 5");
   const depth = Number(options.depth ?? 2);
   if (["search", "discover"].includes(command) && !options.query?.trim())
-    throw new Error("search requires --query <text>");
+    throw new Error(`${words.join(" ")} requires --query <text>`);
   if (["read", "evidence:read"].includes(command) && !options.ref)
-    throw new Error("read requires --ref <kind:id@revision>");
+    throw new Error(`${words.join(" ")} requires --ref <kind:id@revision>`);
   if (command.endsWith(":result") && !options.key) throw new Error("result requires --key");
   let erasureRequest: ErasureRequest | undefined;
   if (command === "forget") {
@@ -259,7 +176,7 @@ async function runCli() {
   }
   const parsed = parseCommandLine();
   if (parsed.help) {
-    console.log(usage);
+    console.log(parsed.text);
     return;
   }
   const { command, options } = parsed;

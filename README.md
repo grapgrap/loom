@@ -6,9 +6,9 @@ V2 draws on [pstack](https://github.com/cursor/plugins/tree/main/pstack)'s task-
 
 This version is a starting point. Real tasks expose failures in judgment, execution, and verification. Fixing and rechecking those failures expands what can be entrusted to the agent. Sustained autonomous work is a direction to grow toward through those improvements.
 
-[English](README.md) · [한국어](README.ko.md)
+[English](README.md) | [한국어](README.ko.md)
 
-## Use only the process the task earns
+## Choose the process the task needs
 
 Loom v2 does not require a fixed `shape → plan → task` sequence. `work` selects an [execution route](skills/work/references/change-routes.md) from the outcome the user wants. A defect starts with reproduction and cause. A performance issue starts with a measurement. A behavior-preserving refactor starts by recording the current behavior. A change to responsibilities or contracts calls for `architect`.
 
@@ -23,13 +23,15 @@ Size alone does not require human approval. Questions that observation or an exp
 | `work`        | One agent owns routing, implementation, cleanup, verification, and delivery within the goal and scope.                |
 | `orchestrate` | Plan, relate, assign, track, submit, and accept work through the shared work CLI.                                     |
 | `understand`  | Reconstruct the current picture from code, runtime evidence, and history. Direct invocation investigates and reports. |
-| `architect`   | Ground implementation and verification in usage examples, responsibilities, state, and interfaces.                    |
+| `architect`   | Define component responsibilities and boundaries through strategic design, then specify input and output contracts.   |
 | `verify`      | Prepare tests or temporary verification tools before implementation, then check actual outcomes during and after it.  |
 | `review`      | Find gaps in decisions and evidence through counterexamples, then check the findings themselves.                      |
 | `write`       | Connect problems, evidence, judgments, and conclusions; refine wording while preserving meaning and constraints.      |
-| `tidy`        | Consolidate records and work history into grounded project memories and graphs while preserving originals.            |
+| `tidy`        | Update current memories and review history from source records while preserving the originals.                        |
 
 Requests for explanation, design, verification, or review stay within that scope. Implementation and fixes follow the scope of the work entrusted to the agent.
+
+`architect` designs component responsibilities, boundaries, and relationships around the problem to solve. It refines input/output, state and failure contracts within the agreed boundaries, then checks how they connect through the complete execution flow. Small changes reuse existing boundaries and contracts.
 
 Use `verify` before implementation to define verification criteria and prepare executable checks. Reuse existing checks, add tests or temporary verification tools where needed, and run them to capture an expected failure or baseline. When only preparation is requested, hand over the checks and execution instructions; implementing product behavior remains subject to the assigned scope.
 
@@ -43,11 +45,11 @@ When multi-agent collaboration is requested, the main agent uses `orchestrate` t
 
 The coordinator assigns files so concurrent writers do not overlap in the shared worktree, and orders work that depends on earlier results or changes to common files. Each worker receives its scope, acceptance criteria, necessary context, and recording and reporting instructions. Workers report agreed intermediate results, blockers, and changed assumptions. The coordinator compares execution status with evidence for each criterion and remaining work, then updates the plan and assigns follow-up work or corrections. Changes to scope or acceptance criteria, further delegation, and coordination between workers belong to the coordinator.
 
-The overall task and its children use the [shared work CLI](skills/work/references/context-work.md). Child definitions connect parent, contributesTo, and dependsOn; assign records the worker, reviewer, and host execution ID. Workers read the current specification and evidence through the CLI, explain the goal and contracts they understand, and return observations, evidence, and remaining work through the host. The coordinator owns every task, records report and submit, and directly applies review against the artifacts before accept or criterion-specific request-changes. Subagents use the CLI read-only; the coordinator also owns record and tidy. There is no understanding-complete state or extra approval step. Work show --tree returns related work, readiness, blockers, review queues, and missing criteria. Whole-work completion requires completed mandatory children and the parent's own integration evidence. The CLI does not launch agents.
+The overall task and its children use the [shared work CLI](skills/work/references/context-work.md). Child definitions connect parent, contributesTo, and dependsOn; assign records the worker, reviewer, and host execution ID. Workers read the current specification and evidence through the CLI, explain the goal and contracts they understand, and return observations, evidence, and remaining work through the host. The coordinator owns every task, records report and submit, and directly applies review against the artifacts before accept or criterion-specific request-changes. Subagents use the CLI read-only; the coordinator also owns record and tidy. There is no understanding-complete state or extra approval step. Work show --tree returns related work, readiness, blockers, review queues, and missing criteria. Overall work completion requires completed mandatory children and the parent's own integration evidence. The CLI does not launch agents.
 
-## Explain design without accumulating a design corpus
+## Explain the design and maintain documents selectively
 
-For a meaningful change, Loom explains what happens now, what will change, what stays true, and why. That picture normally lives in the task conversation rather than a project-wide design-document graph.
+For a meaningful change, Loom explains what happens now, what will change, what stays true, and why. The task conversation normally holds that explanation. Create a maintained document when future work will depend on it.
 
 - Working explanations serve the current task.
 - PR and commit descriptions preserve the decisions and evidence from that change; they are historical records.
@@ -84,7 +86,7 @@ Users can ask Loom to recall, revise, or forget a memory. The `location` command
 ```text
 src/context/             Runtime modules and unit tests by concern, with shared base types
 scripts/context/         CLI and shell/CMD entry points
-src/integration-test/               Integration tests and shared test helpers
+src/integration-test/     Integration tests and shared test helpers
 scripts/check-plugin.ts  Plugin metadata and documentation reference checks
 skills/                  Agent task instructions
 references/              Shared design principles and code rules
@@ -109,6 +111,8 @@ The CLI entry point calls `src/context`; runtime modules do not import tests or 
 ## Improve and check the skills
 
 Use observed failures and omissions from real work to change the instructions or execution tools. Recheck the same conditions afterward. A structural check does not prove that a skill improves the agent's decisions or execution.
+
+Keep shared judgments in the skill that owns them; put conditional procedures in references with an explicit reading trigger. Keep authority and failure rules visible before the affected action. CLI field syntax and examples belong in `<command> --help`; execute those examples before removing duplicated instructions. Keep the criteria for applicability, source attribution, and completion in the skills. Compare a saved baseline with the revision on predefined tasks, using fresh sessions and a no-skill condition when agent evaluations are authorized. File size alone does not measure actual reading cost or behavioral quality. Record the references and help that were read, results, tool errors and remaining uncertainty; do not impose a fixed compression target.
 
 Repository scripts and tests use TypeScript (`.ts`) with explicit `.ts` imports and erasable type syntax. Development tooling supports the same Node.js versions as the context CLI. Development dependencies use the Yarn version pinned in `package.json`, with the `pnpm` node linker. Install them and set up the Git hooks once per clone:
 
