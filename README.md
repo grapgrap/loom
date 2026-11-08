@@ -23,6 +23,7 @@ Size alone does not require human approval. Questions that observation or an exp
 | `work`        | One agent owns routing, implementation, cleanup, verification, and delivery within the goal and scope.                |
 | `orchestrate` | Plan, relate, assign, track, submit, and accept work through the shared work CLI.                                     |
 | `understand`  | Reconstruct the current picture from code, runtime evidence, and history. Direct invocation investigates and reports. |
+| `explore`     | Refine questions through references, derive mechanisms and applicability conditions, and return design candidates.    |
 | `architect`   | Define component responsibilities and boundaries through strategic design, then specify input and output contracts.   |
 | `verify`      | Prepare tests or temporary verification tools before implementation, then check actual outcomes during and after it.  |
 | `review`      | Find gaps in decisions and evidence through counterexamples, then check the findings themselves.                      |
@@ -30,6 +31,8 @@ Size alone does not require human approval. Questions that observation or an exp
 | `tidy`        | Update current memories and review history from source records while preserving the originals.                        |
 
 Requests for explanation, design, verification, or review stay within that scope. Implementation and fixes follow the scope of the work entrusted to the agent.
+
+`explore` can start before the research question is clear. It investigates examples, applies their mechanisms to the current problem, and revises its questions. It hands candidates and selection conditions to design, or returns reasons to redefine the problem or defer judgment. Long explorations use existing work, evidence, and tidy records. Changes with known approaches and applicability conditions do not require a separate exploration.
 
 `architect` designs component responsibilities, boundaries, and relationships around the problem to solve. It refines input/output, state and failure contracts within the agreed boundaries, then checks how they connect through the complete execution flow. Small changes reuse existing boundaries and contracts.
 
@@ -160,6 +163,7 @@ Start a new session so the installed skills are available. Invoke `/loom:work` i
 ```text
 /loom:work Notifications are sent twice after a retry. Reproduce the problem, fix its cause, and verify the same path.
 $loom:orchestrate Divide this change among agents in the same worktree and verify their combined result.
+$loom:explore Explore references for improving retries of long-running jobs, starting with what we should investigate. Do not design yet.
 $loom:architect Show the current ownership and proposed user experience first. Do not implement yet.
 $loom:understand Explain how payment failures work now and why the system was shaped this way.
 $loom:write Connect this design proposal's problem, evidence, judgment, and scope, then refine the wording.

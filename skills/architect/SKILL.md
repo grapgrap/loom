@@ -19,6 +19,8 @@ description: 전략 설계로 컴포넌트의 책임과 경계를 정하고 입�
 
 ### 2. 컴포넌트의 책임과 경계를 정한다
 
+접근 방법이나 적용 전제가 불명확하면 [explore](../explore/SKILL.md)로 레퍼런스의 원리와 선택 조건을 확보한다. 기존 탐색 결과가 있으면 출처, 성립 조건과 현재 시스템의 차이를 재사용하고, 설계안을 가르는 미확인 전제만 재탐색한다. 탐색의 적용 후보를 채택된 구조로 간주하지 않고 아래 책임과 계약 비교를 통해 선택한다. 문제 재정의나 판단 유보가 반환되면 영향받는 설계 판단을 미확정으로 남기고 work에 범위와 다음 행동을 전달한다.
+
 [Domain Vocabulary](../../references/principles/domain_vocabulary.md)에 따라 같은 개념과 책임에는 같은 말을 사용한다. 의미, 규칙과 변경 이유가 함께 움직이는 책임을 모으고, 독립적으로 판단하거나 변경해야 하는 책임은 나눈다. 각 컴포넌트가 소유할 판단과 상태, 보장할 조건 및 다른 컴포넌트에 맡길 책임을 밝힌다.
 
 [Draw Clear Boundaries](../../references/principles/draw_clear_boundaries.md)와 [Earn Your Boundary](../../references/principles/earn_your_boundary.md)에 따라 기존 경계와 분리안을 비교한다. 분리가 실제로 보호할 규칙과 줄일 결합을 설명한다. 논리 컴포넌트를 폴더나 배포 단위와 일대일로 대응시키지 않는다.
@@ -27,7 +29,7 @@ description: 전략 설계로 컴포넌트의 책임과 경계를 정하고 입�
 
 현재와 목표의 관계에서 누가 누구를 호출하고 어떤 정보를 주고받는지, 의존 방향과 변환 책임을 표시한다. 여러 컴포넌트를 거치는 흐름에서는 순서와 부분 실패의 처리를 누가 소유하는지 정한다.
 
-[Cross-Domain Coupling](../../references/principles/cross_domain_coupling.md)과 [Dependency Direction](../../references/principles/dependency_direction.md)으로 모델의 소유와 통합 책임을 확인한다. 중요한 새 선택은 [Exhaust the Design Space](../../references/principles/exhaust_design_space.md)에 따라 기존 안과 구조적으로 다른 안의 보장, 손실과 전환 비용을 비교한다. 레퍼런스의 보장에 필요한 전제도 확인하고 관찰 가능한 쟁점은 작은 실험으로 푼다.
+[Cross-Domain Coupling](../../references/principles/cross_domain_coupling.md)과 [Dependency Direction](../../references/principles/dependency_direction.md)으로 모델의 소유와 통합 책임을 확인한다. 중요한 새 선택은 [Exhaust the Design Space](../../references/principles/exhaust_design_space.md)에 따라 기존 안과 구조적으로 다른 안의 보장, 손실과 전환 비용을 비교한다. 탐색에서 얻은 원리를 채택할 때는 성립 조건이 선택한 설계에서 유지되는지 확인하고, 관찰 가능한 설계 쟁점은 [verify](../verify/SKILL.md)를 통해 작은 실험으로 푼다.
 
 ## 선택한 전략을 구현 계약으로 구체화한다
 
