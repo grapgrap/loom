@@ -38,9 +38,9 @@ Requests for explanation, design, verification, or review stay within that scope
 
 Use `verify` before implementation to define verification criteria and prepare executable checks. Reuse existing checks, add tests or temporary verification tools where needed, and run them to capture an expected failure or baseline. When only preparation is requested, hand over the checks and execution instructions; implementing product behavior remains subject to the assigned scope.
 
-Loom's [principles](references/principles.md) describe the domain responsibilities, contracts, and dependencies a change must preserve. When design decisions concern responsibilities, contracts, or dependencies, skills consult this shared document and select relevant principles from the task's purpose and impact. Each principle includes application situations and examples. `work` is the default single-agent route; use `orchestrate` for multi-agent collaboration.
+`work` is the default single-agent route; use `orchestrate` for multi-agent collaboration.
 
-`work` and `review` select relevant [code rules](references/rules.md) by application situation and decision criteria, then read the individual files for practical guidance on names, functions, state, validation, error handling, and tests. Both use `write` when writing or reviewing prose. `write` owns scope and delivery, applies [clarity criteria](skills/write/references/clarity.md) to all prose, and adds [document framing](skills/write/references/framing.md) when the request involves building or reviewing the reasoning. Editing and summarization preserve the source's direction and judgments.
+Use `write` when writing or reviewing prose. `write` owns scope and delivery, applies [clarity criteria](skills/write/references/clarity.md) to all prose, and adds [document framing](skills/write/references/framing.md) when the request involves building or reviewing the reasoning. Editing and summarization preserve the source's direction and judgments.
 
 ## Coordinate multiple agents in one worktree
 
@@ -92,7 +92,6 @@ scripts/context/         CLI and shell/CMD entry points
 src/integration-test/     Integration tests and shared test helpers
 scripts/check-plugin.ts  Plugin metadata and documentation reference checks
 skills/                  Agent task instructions
-references/              Shared design principles and code rules
 templates/               Planning and verification document templates
 ```
 
