@@ -18,36 +18,61 @@ Size alone does not require human approval. Questions that observation or an exp
 
 ## Skills
 
-| Skill         | Responsibility                                                                                                        |
-| ------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `work`        | One agent owns routing, implementation, cleanup, verification, and delivery within the goal and scope.                |
-| `orchestrate` | Plan and assign work in one worktree, track progress, and review results against acceptance criteria.                 |
-| `understand`  | Reconstruct the current picture from code, runtime evidence, and history. Direct invocation investigates and reports. |
-| `explore`     | Refine questions through references, derive mechanisms and applicability conditions, and return design candidates.    |
-| `architect`   | Define component responsibilities and boundaries through strategic design, then specify input and output contracts.   |
-| `verify`      | Prepare tests or temporary verification tools before implementation, then check actual outcomes during and after it.  |
-| `review`      | Find gaps in decisions and evidence through counterexamples, then check the findings themselves.                      |
-| `write`       | Connect problems, evidence, judgments, and conclusions; refine wording while preserving meaning and constraints.      |
+| Skill                                    | Responsibility                                                                                                                   |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| [coordinate](skills/coordinate/SKILL.md) | Coordinate a task queue, persistent work sessions, dependencies, acceptance, and communication with the user.                    |
+| `work`                                   | Investigate, design, implement, and verify assigned work; report discovered tasks and continue with follow-up requests.          |
+| `orchestrate`                            | Assign bounded work to subagents within one session and worktree, then review and accept their results.                          |
+| `understand`                             | Reconstruct the current picture from code, runtime evidence, and history. Direct invocation investigates and reports.            |
+| `explore`                                | Refine questions through references, derive mechanisms and applicability conditions, and return design candidates.               |
+| `architect`                              | Discover domains, responsibilities, and boundaries; design collaboration and contracts; identify independently designable areas. |
+| `verify`                                 | Prepare tests or temporary verification tools before implementation, then check actual outcomes during and after it.             |
+| `review`                                 | Find gaps in decisions and evidence through counterexamples, then check the findings themselves.                                 |
+| `write`                                  | Connect problems, evidence, judgments, and conclusions; refine wording while preserving meaning and constraints.                 |
 
 Requests for explanation, design, verification, or review stay within that scope. Implementation and fixes follow the scope of the work entrusted to the agent.
 
 `explore` can start before the research question is clear. It investigates examples, applies their mechanisms to the current problem, and revises its questions. It hands candidates and selection conditions to design, or returns reasons to redefine the problem or defer judgment. Long explorations retain changed assumptions, source evidence, and remaining questions in the conversation or an execution plan when needed. Changes with known approaches and applicability conditions do not require a separate exploration.
 
-`architect` designs component responsibilities, boundaries, and relationships around the problem to solve. It refines input/output, state and failure contracts within the agreed boundaries, then checks how they connect through the complete execution flow. Small changes reuse existing boundaries and contracts.
+`architect` can start without a domain inventory or decomposed tasks. It follows the core use flow to discover responsibilities, boundaries, and collaboration. Main sessions work on the overall design, while work sessions refine their assigned areas. Areas with clear boundaries can proceed independently; evidence that changes a shared contract returns to the affected design and work. Small changes reuse existing boundaries and contracts.
 
 Use `verify` before implementation to define verification criteria and prepare executable checks. Reuse existing checks, add tests or temporary verification tools where needed, and run them to capture an expected failure or baseline. When only preparation is requested, hand over the checks and execution instructions; implementing product behavior remains subject to the assigned scope.
 
-`work` is the default single-agent route; use `orchestrate` for multi-agent collaboration.
+`work` is the default route for carrying out assigned work. Use `coordinate` for persistent work sessions and `orchestrate` for subagent collaboration inside a session. Specialized skills remain available in any session or subagent according to its assigned purpose.
 
 Use `write` when writing or reviewing prose. `write` owns scope and delivery, applies [clarity criteria](skills/write/references/clarity.md) to all prose, and adds [document framing](skills/write/references/framing.md) when the request involves building or reviewing the reasoning. Editing and summarization preserve the source's direction and judgments.
 
-## Coordinate multiple agents in one worktree
+## Coordinate persistent work sessions
 
-When multi-agent collaboration is requested, the main agent uses `orchestrate` to own the overall plan. This coordinator derives child tasks from the overall acceptance criteria, defining each task's contribution, scope, owner, dependencies, and execution order, along with integration and overall verification. Acceptance criteria specify observable outcomes, verification methods, expected results, and evidence to return. Subagents act as workers, using `work` to plan, execute, and verify their assigned scope. Model selection follows user and project policy; if no selection exists, the coordinator asks before the first launch.
+Several main sessions can coexist, each with zero or more work sessions. `coordinate` helps clarify an undecomposed goal and its overall design, connecting discovered child and sibling tasks to a shared queue. It selects ready work by priority, performs it directly, reuses a related work session, or assigns a new one. A work session coordinating its own children acts as their main session within that scope.
+
+Related sessions use one source of [shared task records](references/task-record.md). Records connect goals, acceptance criteria, parents and dependencies, priority, coordinating and executing owners, session references, artifacts, and verification evidence. Keep the shared record outside a session's conversation; use the [execution-plan template](templates/execution-plan.md) when a shared file is needed. Derive readiness from accepted dependencies and required inputs, and distinguish host execution status from acceptance of a task's result.
+
+Users normally communicate through the main session and can also enter a work session directly. Decisions that change scope, shared contracts, or priority flow back to the shared record and affected work. The task record links to the original conversation, progress, artifacts, and verification evidence.
+
+```mermaid
+flowchart TB
+    U["User"] <-->|"Default conversation"| M["Main session: coordinate"]
+    U <-->|"Direct conversation"| W["Work session: work"]
+    M <-->|"Assign and resume / progress, discoveries, results"| W
+    M <--> Q["Shared task queue"]
+    M --> D["Direct execution: work"]
+    D --> O["Each session's orchestrate"]
+    W --> O
+    O --> S["Subagents: return bounded results"]
+```
+
+Work sessions retain their conversations and task context after submitting results and can resume for related requests. CI fixes, review responses after a PR, and final cleanup follow the assigned delivery point. Subagents finish their assignment after returning results to the calling session.
+
+Loom provides the decision and reporting instructions. Independent session creation, messaging, waiting, resumption, and persistent execution depend on actual host tools and user/project authority. When a required capability is unavailable, report its impact and the work that remains possible; do not substitute a one-shot subagent for an independent work session.
+
+## Coordinate subagents inside a session
+
+When multi-agent collaboration is requested, the calling session uses `orchestrate` to plan its assigned scope. This coordinator derives bounded tasks from the acceptance criteria, defining each task's contribution, scope, owner, dependencies, and execution order, along with integration and verification. Acceptance criteria specify observable outcomes, verification methods, expected results, and evidence to return. Subagents act as workers, using `work` to plan, execute, and verify their assigned scope. Model selection follows user and project policy; if no selection exists, the coordinator asks before the first launch.
 
 The coordinator assigns files so concurrent writers do not overlap in the shared worktree, and orders work that depends on earlier results or changes to common files. Each worker receives its scope, acceptance criteria, necessary context, and reporting instructions. Workers report agreed intermediate results, blockers, and changed assumptions. The coordinator compares execution status with evidence for each criterion and remaining work, then updates the plan and assigns follow-up work or corrections. Changes to scope or acceptance criteria, further delegation, and coordination between workers belong to the coordinator.
 
-Workers follow the [delegated-work instructions](skills/work/references/delegated-work.md), read the specification and source evidence provided by the coordinator, and return observations, artifacts, and remaining work through the host. The coordinator checks the current specification against the artifacts, accepts results that meet the criteria, and requests corrections with evidence when they do not. Overall completion requires accepted child results and verification of their combined behavior.
+Subagents follow the [delegated-work instructions](skills/work/references/delegated-work.md), read the specification and source evidence, and return observations, artifacts, and remaining work to the calling session. Persistent work sessions follow separate [delegated-session instructions](skills/work/references/delegated-session.md). The coordinator checks the current specification against the artifacts, accepts results that meet the criteria, and requests corrections with evidence when they do not. Completion of the assigned scope requires accepted child results and verification of their combined behavior.
 
 ## Explain the design and maintain documents selectively
 
@@ -64,6 +89,7 @@ Use the [execution-plan template](templates/execution-plan.md) when a multi-phas
 ```text
 scripts/check-plugin.ts  Plugin metadata and documentation reference checks
 skills/                  Agent task instructions
+references/              Shared task record and reporting contracts across sessions
 templates/               Planning and verification document templates
 ```
 
@@ -117,6 +143,7 @@ Start a new session so the installed skills are available. Invoke `/loom:work` i
 
 ```text
 /loom:work Notifications are sent twice after a retry. Reproduce the problem, fix its cause, and verify the same path.
+$loom:coordinate Discover the domains and boundaries of an agent execution engine, then create work sessions for detailed design. Coordinate the priorities and dependencies of discovered child and sibling tasks.
 $loom:orchestrate Divide this change among agents in the same worktree and verify their combined result.
 $loom:explore Explore references for improving retries of long-running jobs, starting with what we should investigate. Do not design yet.
 $loom:architect Show the current ownership and proposed user experience first. Do not implement yet.
