@@ -27,13 +27,14 @@ Start a new session so the installed skills are available. Invoke `/loom:work` i
 | Skill                                            | Responsibility                                                                 |
 | ------------------------------------------------ | ------------------------------------------------------------------------------ |
 | [`$loom:work`](skills/work/SKILL.md)             | Set completion criteria and choose the next skill.                             |
-| [`$loom:understand`](skills/understand/SKILL.md) | Trace current behavior through code and execution evidence.                    |
-| [`$loom:explorer`](skills/explorer/SKILL.md)     | Find reference implementations and compare their assumptions.                  |
+| [`$loom:understand`](skills/understand/SKILL.md) | Trace domain responsibilities and interactions through existing code.          |
+| [`$loom:diagnose`](skills/diagnose/SKILL.md)     | Reproduce reported symptoms and identify their causes.                         |
+| [`$loom:explorer`](skills/explorer/SKILL.md)     | Explore products, docs, and code to refine questions and compare approaches.   |
 | [`$loom:architect`](skills/architect/SKILL.md)   | Derive domain rules from scenarios and diagram responsibilities and contracts. |
 | [`$loom:implement`](skills/implement/SKILL.md)   | Implement and verify one scenario at a time with Red → Green → Refactor.       |
-| [`$loom:review`](skills/review/SKILL.md)         | Check design and implementation claims against counterexamples.                |
+| [`$loom:review`](skills/review/SKILL.md)         | Check for unmet requirements and probe guarantees with counterexamples.        |
 | [`$loom:write`](skills/write/SKILL.md)           | Write and edit explanations and documents for their audience.                  |
 
 ## Migrating from 2.x
 
-Update reference research calls from `$loom:explore` to `$loom:explorer`. Start behavior changes with `$loom:work`. `$loom:architect` establishes the contract and `$loom:implement` owns implementation and verification. Use `$loom:understand` for reproduction-only requests. Version 3.0 removes the standalone `$loom:verify`, `$loom:coordinate` and `$loom:orchestrate` skills.
+Update reference research calls from `$loom:explore` to `$loom:explorer`. Start behavior changes with `$loom:work`. Use `$loom:diagnose` to reproduce or investigate a defect. When the cause is known, `$loom:implement` restores the existing contract. If the fix needs a new contract or a change in responsibilities, use `$loom:architect` first. Version 3.0 removes the standalone `$loom:verify`, `$loom:coordinate` and `$loom:orchestrate` skills.
