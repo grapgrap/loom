@@ -24,16 +24,16 @@ Start a new session so the installed skills are available. Invoke `/loom:work` i
 
 ## Skills
 
-| Skill                                            | Responsibility                                                                 |
-| ------------------------------------------------ | ------------------------------------------------------------------------------ |
-| [`$loom:work`](skills/work/SKILL.md)             | Set completion criteria and choose the next skill.                             |
-| [`$loom:understand`](skills/understand/SKILL.md) | Trace domain responsibilities and interactions through existing code.          |
-| [`$loom:diagnose`](skills/diagnose/SKILL.md)     | Reproduce reported symptoms and identify their causes.                         |
-| [`$loom:explorer`](skills/explorer/SKILL.md)     | Explore products, docs, and code to refine questions and compare approaches.   |
-| [`$loom:architect`](skills/architect/SKILL.md)   | Derive domain rules from scenarios and diagram responsibilities and contracts. |
-| [`$loom:implement`](skills/implement/SKILL.md)   | Implement and verify one scenario at a time with Red → Green → Refactor.       |
-| [`$loom:review`](skills/review/SKILL.md)         | Check for unmet requirements and probe guarantees with counterexamples.        |
-| [`$loom:write`](skills/write/SKILL.md)           | Write and edit explanations and documents for their audience.                  |
+| Skill                                            | Responsibility                                                                               |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| [`$loom:work`](skills/work/SKILL.md)             | Set completion criteria, hand off unfinished work, and verify the outcome in code and tests. |
+| [`$loom:understand`](skills/understand/SKILL.md) | Trace domain responsibilities and interactions through existing code.                        |
+| [`$loom:diagnose`](skills/diagnose/SKILL.md)     | Reproduce reported symptoms and identify their causes.                                       |
+| [`$loom:explorer`](skills/explorer/SKILL.md)     | Explore products, docs, and code to refine questions and compare approaches.                 |
+| [`$loom:architect`](skills/architect/SKILL.md)   | Model what each role needs to make its decisions and verify important state transitions.     |
+| [`$loom:implement`](skills/implement/SKILL.md)   | Implement and verify one scenario at a time with Red → Green → Refactor.                     |
+| [`$loom:review`](skills/review/SKILL.md)         | Find missing or unjustified test expectations and trace who makes each decision in the code. |
+| [`$loom:write`](skills/write/SKILL.md)           | Write and edit explanations and documents for their audience.                                |
 
 ## Migrating from 2.x
 

@@ -24,16 +24,16 @@ codex plugin add loom@loom-marketplace
 
 ## 스킬
 
-| 스킬                                             | 역할                                                             |
-| ------------------------------------------------ | ---------------------------------------------------------------- |
-| [`$loom:work`](skills/work/SKILL.md)             | 요청의 완료 조건을 정하고 다음 스킬을 선택합니다.                |
-| [`$loom:understand`](skills/understand/SKILL.md) | 기존 코드에서 도메인의 책임과 협력 흐름을 설명합니다.            |
-| [`$loom:diagnose`](skills/diagnose/SKILL.md)     | 보고된 증상을 재현하고 근거를 바탕으로 원인을 좁힙니다.          |
-| [`$loom:explorer`](skills/explorer/SKILL.md)     | 제품·문서·구현 사례로 질문을 좁히고 방법과 적용 조건을 찾습니다. |
-| [`$loom:architect`](skills/architect/SKILL.md)   | 시나리오에서 도메인 규칙을 찾고 책임 경계와 계약을 도식화합니다. |
-| [`$loom:implement`](skills/implement/SKILL.md)   | 시나리오 하나씩 Red → Green → Refactor로 구현하고 검증합니다.    |
-| [`$loom:review`](skills/review/SKILL.md)         | 합의한 요구의 누락을 찾고 보장한 동작에 반례를 대입합니다.       |
-| [`$loom:write`](skills/write/SKILL.md)           | 독자와 목적에 맞게 설명과 문서를 작성하고 다듬습니다.            |
+| 스킬                                             | 역할                                                                       |
+| ------------------------------------------------ | -------------------------------------------------------------------------- |
+| [`$loom:work`](skills/work/SKILL.md)             | 완료 조건을 정하고 세션을 이어가며 코드와 테스트로 결과를 확인합니다.      |
+| [`$loom:understand`](skills/understand/SKILL.md) | 기존 코드에서 도메인의 책임과 협력 흐름을 설명합니다.                      |
+| [`$loom:diagnose`](skills/diagnose/SKILL.md)     | 보고된 증상을 재현하고 근거를 바탕으로 원인을 좁힙니다.                    |
+| [`$loom:explorer`](skills/explorer/SKILL.md)     | 제품·문서·구현 사례로 질문을 좁히고 방법과 적용 조건을 찾습니다.           |
+| [`$loom:architect`](skills/architect/SKILL.md)   | 역할에 필요한 정보를 모델링하고 중요한 상태 전이를 검증합니다.             |
+| [`$loom:implement`](skills/implement/SKILL.md)   | 시나리오 하나씩 Red → Green → Refactor로 구현하고 검증합니다.              |
+| [`$loom:review`](skills/review/SKILL.md)         | 테스트가 빠뜨리거나 추가한 조건을 찾고 실제 구현의 책임 경계를 확인합니다. |
+| [`$loom:write`](skills/write/SKILL.md)           | 독자와 목적에 맞게 설명과 문서를 작성하고 다듬습니다.                      |
 
 ## 2.x에서 옮기기
 
