@@ -30,10 +30,12 @@ codex plugin add loom@loom-marketplace
 | [`$loom:understand`](skills/understand/SKILL.md) | 기존 코드에서 도메인의 책임과 협력 흐름을 설명합니다.                      |
 | [`$loom:diagnose`](skills/diagnose/SKILL.md)     | 보고된 증상을 재현하고 근거를 바탕으로 원인을 좁힙니다.                    |
 | [`$loom:explorer`](skills/explorer/SKILL.md)     | 제품·문서·구현 사례로 질문을 좁히고 방법과 적용 조건을 찾습니다.           |
-| [`$loom:architect`](skills/architect/SKILL.md)   | 역할에 필요한 정보를 모델링하고 중요한 상태 전이를 검증합니다.             |
+| [`$loom:architect`](skills/architect/SKILL.md)   | TypeScript로 도메인을, TLA+와 TLC로 흐름을 검증하며 설계를 합의합니다.     |
 | [`$loom:implement`](skills/implement/SKILL.md)   | 시나리오 하나씩 Red → Green → Refactor로 구현하고 검증합니다.              |
 | [`$loom:review`](skills/review/SKILL.md)         | 테스트가 빠뜨리거나 추가한 조건을 찾고 실제 구현의 책임 경계를 확인합니다. |
 | [`$loom:write`](skills/write/SKILL.md)           | 독자와 목적에 맞게 설명과 문서를 작성하고 다듬습니다.                      |
+
+[화물 예약 합의서 예시](examples/strategic-design-agreement.ko.md)에서 경계와 업무 사례, 두 모델의 검증 결과를 함께 볼 수 있습니다.
 
 ## 2.x에서 옮기기
 

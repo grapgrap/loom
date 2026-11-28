@@ -30,10 +30,12 @@ Start a new session so the installed skills are available. Invoke `/loom:work` i
 | [`$loom:understand`](skills/understand/SKILL.md) | Trace domain responsibilities and interactions through existing code.                        |
 | [`$loom:diagnose`](skills/diagnose/SKILL.md)     | Reproduce reported symptoms and identify their causes.                                       |
 | [`$loom:explorer`](skills/explorer/SKILL.md)     | Explore products, docs, and code to refine questions and compare approaches.                 |
-| [`$loom:architect`](skills/architect/SKILL.md)   | Model what each role needs to make its decisions and verify important state transitions.     |
+| [`$loom:architect`](skills/architect/SKILL.md)   | Agree on designs by checking domain models with TypeScript and flows with TLA+ and TLC.      |
 | [`$loom:implement`](skills/implement/SKILL.md)   | Implement and verify one scenario at a time with Red → Green → Refactor.                     |
 | [`$loom:review`](skills/review/SKILL.md)         | Find missing or unjustified test expectations and trace who makes each decision in the code. |
 | [`$loom:write`](skills/write/SKILL.md)           | Write and edit explanations and documents for their audience.                                |
+
+The [cargo booking agreement (Korean)](examples/strategic-design-agreement.ko.md) connects the context map and business scenarios to both models and their verification results.
 
 ## Migrating from 2.x
 
