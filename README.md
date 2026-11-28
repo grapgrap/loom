@@ -26,7 +26,7 @@ Start a new session so the installed skills are available. Invoke `/loom:work` i
 
 | Skill                                            | Responsibility                                                                               |
 | ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| [`$loom:work`](skills/work/SKILL.md)             | Set completion criteria, hand off unfinished work, and verify the outcome in code and tests. |
+| [`$loom:work`](skills/work/SKILL.md)             | Set completion criteria, choose the skills the task needs, and verify the requested outcome. |
 | [`$loom:understand`](skills/understand/SKILL.md) | Trace domain responsibilities and interactions through existing code.                        |
 | [`$loom:diagnose`](skills/diagnose/SKILL.md)     | Reproduce reported symptoms and identify their causes.                                       |
 | [`$loom:explorer`](skills/explorer/SKILL.md)     | Explore products, docs, and code to refine questions and compare approaches.                 |
@@ -60,4 +60,4 @@ flowchart TD
 
 ## Migrating from 2.x
 
-Update reference research calls from `$loom:explore` to `$loom:explorer`. Start behavior changes with `$loom:work`. Use `$loom:diagnose` to reproduce or investigate a defect. When the cause is known, `$loom:implement` restores the existing contract. If the fix needs a new contract or a change in responsibilities, use `$loom:architect` first. Version 3.0 removes the standalone `$loom:verify`, `$loom:coordinate` and `$loom:orchestrate` skills.
+Update reference research calls from `$loom:explore` to `$loom:explorer`. Start behavior changes with `$loom:work`. Use `$loom:diagnose` to reproduce or investigate a defect. When the user asks for a fix and the existing contract is clear, `$loom:implement` restores that behavior. If the fix needs a new contract or a change in responsibilities, use `$loom:architect` first. Version 3.0 removes the standalone `$loom:verify`, `$loom:coordinate` and `$loom:orchestrate` skills.

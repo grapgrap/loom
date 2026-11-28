@@ -26,7 +26,7 @@ codex plugin add loom@loom-marketplace
 
 | 스킬                                             | 역할                                                                       |
 | ------------------------------------------------ | -------------------------------------------------------------------------- |
-| [`$loom:work`](skills/work/SKILL.md)             | 완료 조건을 정하고 세션을 이어가며 코드와 테스트로 결과를 확인합니다.      |
+| [`$loom:work`](skills/work/SKILL.md)             | 완료 조건을 정하고 필요한 스킬을 연결해 요청한 결과를 확인합니다.          |
 | [`$loom:understand`](skills/understand/SKILL.md) | 기존 코드에서 도메인의 책임과 협력 흐름을 설명합니다.                      |
 | [`$loom:diagnose`](skills/diagnose/SKILL.md)     | 보고된 증상을 재현하고 근거를 바탕으로 원인을 좁힙니다.                    |
 | [`$loom:explorer`](skills/explorer/SKILL.md)     | 제품·문서·구현 사례로 질문을 좁히고 방법과 적용 조건을 찾습니다.           |
@@ -60,4 +60,4 @@ flowchart TD
 
 ## 2.x에서 옮기기
 
-레퍼런스 탐색 호출을 `$loom:explore`에서 `$loom:explorer`로 바꾸세요. 동작 변경은 `$loom:work`에서 시작합니다. 결함 재현과 원인 조사는 `$loom:diagnose`가 맡습니다. 원인이 확인되면 `$loom:implement`가 기존 계약을 회복합니다. 새 계약이나 책임 변경이 필요하면 먼저 `$loom:architect`로 설계합니다. 3.0은 독립 스킬 `$loom:verify`, `$loom:coordinate`, `$loom:orchestrate`를 제거했습니다.
+레퍼런스 탐색 호출을 `$loom:explore`에서 `$loom:explorer`로 바꾸세요. 동작 변경은 `$loom:work`에서 시작합니다. 결함 재현과 원인 조사는 `$loom:diagnose`가 맡습니다. 수정을 요청했고 기존 계약이 분명하면 `$loom:implement`가 그 동작을 회복합니다. 새 계약이나 책임 변경이 필요하면 먼저 `$loom:architect`로 설계합니다. 3.0은 독립 스킬 `$loom:verify`, `$loom:coordinate`, `$loom:orchestrate`를 제거했습니다.
