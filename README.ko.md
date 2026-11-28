@@ -35,8 +35,6 @@ codex plugin add loom@loom-marketplace
 | [`$loom:review`](skills/review/SKILL.md)         | 테스트가 빠뜨리거나 추가한 조건을 찾고 실제 구현의 책임 경계를 확인합니다. |
 | [`$loom:write`](skills/write/SKILL.md)           | 독자와 목적에 맞게 설명과 문서를 작성하고 다듬습니다.                      |
 
-[화물 예약 합의서 예시](examples/strategic-design-agreement.ko.md)에서 경계와 업무 사례, 두 모델의 검증 결과를 함께 볼 수 있습니다.
-
 ## 2.x에서 옮기기
 
 레퍼런스 탐색 호출을 `$loom:explore`에서 `$loom:explorer`로 바꾸세요. 동작 변경은 `$loom:work`에서 시작합니다. 결함 재현과 원인 조사는 `$loom:diagnose`가 맡습니다. 원인이 확인되면 `$loom:implement`가 기존 계약을 회복합니다. 새 계약이나 책임 변경이 필요하면 먼저 `$loom:architect`로 설계합니다. 3.0은 독립 스킬 `$loom:verify`, `$loom:coordinate`, `$loom:orchestrate`를 제거했습니다.

@@ -35,8 +35,6 @@ Start a new session so the installed skills are available. Invoke `/loom:work` i
 | [`$loom:review`](skills/review/SKILL.md)         | Find missing or unjustified test expectations and trace who makes each decision in the code. |
 | [`$loom:write`](skills/write/SKILL.md)           | Write and edit explanations and documents for their audience.                                |
 
-The [cargo booking agreement (Korean)](examples/strategic-design-agreement.ko.md) connects the context map and business scenarios to both models and their verification results.
-
 ## Migrating from 2.x
 
 Update reference research calls from `$loom:explore` to `$loom:explorer`. Start behavior changes with `$loom:work`. Use `$loom:diagnose` to reproduce or investigate a defect. When the cause is known, `$loom:implement` restores the existing contract. If the fix needs a new contract or a change in responsibilities, use `$loom:architect` first. Version 3.0 removes the standalone `$loom:verify`, `$loom:coordinate` and `$loom:orchestrate` skills.
